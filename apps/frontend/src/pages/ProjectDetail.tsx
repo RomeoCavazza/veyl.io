@@ -8,7 +8,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Settings, Bell, AtSign, Trash2 } from 'lucide-react';
 import { getFakeProject, getFakeProjectPosts, fakeCreators, fakePosts } from '@/lib/fakeData';
+import { engagementTrendData, topPerformingCreators } from '@/lib/mockData';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 
 // Importer getApiBase depuis api.ts
 import { getApiBase } from '@/lib/api';
@@ -22,6 +38,23 @@ export default function ProjectDetail() {
   const [creators, setCreators] = useState<any[]>([]);
   const [niches, setNiches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Mock data for charts
+  const pieData = [
+    { name: 'Images', value: 45, color: 'hsl(var(--primary))' },
+    { name: 'Videos', value: 35, color: 'hsl(var(--accent))' },
+    { name: 'Carousels', value: 20, color: 'hsl(var(--success))' },
+  ];
+
+  const reachData = [
+    { date: '2025-01-15', organic: 45000, paid: 15000 },
+    { date: '2025-01-16', organic: 52000, paid: 18000 },
+    { date: '2025-01-17', organic: 48000, paid: 22000 },
+    { date: '2025-01-18', organic: 61000, paid: 25000 },
+    { date: '2025-01-19', organic: 58000, paid: 28000 },
+    { date: '2025-01-20', organic: 72000, paid: 32000 },
+    { date: '2025-01-21', organic: 68000, paid: 30000 },
+  ];
 
   useEffect(() => {
     // Charger projet depuis API
@@ -583,32 +616,158 @@ export default function ProjectDetail() {
               </Card>
             </div>
 
-            {/* Analytics Content */}
+            {/* Analytics Content - Charts */}
             <div className="grid gap-4 md:grid-cols-2">
               <Card className="bg-card border-border shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-white">Engagement Overview</CardTitle>
+                  <CardTitle className="text-white">Engagement Trends</CardTitle>
                   <CardDescription className="text-gray-400">
-                    Project performance metrics
+                    Daily engagement rate over time
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-lg border border-gray-700 bg-gray-800/50">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-gray-300">Average Engagement</span>
-                        <span className="text-lg font-bold text-primary">4.2%</span>
-                      </div>
-                      <p className="text-xs text-success">+0.8% vs last week</p>
-                    </div>
-                    <div className="p-4 rounded-lg border border-gray-700 bg-gray-800/50">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-gray-300">Total Reach</span>
-                        <span className="text-lg font-bold text-primary">{((project?.posts_count || 0) * 1250).toLocaleString()}</span>
-                      </div>
-                      <p className="text-xs text-success">+24.3% vs last week</p>
-                    </div>
-                  </div>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={engagementTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-gray-700" />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(value) =>
+                          new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        }
+                        className="text-gray-400"
+                      />
+                      <YAxis className="text-gray-400" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '6px',
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="engagement"
+                        stroke="hsl(var(--primary))"
+                        fill="hsl(var(--primary))"
+                        fillOpacity={0.2}
+                        name="Engagement Rate (%)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-white">Top Performing Creators</CardTitle>
+                  <CardDescription className="text-gray-400">
+                    By average engagement rate
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={topPerformingCreators} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-gray-700" />
+                      <XAxis type="number" className="text-gray-400" />
+                      <YAxis dataKey="username" type="category" width={100} className="text-gray-400" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '6px',
+                        }}
+                      />
+                      <Bar dataKey="avg_engagement" fill="hsl(var(--accent))" name="Avg Engagement (%)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="bg-card border-border shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-white">Reach & Impressions</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Organic vs Paid reach over time
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={400}>
+                  <AreaChart data={reachData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-700" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(value) =>
+                        new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      }
+                      className="text-gray-400"
+                    />
+                    <YAxis className="text-gray-400" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '6px',
+                      }}
+                    />
+                    <Legend />
+                    <Area
+                      type="monotone"
+                      dataKey="organic"
+                      stackId="1"
+                      stroke="hsl(var(--primary))"
+                      fill="hsl(var(--primary))"
+                      fillOpacity={0.8}
+                      name="Organic Reach"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="paid"
+                      stackId="1"
+                      stroke="hsl(var(--accent))"
+                      fill="hsl(var(--accent))"
+                      fillOpacity={0.8}
+                      name="Paid Reach"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="bg-card border-border shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-white">Content Type Distribution</CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Breakdown by media type
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '6px',
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
 
@@ -652,29 +811,6 @@ export default function ProjectDetail() {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Coming Soon Note */}
-            <Card className="bg-card border-border shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-white">Advanced Analytics</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Detailed analytics including engagement trends, reach analysis, and content performance
-                  will be available once data ingestion is active.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="p-4 rounded-lg border border-gray-700 bg-gray-800/50">
-                  <p className="text-sm text-gray-300 mb-2">📊 Analytics Features Coming Soon:</p>
-                  <ul className="text-sm text-gray-400 space-y-1 list-disc list-inside">
-                    <li>Engagement trends over time</li>
-                    <li>Reach & Impressions analysis</li>
-                    <li>Content type distribution</li>
-                    <li>Top performing creators</li>
-                    <li>Hashtag performance metrics</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>
