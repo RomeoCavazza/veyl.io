@@ -14,6 +14,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Settings, Bell, AtSign, Trash2, ExternalLink } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { getFakeProject, getFakeProjectPosts, fakeCreators, fakePosts } from '@/lib/fakeData';
 import { engagementTrendData, topPerformingCreators } from '@/lib/mockData';
 import { useToast } from '@/hooks/use-toast';
@@ -390,178 +392,165 @@ export default function ProjectDetail() {
             </Tabs>
           </TabsContent>
 
-          {/* Post Detail Dialog */}
+          {/* Post Detail Dialog - Style Instagram */}
           <Dialog open={postDialogOpen} onOpenChange={setPostDialogOpen}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Post Details</DialogTitle>
-                <DialogDescription>
-                  Comments, mentions, and hashtags for this post
-                </DialogDescription>
-              </DialogHeader>
-              
-              {selectedPost && (
-                <div className="space-y-6">
-                  {/* Post Info */}
-                  <Card>
-                    <div className="flex gap-4">
+            <DialogContent className="max-w-5xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+              {selectedPost && (() => {
+                const creator = creators.find(c => c.handle === selectedPost.username);
+                const profilePic = creator?.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedPost.username}`;
+                const postedDate = selectedPost.posted_at ? new Date(selectedPost.posted_at) : new Date();
+                const relativeTime = formatDistanceToNow(postedDate, { addSuffix: true, locale: fr });
+                const caption = selectedPost.caption || '';
+                const hashtags = selectedPost.hashtags || caption.match(/#\w+/g) || [];
+                const mentions = selectedPost.mentions || caption.match(/@\w+/g) || [];
+
+                return (
+                  <div className="flex bg-white dark:bg-background">
+                    {/* Photo à gauche */}
+                    <div className="flex-shrink-0 w-full md:w-[60%] bg-black flex items-center justify-center">
                       <img
                         src={selectedPost.media_url}
                         alt={selectedPost.caption}
-                        className="w-48 h-48 object-cover rounded-lg"
+                        className="max-h-[90vh] w-full object-contain"
                       />
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
+                    </div>
+
+                    {/* Panneau infos à droite */}
+                    <div className="flex flex-col w-full md:w-[40%] max-h-[90vh] border-l">
+                      {/* Header */}
+                      <div className="flex items-center justify-between p-4 border-b">
+                        <div className="flex items-center gap-3">
                           <img
-                            src={creators.find(c => c.handle === selectedPost.username)?.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedPost.username}`}
+                            src={profilePic}
                             alt={selectedPost.username}
-                            className="w-8 h-8 rounded-full"
+                            className="w-10 h-10 rounded-full cursor-pointer hover:opacity-80"
+                            onClick={() => {
+                              setPostDialogOpen(false);
+                              navigate(`/projects/${id}/creator/${selectedPost.username}`);
+                            }}
                           />
-                          <span className="font-semibold">{selectedPost.username}</span>
-                        </div>
-                        <p className="text-sm">{selectedPost.caption}</p>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Heart className="h-4 w-4" />
-                            <span>{selectedPost.like_count?.toLocaleString() || 0}</span>
+                          <div>
+                            <div 
+                              className="font-semibold text-sm cursor-pointer hover:opacity-80"
+                              onClick={() => {
+                                setPostDialogOpen(false);
+                                navigate(`/projects/${id}/creator/${selectedPost.username}`);
+                              }}
+                            >
+                              {selectedPost.username}
+                            </div>
+                            {selectedPost.location && (
+                              <div className="text-xs text-muted-foreground">{selectedPost.location}</div>
+                            )}
                           </div>
-                          <div className="flex items-center gap-1">
-                            <MessageCircle className="h-4 w-4" />
-                            <span>{selectedPost.comment_count?.toLocaleString() || 0}</span>
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                        <div className="flex items-start gap-3">
+                          <img src={profilePic} alt={selectedPost.username} className="w-8 h-8 rounded-full flex-shrink-0" />
+                          <div className="flex-1">
+                            <span className="font-semibold text-sm mr-2">{selectedPost.username}</span>
+                            <span className="text-sm">{caption}</span>
                           </div>
                         </div>
-                        {selectedPost.permalink && (
-                          <Button variant="outline" size="sm" asChild className="mt-2">
-                            <a href={selectedPost.permalink} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              View on {selectedPost.platform || 'Instagram'}
-                            </a>
-                          </Button>
+
+                        {/* Hashtags */}
+                        {hashtags.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {hashtags.map((tag: string, idx: number) => {
+                              const tagText = tag.startsWith('#') ? tag : `#${tag}`;
+                              return (
+                                <Badge key={idx} variant="secondary" className="cursor-pointer hover:bg-primary/20">
+                                  <Hash className="h-3 w-3 mr-1" />
+                                  {tagText.replace('#', '')}
+                                </Badge>
+                              );
+                            })}
+                          </div>
                         )}
+
+                        {/* Mentions */}
+                        {mentions.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {mentions.map((mention: string, idx: number) => {
+                              const mentionText = mention.startsWith('@') ? mention : `@${mention}`;
+                              return (
+                                <Badge key={idx} variant="outline" className="cursor-pointer hover:bg-primary/20">
+                                  <AtSign className="h-3 w-3 mr-1" />
+                                  {mentionText.replace('@', '')}
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Stats */}
+                        <div className="pt-4 border-t space-y-2">
+                          <div className="flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-1">
+                              <Heart className="h-4 w-4 text-red-500" />
+                              <span className="font-semibold">{selectedPost.like_count?.toLocaleString() || '0'}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <MessageCircle className="h-4 w-4" />
+                              <span className="font-semibold">{selectedPost.comment_count?.toLocaleString() || '0'}</span>
+                            </div>
+                            {selectedPost.view_count && (
+                              <div className="flex items-center gap-1">
+                                <Eye className="h-4 w-4" />
+                                <span className="font-semibold">{selectedPost.view_count.toLocaleString()}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{relativeTime}</div>
+                        </div>
+
+                        {/* Commentaires */}
+                        <div className="pt-4 border-t space-y-3">
+                          <h4 className="font-semibold text-sm mb-3">Commentaires</h4>
+                          {[
+                            {
+                              id: '1',
+                              user: 'fashionlover23',
+                              avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user1',
+                              comment: 'Love this collection! When will it be available? 😍',
+                              timestamp: '2h',
+                              likes: 24,
+                            },
+                            {
+                              id: '2',
+                              user: 'styleicon',
+                              avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user2',
+                              comment: 'Amazing quality! Just received my order 🎉',
+                              timestamp: '5h',
+                              likes: 18,
+                            },
+                          ].map((comment) => (
+                            <div key={comment.id} className="flex items-start gap-3">
+                              <img src={comment.avatar} alt={comment.user} className="w-8 h-8 rounded-full flex-shrink-0" />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-semibold text-sm">{comment.user}</span>
+                                  <span className="text-sm">{comment.comment}</span>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                  <span>{comment.timestamp}</span>
+                                  <div className="flex items-center gap-1 cursor-pointer hover:opacity-80">
+                                    <Heart className="h-3 w-3" />
+                                    <span>{comment.likes}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </Card>
-
-                  {/* Tabs for Comments/Mentions/Hashtags */}
-                  <Tabs defaultValue="comments" className="space-y-4">
-                    <TabsList>
-                      <TabsTrigger value="comments">
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Comments
-                      </TabsTrigger>
-                      <TabsTrigger value="mentions">
-                        <AtSign className="h-4 w-4 mr-2" />
-                        Mentions
-                      </TabsTrigger>
-                      <TabsTrigger value="hashtags">
-                        <Hash className="h-4 w-4 mr-2" />
-                        Hashtags
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="comments" className="space-y-4">
-                      <div className="space-y-4">
-                        {[
-                          {
-                            id: '1',
-                            user: '@fashionlover23',
-                            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user1',
-                            comment: 'Love this collection! When will it be available? 😍',
-                            timestamp: '2h ago',
-                            likes: 24,
-                          },
-                          {
-                            id: '2',
-                            user: '@styleicon',
-                            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user2',
-                            comment: 'Amazing quality! Just received my order 🎉',
-                            timestamp: '5h ago',
-                            likes: 18,
-                          },
-                        ].map((comment) => (
-                          <div
-                            key={comment.id}
-                            className="flex gap-4 p-4 rounded-lg border"
-                          >
-                            <img
-                              src={comment.avatar}
-                              alt={comment.user}
-                              className="w-10 h-10 rounded-full"
-                            />
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-center gap-2">
-                                <p className="font-semibold text-sm">{comment.user}</p>
-                                <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
-                              </div>
-                              <p className="text-sm">{comment.comment}</p>
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Heart className="h-3 w-3" />
-                                <span>{comment.likes} likes</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="mentions" className="space-y-4">
-                      <div className="space-y-4">
-                        {[
-                          {
-                            id: '1',
-                            user: '@influencer_marie',
-                            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=marie',
-                            content: 'Tagged your page in my latest post about sustainable fashion!',
-                            timestamp: '3h ago',
-                            engagement: 2847,
-                          },
-                        ].map((mention) => (
-                          <div
-                            key={mention.id}
-                            className="flex gap-4 p-4 rounded-lg border"
-                          >
-                            <img
-                              src={mention.avatar}
-                              alt={mention.user}
-                              className="w-10 h-10 rounded-full"
-                            />
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-center gap-2">
-                                <p className="font-semibold text-sm">{mention.user}</p>
-                                <Badge variant="secondary" className="text-xs">Mentioned</Badge>
-                                <span className="text-xs text-muted-foreground">{mention.timestamp}</span>
-                              </div>
-                              <p className="text-sm">{mention.content}</p>
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Eye className="h-3 w-3" />
-                                <span>{mention.engagement.toLocaleString()} engagement</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="hashtags" className="space-y-4">
-                      <div className="flex flex-wrap gap-2">
-                        {(() => {
-                          // Extraire hashtags depuis hashtags array ou depuis caption
-                          const hashtags = selectedPost.hashtags || 
-                            (selectedPost.caption?.match(/#\w+/g) || []).map((h: string) => h.replace('#', ''));
-                          return hashtags.length > 0 ? hashtags.map((tag: string, idx: number) => (
-                            <Badge key={idx} variant="secondary">
-                              <Hash className="h-3 w-3 mr-1" />
-                              {typeof tag === 'string' ? tag.replace('#', '') : tag}
-                            </Badge>
-                          )) : (
-                            <p className="text-sm text-muted-foreground">No hashtags in this post</p>
-                          );
-                        })()}
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                </div>
-              )}
+                  </div>
+                );
+              })()}
             </DialogContent>
           </Dialog>
 
