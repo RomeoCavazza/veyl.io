@@ -218,34 +218,6 @@ export default function ProjectDetail() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{creators.length}</div>
-              <div className="text-sm text-muted-foreground">Creators</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{posts.length}</div>
-              <div className="text-sm text-muted-foreground">Posts</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{niches.length}</div>
-              <div className="text-sm text-muted-foreground">Niches</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{project.signals_count || 0}</div>
-              <div className="text-sm text-muted-foreground">Signals</div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Tabs */}
         <Tabs defaultValue="watchlist" className="space-y-4">
           <TabsList>
@@ -269,124 +241,124 @@ export default function ProjectDetail() {
               </TabsList>
 
               <TabsContent value="feed" className="space-y-6">
-            {/* Section: Feed Posts */}
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Posts Feed</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {posts.length > 0 ? (
-                  posts.map((post) => {
-                    const creator = creators.find(c => c.handle === post.username);
-                    return (
-                      <Card 
-                        key={post.id} 
-                        className="overflow-hidden cursor-pointer hover:border-primary transition-colors"
-                        onClick={() => {
-                          setSelectedPost(post);
-                          setPostDialogOpen(true);
-                        }}
-                      >
-                        <div className="relative">
-                          <img
-                            src={post.media_url}
-                            alt={post.caption}
-                            className="w-full h-64 object-cover"
-                          />
-                          <div className="absolute top-2 right-2 flex gap-2">
-                            <Badge variant="secondary" className="bg-black/50 text-white">
-                              {post.platform}
-                            </Badge>
-                          </div>
-                        </div>
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            {creator?.profile_picture && (
-                              <img
-                                src={creator.profile_picture}
-                                alt={creator.handle}
-                                className="w-6 h-6 rounded-full"
-                              />
-                            )}
-                            <span 
-                              className="text-sm font-medium hover:text-primary"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/projects/${id}/creator/${post.username}`);
-                              }}
-                            >
-                              {post.username}
-                            </span>
-                          </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                            {post.caption}
-                          </p>
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-1">
-                                <Heart className="h-4 w-4" />
-                                <span>{post.like_count?.toLocaleString() || 0}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <MessageCircle className="h-4 w-4" />
-                                <span>{post.comment_count?.toLocaleString() || 0}</span>
-                              </div>
-                            </div>
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })
-                ) : (
-                  <div className="col-span-full text-center py-12 text-muted-foreground">
-                    No posts found
-                  </div>
-                )}
-              </div>
-            </div>
-
                 {/* Section: Creators */}
                 {creators.length > 0 && (
                   <div>
                     <h2 className="text-xl font-semibold mb-4">Creators ({creators.length})</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {creators.map((creator) => (
-                    <Card
-                      key={creator.id || creator.handle}
-                      className="cursor-pointer hover:border-primary transition-colors"
-                      onClick={() => navigate(`/projects/${id}/creator/${creator.handle.replace('@', '')}`)}
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex flex-col items-center text-center gap-4">
-                          <img
-                            src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
-                            alt={creator.handle}
-                            className="w-20 h-20 rounded-full"
-                          />
-                          <div>
-                            <h3 className="font-semibold">{creator.handle}</h3>
-                            {creator.followers && (
-                              <p className="text-sm text-muted-foreground">
-                                {creator.followers.toLocaleString()} followers
-                              </p>
-                            )}
-                          </div>
-                          {creator.avg_engagement && (
-                            <div className="w-full p-3 bg-primary/10 rounded-lg">
-                              <div className="text-center">
-                                <span className="font-medium">{creator.avg_engagement}%</span>
-                                <p className="text-xs text-muted-foreground">Engagement</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {creators.map((creator) => (
+                        <Card
+                          key={creator.id || creator.handle}
+                          className="cursor-pointer hover:border-primary transition-colors"
+                          onClick={() => navigate(`/projects/${id}/creator/${creator.handle.replace('@', '')}`)}
+                        >
+                          <CardContent className="p-6">
+                            <div className="flex flex-col items-center text-center gap-4">
+                              <img
+                                src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
+                                alt={creator.handle}
+                                className="w-20 h-20 rounded-full"
+                              />
+                              <div>
+                                <h3 className="font-semibold">{creator.handle}</h3>
+                                {creator.followers && (
+                                  <p className="text-sm text-muted-foreground">
+                                    {creator.followers.toLocaleString()} followers
+                                  </p>
+                                )}
+                              </div>
+                              {creator.avg_engagement && (
+                                <div className="w-full p-3 bg-primary/10 rounded-lg">
+                                  <div className="text-center">
+                                    <span className="font-medium">{creator.avg_engagement}%</span>
+                                    <p className="text-xs text-muted-foreground">Engagement</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Section: Feed Posts */}
+                <div>
+                  <h2 className="text-xl font-semibold mb-4">Posts Feed</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {posts.length > 0 ? (
+                      posts.map((post) => {
+                        const creator = creators.find(c => c.handle === post.username);
+                        return (
+                          <Card 
+                            key={post.id} 
+                            className="overflow-hidden cursor-pointer hover:border-primary transition-colors"
+                            onClick={() => {
+                              setSelectedPost(post);
+                              setPostDialogOpen(true);
+                            }}
+                          >
+                            <div className="relative">
+                              <img
+                                src={post.media_url}
+                                alt={post.caption}
+                                className="w-full h-64 object-cover"
+                              />
+                              <div className="absolute top-2 right-2 flex gap-2">
+                                <Badge variant="secondary" className="bg-black/50 text-white">
+                                  {post.platform}
+                                </Badge>
                               </div>
                             </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                {creator?.profile_picture && (
+                                  <img
+                                    src={creator.profile_picture}
+                                    alt={creator.handle}
+                                    className="w-6 h-6 rounded-full"
+                                  />
+                                )}
+                                <span 
+                                  className="text-sm font-medium hover:text-primary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/projects/${id}/creator/${post.username}`);
+                                  }}
+                                >
+                                  {post.username}
+                                </span>
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                                {post.caption}
+                              </p>
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-4">
+                                  <div className="flex items-center gap-1">
+                                    <Heart className="h-4 w-4" />
+                                    <span>{post.like_count?.toLocaleString() || 0}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <MessageCircle className="h-4 w-4" />
+                                    <span>{post.comment_count?.toLocaleString() || 0}</span>
+                                  </div>
+                                </div>
+                                <Button variant="ghost" size="sm">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })
+                    ) : (
+                      <div className="col-span-full text-center py-12 text-muted-foreground">
+                        No posts found
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
 
               </TabsContent>
             </Tabs>
