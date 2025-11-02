@@ -460,8 +460,8 @@ export default function ProjectDetail() {
                     </div>
                   </CardHeader>
                   <CardContent className="flex-1 overflow-hidden">
-                    <div className="space-y-3">
-                      {creators.slice(0, 4).map((creator) => {
+                    <div className="space-y-3 h-[400px] overflow-y-auto pr-2">
+                      {creators.map((creator) => {
                         const stats = getCreatorStats(creator.handle, selectedPeriod);
                         return (
                           <div
@@ -491,21 +491,6 @@ export default function ProjectDetail() {
                           </div>
                         );
                       })}
-                      {creators.length > 4 && (
-                        <Button
-                          variant="ghost"
-                          className="w-full text-sm"
-                          onClick={() => {
-                            // Scroll vers la section complète des creators dans la grille
-                            const gridTab = document.querySelector('[value="grid"]');
-                            if (gridTab) {
-                              (gridTab as HTMLElement).click();
-                            }
-                          }}
-                        >
-                          Voir tous les {creators.length} creators →
-                        </Button>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -585,18 +570,6 @@ export default function ProjectDetail() {
 
           {/* Tab 2: Grille - Tableau des posts */}
           <TabsContent value="grid" className="space-y-6">
-            {/* Panneau Projet */}
-            <ProjectPanel
-              project={project}
-              creators={creators}
-              onEdit={() => {
-                setEditName(project.name || '');
-                setEditDescription(project.description || '');
-                setEditDialogOpen(true);
-              }}
-              onDelete={() => setDeleteDialogOpen(true)}
-            />
-
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle>Posts ({sortedPosts.length})</CardTitle>
