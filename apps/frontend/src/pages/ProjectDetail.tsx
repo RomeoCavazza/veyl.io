@@ -8,6 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -55,6 +62,7 @@ export default function ProjectDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('week');
 
   // Mock data for charts
   const pieData = [
@@ -278,6 +286,40 @@ export default function ProjectDetail() {
 
   const postStats = calculatePostStats();
 
+  // Fonction pour calculer les stats d'un creator selon la période
+  const getCreatorStats = (creatorHandle: string, period: 'day' | 'week' | 'month') => {
+    const now = new Date();
+    let startDate = new Date();
+    
+    if (period === 'day') {
+      startDate.setHours(0, 0, 0, 0);
+    } else if (period === 'week') {
+      startDate.setDate(startDate.getDate() - 7);
+    } else if (period === 'month') {
+      startDate.setMonth(startDate.getMonth() - 1);
+    }
+    
+    // Compter les posts du creator dans la période
+    const creatorPosts = posts.filter((post: any) => {
+      if (post.username?.toLowerCase() !== creatorHandle.toLowerCase()) return false;
+      if (!post.posted_at) return true; // Si pas de date, inclure
+      const postDate = new Date(post.posted_at);
+      return postDate >= startDate;
+    });
+    
+    // Trouver le creator pour avoir les followers
+    const creator = creators.find((c: any) => c.handle?.toLowerCase() === creatorHandle.toLowerCase());
+    
+    // Générer un nombre de followers stable basé sur le hash du username
+    const hash = creatorHandle.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const mockFollowers = creator?.followers || (hash % 500000) + 5000; // 5K à 505K followers
+    
+    return {
+      postsCount: creatorPosts.length,
+      followers: mockFollowers,
+    };
+  };
+
   if (loading || !project) {
     return (
       <div className="min-h-screen bg-background">
@@ -336,95 +378,59 @@ export default function ProjectDetail() {
 
               {/* Section: Creators (Droite - 50%) */}
               {creators.length > 0 && (
-                <Card className="bg-card border-border">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Creators ({creators.length})</CardTitle>
+                <Card className="bg-card border-border flex flex-col">
+                  <CardHeader className="flex-shrink-0">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">Creators ({creators.length})</CardTitle>
+                      <Select value={selectedPeriod} onValueChange={(value: 'day' | 'week' | 'month') => setSelectedPeriod(value)}>
+                        <SelectTrigger className="w-32 h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="day">Jour</SelectItem>
+                          <SelectItem value="week">Semaine</SelectItem>
+                          <SelectItem value="month">Mois</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {creators.slice(0, 10).map((creator) => (
-                        <div
-                          key={creator.id || creator.handle}
-                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                          onClick={() => navigate(`/projects/${id}/creator/${creator.handle.replace('@', '')}`)}
-                        >
-                          <img
-                            src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
-                            alt={creator.handle}
-                            className="w-10 h-10 rounded-full"
-                          />
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{creator.handle}</p>
-                            {creator.followers && (
-                              <p className="text-xs text-muted-foreground">
-                                {creator.followers.toLocaleString()} followers
-                              </p>
+                  <CardContent className="flex-1 overflow-hidden">
+                    <div className="space-y-3 h-[400px] overflow-y-auto pr-2">
+                      {creators.map((creator) => {
+                        const stats = getCreatorStats(creator.handle, selectedPeriod);
+                        return (
+                          <div
+                            key={creator.id || creator.handle}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                            onClick={() => navigate(`/projects/${id}/creator/${creator.handle.replace('@', '')}`)}
+                          >
+                            <img
+                              src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
+                              alt={creator.handle}
+                              className="w-10 h-10 rounded-full flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{creator.handle}</p>
+                              <div className="flex items-center gap-3 mt-1">
+                                <p className="text-xs text-muted-foreground">
+                                  {stats.followers.toLocaleString()} abonnés
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {stats.postsCount} {selectedPeriod === 'day' ? 'post' : selectedPeriod === 'week' ? 'posts/sem' : 'posts/mois'}
+                                </p>
+                              </div>
+                            </div>
+                            {creator.avg_engagement && (
+                              <Badge variant="outline" className="flex-shrink-0">{creator.avg_engagement}%</Badge>
                             )}
                           </div>
-                          {creator.avg_engagement && (
-                            <Badge variant="outline">{creator.avg_engagement}%</Badge>
-                          )}
-                        </div>
-                      ))}
-                      {creators.length > 10 && (
-                        <Button
-                          variant="ghost"
-                          className="w-full"
-                          onClick={() => {
-                            // Scroll vers la section complète des creators plus bas
-                            document.querySelector('#creators-full')?.scrollIntoView({ behavior: 'smooth' });
-                          }}
-                        >
-                          Voir tous ({creators.length})
-                        </Button>
-                      )}
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
               )}
             </div>
-
-            {/* Section: Creators complète (si plus de 10) */}
-            {creators.length > 10 && (
-              <div id="creators-full">
-                <h2 className="text-xl font-semibold mb-4">Creators ({creators.length})</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {creators.map((creator) => (
-                    <Card
-                      key={creator.id || creator.handle}
-                      className="cursor-pointer hover:border-primary transition-colors"
-                      onClick={() => navigate(`/projects/${id}/creator/${creator.handle.replace('@', '')}`)}
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex flex-col items-center text-center gap-4">
-                          <img
-                            src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
-                            alt={creator.handle}
-                            className="w-20 h-20 rounded-full"
-                          />
-                          <div>
-                            <h3 className="font-semibold">{creator.handle}</h3>
-                            {creator.followers && (
-                              <p className="text-sm text-muted-foreground">
-                                {creator.followers.toLocaleString()} followers
-                              </p>
-                            )}
-                          </div>
-                          {creator.avg_engagement && (
-                            <div className="w-full p-3 bg-primary/10 rounded-lg">
-                              <div className="text-center">
-                                <span className="font-medium">{creator.avg_engagement}%</span>
-                                <p className="text-xs text-muted-foreground">Engagement</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Section: Feed Posts */}
             <div>
@@ -474,20 +480,15 @@ export default function ProjectDetail() {
                           <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                             {post.caption}
                           </p>
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-1">
-                                <Heart className="h-4 w-4" />
-                                <span>{post.like_count?.toLocaleString() || 0}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <MessageCircle className="h-4 w-4" />
-                                <span>{post.comment_count?.toLocaleString() || 0}</span>
-                              </div>
+                          <div className="flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-1">
+                              <Heart className="h-4 w-4" />
+                              <span>{post.like_count?.toLocaleString() || 0}</span>
                             </div>
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <MessageCircle className="h-4 w-4" />
+                              <span>{post.comment_count?.toLocaleString() || 0}</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -558,43 +559,45 @@ export default function ProjectDetail() {
 
                       {/* Description */}
                       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                        <div className="flex items-start gap-3">
-                          <img src={profilePic} alt={selectedPost.username} className="w-8 h-8 rounded-full flex-shrink-0" />
-                          <div className="flex-1">
-                            <span className="font-semibold text-sm mr-2">{selectedPost.username}</span>
-                            <span className="text-sm">{caption}</span>
-                          </div>
+                        <div className="text-sm whitespace-pre-wrap">
+                          <span className="font-semibold mr-2">{selectedPost.username}</span>
+                          {(() => {
+                            // Formater la caption avec hashtags et mentions en texte normal mais stylisés
+                            const parts: (string | JSX.Element)[] = [];
+                            let lastIndex = 0;
+                            
+                            // Regex pour trouver hashtags et mentions
+                            const regex = /(#\w+|@\w+)/g;
+                            let match;
+                            
+                            while ((match = regex.exec(caption)) !== null) {
+                              // Ajouter le texte avant le match
+                              if (match.index > lastIndex) {
+                                parts.push(caption.substring(lastIndex, match.index));
+                              }
+                              
+                              // Ajouter le hashtag ou mention stylisé
+                              const isHashtag = match[0].startsWith('#');
+                              parts.push(
+                                <span
+                                  key={match.index}
+                                  className="text-primary hover:underline cursor-pointer"
+                                >
+                                  {match[0]}
+                                </span>
+                              );
+                              
+                              lastIndex = regex.lastIndex;
+                            }
+                            
+                            // Ajouter le reste du texte
+                            if (lastIndex < caption.length) {
+                              parts.push(caption.substring(lastIndex));
+                            }
+                            
+                            return parts.length > 0 ? parts : <span>{caption}</span>;
+                          })()}
                         </div>
-
-                        {/* Hashtags */}
-                        {hashtags.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {hashtags.map((tag: string, idx: number) => {
-                              const tagText = tag.startsWith('#') ? tag : `#${tag}`;
-                              return (
-                                <Badge key={idx} variant="secondary" className="cursor-pointer hover:bg-primary/20">
-                                  <Hash className="h-3 w-3 mr-1" />
-                                  {tagText.replace('#', '')}
-                                </Badge>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {/* Mentions */}
-                        {mentions.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {mentions.map((mention: string, idx: number) => {
-                              const mentionText = mention.startsWith('@') ? mention : `@${mention}`;
-                              return (
-                                <Badge key={idx} variant="outline" className="cursor-pointer hover:bg-primary/20">
-                                  <AtSign className="h-3 w-3 mr-1" />
-                                  {mentionText.replace('@', '')}
-                                </Badge>
-                              );
-                            })}
-                          </div>
-                        )}
 
                         {/* Stats */}
                         <div className="pt-4 border-t border-border space-y-2">
@@ -641,10 +644,10 @@ export default function ProjectDetail() {
                             <div key={comment.id} className="flex items-start gap-3">
                               <img src={comment.avatar} alt={comment.user} className="w-8 h-8 rounded-full flex-shrink-0" />
                               <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
+                                <div className="mb-1">
                                   <span className="font-semibold text-sm">{comment.user}</span>
-                                  <span className="text-sm">{comment.comment}</span>
                                 </div>
+                                <div className="text-sm mb-2">{comment.comment}</div>
                                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                   <span>{comment.timestamp}</span>
                                   <div className="flex items-center gap-1 cursor-pointer hover:opacity-80">
