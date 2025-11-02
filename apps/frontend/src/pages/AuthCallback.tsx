@@ -32,8 +32,8 @@ export default function AuthCallback() {
       return;
     }
 
-    // Si on a un token, stocker immédiatement et rediriger vers /analytics
-    // Le AuthContext chargera le user depuis le token au chargement de /analytics
+    // Si on a un token, stocker immédiatement et rediriger vers / (landing page)
+    // Le AuthContext chargera le user depuis le token au chargement
     if (token) {
       // Décoder le token si nécessaire (il est URL-encodé)
       let decodedToken: string;
@@ -46,7 +46,7 @@ export default function AuthCallback() {
       
       console.log('🔑 Token décodé, longueur:', decodedToken.length);
       
-      // Stocker le token immédiatement - C'EST TOUT CE QU'ON A BESOIN
+      // Stocker le token immédiatement
       localStorage.setItem('token', decodedToken);
       setToken(decodedToken);
       
@@ -64,10 +64,9 @@ export default function AuthCallback() {
         });
       }
       
-      // Rediriger IMMÉDIATEMENT vers /analytics
-      // Le AuthContext chargera le vrai user depuis /api/v1/auth/me au chargement
-      console.log('🚀 Redirection immédiate vers /analytics');
-      window.location.replace(window.location.origin + '/analytics');
+      // Rediriger vers la landing page (/)
+      console.log('🚀 Redirection vers landing page');
+      navigate('/');
       return;
     } else if (userId && email) {
       // Fallback: utiliser les paramètres URL si le token n'est pas dans l'URL
@@ -83,8 +82,8 @@ export default function AuthCallback() {
         is_active: true
       });
       setTimeout(() => {
-        console.log('🚀 Redirection vers /analytics (fallback userId)');
-        window.location.href = '/analytics';
+        console.log('🚀 Redirection vers landing page (fallback userId)');
+        navigate('/');
       }, 300);
     } else {
       // En cas d'erreur, rediriger vers la page de connexion

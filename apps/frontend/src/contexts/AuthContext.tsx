@@ -67,8 +67,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(access_token);
       setUser(userData);
       
-      // Rediriger vers la page demandée ou /analytics par défaut
-      const redirectTo = sessionStorage.getItem('redirectAfterLogin') || '/analytics';
+      // Rediriger vers la page demandée ou / (landing) par défaut
+      const redirectTo = sessionStorage.getItem('redirectAfterLogin') || '/';
       sessionStorage.removeItem('redirectAfterLogin');
       window.location.href = redirectTo;
       
@@ -87,8 +87,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(access_token);
       setUser(userData);
       
-      // Rediriger vers la page demandée ou /analytics par défaut
-      const redirectTo = sessionStorage.getItem('redirectAfterLogin') || '/analytics';
+      // Rediriger vers la page demandée ou / (landing) par défaut
+      const redirectTo = sessionStorage.getItem('redirectAfterLogin') || '/';
       sessionStorage.removeItem('redirectAfterLogin');
       window.location.href = redirectTo;
       
