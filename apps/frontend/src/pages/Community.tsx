@@ -13,6 +13,35 @@ export default function Community() {
       <Navbar />
       
       <div className="container py-12 px-4 max-w-6xl">
+        {/* Section Contribution - En haut */}
+        <section className="mb-20">
+          <Card className="p-8 bg-gradient-to-br from-card to-card/50 border-primary/20">
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <Heart className="h-12 w-12 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold">Contribuer au projet</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Que vous soyez développeur, designer, marketeur ou simplement passionné par l'intelligence sociale, 
+                votre contribution est la bienvenue !
+              </p>
+              <div className="flex flex-wrap justify-center gap-4 pt-4">
+                <Button asChild variant="default">
+                  <a href="https://github.com/RomeoCavazza/veyl.io" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                    <Github className="h-4 w-4" />
+                    Contribuer sur GitHub
+                  </a>
+                </Button>
+                <Button asChild variant="outline">
+                  <a href="https://discord.gg/TKbNuuV4sX" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4" />
+                    Rejoindre Discord
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </section>
 
         {/* Rang 1 : ISCOM Paris */}
         <section className="mb-20">
@@ -194,36 +223,6 @@ export default function Community() {
               </a>
             </div>
           </div>
-        </section>
-
-        {/* Section Contribution */}
-        <section className="mb-16">
-          <Card className="p-8 bg-gradient-to-br from-card to-card/50 border-primary/20">
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <Heart className="h-12 w-12 text-primary" />
-              </div>
-              <h2 className="text-2xl font-bold">Contribuer au projet</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Que vous soyez développeur, designer, marketeur ou simplement passionné par l'intelligence sociale, 
-                votre contribution est la bienvenue !
-              </p>
-              <div className="flex flex-wrap justify-center gap-4 pt-4">
-                <Button asChild variant="default">
-                  <a href="https://github.com/RomeoCavazza/veyl.io" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                    <Github className="h-4 w-4" />
-                    Contribuer sur GitHub
-                  </a>
-                </Button>
-                <Button asChild variant="outline">
-                  <a href="https://discord.gg/TKbNuuV4sX" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                    <MessageCircle className="h-4 w-4" />
-                    Rejoindre Discord
-                  </a>
-                </Button>
-              </div>
-            </div>
-          </Card>
         </section>
       </div>
       
