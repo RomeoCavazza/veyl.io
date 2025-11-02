@@ -80,8 +80,8 @@ export default function Search() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="container py-32 md:py-40">
-        <div className="flex flex-col items-center text-center space-y-12 max-w-4xl mx-auto">
+      <section className="container py-8 md:py-12">
+        <div className="flex flex-col items-center text-center space-y-6 max-w-4xl mx-auto">
           <div className="space-y-6">
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gradient">
               Search. Discover. Analyze.
@@ -115,7 +115,7 @@ export default function Search() {
 
       {/* Search Results Section */}
       {hasSearched && (
-        <section className="container py-16">
+        <section className="container py-4">
           {isLoading ? (
             <div className="text-center py-12">
               <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted animate-pulse">
