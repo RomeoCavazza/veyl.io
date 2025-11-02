@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Heart, MessageCircle, Eye, Grid3x3, Table } from 'lucide-react';
@@ -44,29 +44,62 @@ export default function CreatorDetail() {
             Back to Project
           </Button>
 
-          {/* Creator Info */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-6">
+          {/* Creator Info - Panneau Description */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>{creator.handle}</CardTitle>
+                <CardDescription>{creator.full_name || 'Creator Profile'}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {creator.bio && (
+                    <p className="text-sm">{creator.bio}</p>
+                  )}
+                  <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                    <div>
+                      <p className="text-2xl font-bold text-primary">{creator.followers.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Followers</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-primary">{creator.following?.toLocaleString() || 'N/A'}</p>
+                      <p className="text-xs text-muted-foreground">Following</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-primary">{creatorPosts.length}</p>
+                      <p className="text-xs text-muted-foreground">Posts</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2">
+                    <Badge variant="secondary">{creator.platform}</Badge>
+                    {creator.verified && (
+                      <Badge variant="default">Verified</Badge>
+                    )}
+                    <Badge variant="outline">{creator.avg_engagement}% engagement</Badge>
+                  </div>
+                  {creator.category && (
+                    <div className="pt-2">
+                      <p className="text-xs text-muted-foreground">Category</p>
+                      <p className="text-sm font-medium">{creator.category}</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Profile Picture</CardTitle>
+              </CardHeader>
+              <CardContent className="flex justify-center">
                 <img
                   src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
                   alt={creator.handle}
-                  className="w-24 h-24 rounded-full"
+                  className="w-32 h-32 rounded-full"
                 />
-                <div className="flex-1">
-                  <h1 className="text-3xl font-bold">{creator.handle}</h1>
-                  <div className="flex items-center gap-6 mt-2 text-sm text-muted-foreground">
-                    <span className="font-medium">{creator.followers.toLocaleString()} followers</span>
-                    <span className="font-medium">{creatorPosts.length} posts</span>
-                    <span className="font-medium">{creator.avg_engagement}% engagement</span>
-                  </div>
-                  <Badge variant="secondary" className="mt-2">
-                    {creator.platform}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Posts Grid */}

@@ -6,7 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Settings, Bell, AtSign, Trash2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Settings, Bell, AtSign, Trash2, ExternalLink } from 'lucide-react';
 import { getFakeProject, getFakeProjectPosts, fakeCreators, fakePosts } from '@/lib/fakeData';
 import { engagementTrendData, topPerformingCreators } from '@/lib/mockData';
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +45,8 @@ export default function ProjectDetail() {
   const [creators, setCreators] = useState<any[]>([]);
   const [niches, setNiches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [postDialogOpen, setPostDialogOpen] = useState(false);
 
   // Mock data for charts
   const pieData = [
@@ -255,18 +264,6 @@ export default function ProjectDetail() {
                   <Eye className="h-4 w-4 mr-2" />
                   Feed Posts
                 </TabsTrigger>
-                <TabsTrigger value="hashtags">
-                  <Hash className="h-4 w-4 mr-2" />
-                  Hashtags
-                </TabsTrigger>
-                <TabsTrigger value="comments">
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Comments
-                </TabsTrigger>
-                <TabsTrigger value="mentions">
-                  <AtSign className="h-4 w-4 mr-2" />
-                  Mentions
-                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="feed" className="space-y-6">
@@ -278,7 +275,14 @@ export default function ProjectDetail() {
                   posts.map((post) => {
                     const creator = creators.find(c => c.handle === post.username);
                     return (
-                      <Card key={post.id} className="overflow-hidden">
+                      <Card 
+                        key={post.id} 
+                        className="overflow-hidden cursor-pointer hover:border-primary transition-colors"
+                        onClick={() => {
+                          setSelectedPost(post);
+                          setPostDialogOpen(true);
+                        }}
+                      >
                         <div className="relative">
                           <img
                             src={post.media_url}
@@ -300,7 +304,15 @@ export default function ProjectDetail() {
                                 className="w-6 h-6 rounded-full"
                               />
                             )}
-                            <span className="text-sm font-medium">{post.username}</span>
+                            <span 
+                              className="text-sm font-medium hover:text-primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/projects/${id}/creator/${post.username}`);
+                              }}
+                            >
+                              {post.username}
+                            </span>
                           </div>
                           <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                             {post.caption}
@@ -375,199 +387,183 @@ export default function ProjectDetail() {
             )}
 
               </TabsContent>
+            </Tabs>
+          </TabsContent>
 
-              {/* Hashtags Tab */}
-              <TabsContent value="hashtags" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Tracked Hashtags</CardTitle>
-                    <CardDescription>
-                      Receive alerts when these hashtags show significant activity
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {niches.length > 0 ? niches.map((hashtag) => (
-                        <div
-                          key={hashtag.id}
-                          className="flex items-center justify-between p-4 rounded-lg border hover:border-primary transition-colors"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                              <Hash className="h-6 w-6 text-primary" />
-                            </div>
-                            <div>
-                              <p className="font-semibold">#{hashtag.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {(hashtag.posts || 0).toLocaleString()} posts tracked
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <div className="flex items-center gap-2">
-                                <Bell className="h-4 w-4 text-success" />
-                                <span className="text-sm font-medium">{hashtag.posts ? '12' : '0'} new alerts</span>
-                              </div>
-                              <p className="text-xs text-success">{hashtag.growth || '+24%'} growth</p>
-                            </div>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      )) : (
-                        <div className="text-center py-12 text-muted-foreground">
-                          <Hash className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                          <p>No hashtags tracked yet</p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Comments Tab */}
-              <TabsContent value="comments" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>User Comments on Your Pages</CardTitle>
-                    <CardDescription>
-                      Monitor and manage user-generated content (pages_read_user_content permission)
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {[
-                        {
-                          id: '1',
-                          user: '@fashionlover23',
-                          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user1',
-                          comment: 'Love this collection! When will it be available? 😍',
-                          post: 'Summer Collection 2025',
-                          timestamp: '2h ago',
-                          likes: 24,
-                        },
-                        {
-                          id: '2',
-                          user: '@styleicon',
-                          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user2',
-                          comment: 'Amazing quality! Just received my order 🎉',
-                          post: 'Product Launch Post',
-                          timestamp: '5h ago',
-                          likes: 18,
-                        },
-                        {
-                          id: '3',
-                          user: '@trendhunter',
-                          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user3',
-                          comment: 'Can you share the styling tips? 💫',
-                          post: 'Behind The Scenes',
-                          timestamp: '1d ago',
-                          likes: 31,
-                        },
-                      ].map((comment) => (
-                        <div
-                          key={comment.id}
-                          className="flex gap-4 p-4 rounded-lg border hover:border-primary transition-colors"
-                        >
+          {/* Post Detail Dialog */}
+          <Dialog open={postDialogOpen} onOpenChange={setPostDialogOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Post Details</DialogTitle>
+                <DialogDescription>
+                  Comments, mentions, and hashtags for this post
+                </DialogDescription>
+              </DialogHeader>
+              
+              {selectedPost && (
+                <div className="space-y-6">
+                  {/* Post Info */}
+                  <Card>
+                    <div className="flex gap-4">
+                      <img
+                        src={selectedPost.media_url}
+                        alt={selectedPost.caption}
+                        className="w-48 h-48 object-cover rounded-lg"
+                      />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
                           <img
-                            src={comment.avatar}
-                            alt={comment.user}
-                            className="w-12 h-12 rounded-full"
+                            src={creators.find(c => c.handle === selectedPost.username)?.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedPost.username}`}
+                            alt={selectedPost.username}
+                            className="w-8 h-8 rounded-full"
                           />
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold">{comment.user}</p>
-                              <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
-                            </div>
-                            <p className="text-sm">{comment.comment}</p>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span>On: {comment.post}</span>
-                              <div className="flex items-center gap-1">
+                          <span className="font-semibold">{selectedPost.username}</span>
+                        </div>
+                        <p className="text-sm">{selectedPost.caption}</p>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Heart className="h-4 w-4" />
+                            <span>{selectedPost.like_count?.toLocaleString() || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MessageCircle className="h-4 w-4" />
+                            <span>{selectedPost.comment_count?.toLocaleString() || 0}</span>
+                          </div>
+                        </div>
+                        {selectedPost.permalink && (
+                          <Button variant="outline" size="sm" asChild className="mt-2">
+                            <a href={selectedPost.permalink} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              View on {selectedPost.platform || 'Instagram'}
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Tabs for Comments/Mentions/Hashtags */}
+                  <Tabs defaultValue="comments" className="space-y-4">
+                    <TabsList>
+                      <TabsTrigger value="comments">
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Comments
+                      </TabsTrigger>
+                      <TabsTrigger value="mentions">
+                        <AtSign className="h-4 w-4 mr-2" />
+                        Mentions
+                      </TabsTrigger>
+                      <TabsTrigger value="hashtags">
+                        <Hash className="h-4 w-4 mr-2" />
+                        Hashtags
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="comments" className="space-y-4">
+                      <div className="space-y-4">
+                        {[
+                          {
+                            id: '1',
+                            user: '@fashionlover23',
+                            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user1',
+                            comment: 'Love this collection! When will it be available? 😍',
+                            timestamp: '2h ago',
+                            likes: 24,
+                          },
+                          {
+                            id: '2',
+                            user: '@styleicon',
+                            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user2',
+                            comment: 'Amazing quality! Just received my order 🎉',
+                            timestamp: '5h ago',
+                            likes: 18,
+                          },
+                        ].map((comment) => (
+                          <div
+                            key={comment.id}
+                            className="flex gap-4 p-4 rounded-lg border"
+                          >
+                            <img
+                              src={comment.avatar}
+                              alt={comment.user}
+                              className="w-10 h-10 rounded-full"
+                            />
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-sm">{comment.user}</p>
+                                <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
+                              </div>
+                              <p className="text-sm">{comment.comment}</p>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <Heart className="h-3 w-3" />
                                 <span>{comment.likes} likes</span>
                               </div>
                             </div>
-                            <div className="flex gap-2">
-                              <Button variant="ghost" size="sm">Reply</Button>
-                              <Button variant="ghost" size="sm" className="text-destructive">Delete</Button>
-                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                        ))}
+                      </div>
+                    </TabsContent>
 
-              {/* Mentions Tab */}
-              <TabsContent value="mentions" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Page Mentions & Tags</CardTitle>
-                    <CardDescription>
-                      Posts where your page is mentioned or tagged (pages_read_user_content permission)
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {[
-                        {
-                          id: '1',
-                          user: '@influencer_marie',
-                          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=marie',
-                          content: 'Tagged your page in my latest post about sustainable fashion!',
-                          post_url: 'https://instagram.com/p/xyz123',
-                          timestamp: '3h ago',
-                          engagement: 2847,
-                        },
-                        {
-                          id: '2',
-                          user: '@fashionblogger',
-                          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=blogger',
-                          content: 'Mentioned your brand in my Instagram Story',
-                          post_url: 'https://instagram.com/p/abc456',
-                          timestamp: '6h ago',
-                          engagement: 1523,
-                        },
-                      ].map((mention) => (
-                        <div
-                          key={mention.id}
-                          className="flex gap-4 p-4 rounded-lg border hover:border-primary transition-colors"
-                        >
-                          <img
-                            src={mention.avatar}
-                            alt={mention.user}
-                            className="w-12 h-12 rounded-full"
-                          />
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold">{mention.user}</p>
-                              <Badge variant="secondary">Mentioned</Badge>
-                              <span className="text-xs text-muted-foreground">{mention.timestamp}</span>
-                            </div>
-                            <p className="text-sm">{mention.content}</p>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <div className="flex items-center gap-1">
+                    <TabsContent value="mentions" className="space-y-4">
+                      <div className="space-y-4">
+                        {[
+                          {
+                            id: '1',
+                            user: '@influencer_marie',
+                            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=marie',
+                            content: 'Tagged your page in my latest post about sustainable fashion!',
+                            timestamp: '3h ago',
+                            engagement: 2847,
+                          },
+                        ].map((mention) => (
+                          <div
+                            key={mention.id}
+                            className="flex gap-4 p-4 rounded-lg border"
+                          >
+                            <img
+                              src={mention.avatar}
+                              alt={mention.user}
+                              className="w-10 h-10 rounded-full"
+                            />
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-sm">{mention.user}</p>
+                                <Badge variant="secondary" className="text-xs">Mentioned</Badge>
+                                <span className="text-xs text-muted-foreground">{mention.timestamp}</span>
+                              </div>
+                              <p className="text-sm">{mention.content}</p>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <Eye className="h-3 w-3" />
                                 <span>{mention.engagement.toLocaleString()} engagement</span>
                               </div>
                             </div>
-                            <Button variant="outline" size="sm" asChild>
-                              <a href={mention.post_url} target="_blank" rel="noopener noreferrer">
-                                View Post
-                              </a>
-                            </Button>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
+                        ))}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="hashtags" className="space-y-4">
+                      <div className="flex flex-wrap gap-2">
+                        {(() => {
+                          // Extraire hashtags depuis hashtags array ou depuis caption
+                          const hashtags = selectedPost.hashtags || 
+                            (selectedPost.caption?.match(/#\w+/g) || []).map((h: string) => h.replace('#', ''));
+                          return hashtags.length > 0 ? hashtags.map((tag: string, idx: number) => (
+                            <Badge key={idx} variant="secondary">
+                              <Hash className="h-3 w-3 mr-1" />
+                              {typeof tag === 'string' ? tag.replace('#', '') : tag}
+                            </Badge>
+                          )) : (
+                            <p className="text-sm text-muted-foreground">No hashtags in this post</p>
+                          );
+                        })()}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
           {/* Tab 2: Analytics */}
           <TabsContent value="analytics" className="space-y-6">
