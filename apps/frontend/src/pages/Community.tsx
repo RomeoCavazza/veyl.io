@@ -56,12 +56,11 @@ export default function Community() {
                   alt="ISCOM Paris" 
                   className="max-w-[200px] h-16 object-contain"
                 />
-                <Badge variant="outline" className="flex items-center gap-2">
-                  <Link2 className="h-3 w-3" />
-                  <a href="https://www.iscom.fr/formation/bac-4-planning-strategique-marketing-innovation" target="_blank" rel="noopener noreferrer" className="hover:underline">
-                    iscom.fr
+                <div className="flex flex-col items-center gap-2">
+                  <a href="https://www.iscom.fr/formation/bac-4-planning-strategique-marketing-innovation" target="_blank" rel="noopener noreferrer">
+                    <img src="https://img.shields.io/badge/ISCOM-Paris-0066CC?style=flat&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48L3N2Zz4=&logoColor=white" alt="ISCOM Paris" className="h-5" />
                   </a>
-                </Badge>
+                </div>
               </div>
             </div>
             
