@@ -137,6 +137,33 @@ export default function ProjectDetail() {
         const projectPosts = getFakeProjectPosts(id || '');
         setPosts(projectPosts);
         
+        // Extraire tous les usernames uniques depuis les posts et les ajouter aux creators
+        if (projectPosts.length > 0) {
+          const existingUsernames = new Set(creatorsData.map((c: any) => c.handle.toLowerCase()));
+          const postUsernames = new Set(
+            projectPosts
+              .map((p: any) => p.username?.toLowerCase())
+              .filter(Boolean)
+          );
+          
+          // Ajouter les nouveaux creators depuis les posts
+          const newCreators = Array.from(postUsernames)
+            .filter((username: string) => !existingUsernames.has(username))
+            .map((username: string) => {
+              // Trouver le post original pour récupérer le vrai username (avec casse)
+              const originalPost = projectPosts.find((p: any) => p.username?.toLowerCase() === username);
+              const displayUsername = originalPost?.username || username;
+              return {
+                handle: displayUsername,
+                platform: projectData.platforms[0] || 'instagram',
+                profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayUsername}`,
+              };
+            });
+          
+          // Fusionner les creators existants avec les nouveaux
+          setCreators([...creatorsData, ...newCreators]);
+        }
+        
       } catch (error: any) {
         console.error('Error loading project:', error);
         toast({
@@ -148,8 +175,34 @@ export default function ProjectDetail() {
         const fakeProject = getFakeProject(id || '');
         if (fakeProject) {
           setProject(fakeProject);
-          setPosts(getFakeProjectPosts(id || ''));
-          setCreators(fakeCreators);
+          const fakePosts = getFakeProjectPosts(id || '');
+          setPosts(fakePosts);
+          
+          // Extraire creators depuis fake posts
+          const fakePostUsernames = new Set(
+            fakePosts
+              .map((p: any) => p.username?.toLowerCase())
+              .filter(Boolean)
+          );
+          
+          const allFakeCreators = [
+            ...fakeCreators,
+            ...Array.from(fakePostUsernames)
+              .filter((username: string) => 
+                !fakeCreators.some((c: any) => c.handle?.toLowerCase() === username)
+              )
+              .map((username: string) => {
+                const originalPost = fakePosts.find((p: any) => p.username?.toLowerCase() === username);
+                const displayUsername = originalPost?.username || username;
+                return {
+                  handle: displayUsername,
+                  platform: fakeProject.platforms?.[0] || 'instagram',
+                  profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayUsername}`,
+                };
+              })
+          ];
+          
+          setCreators(allFakeCreators);
           setNiches([
             { id: 1, name: 'fashion', posts: 1247, growth: '+34%', engagement: 8.2 },
             { id: 2, name: 'makeup', posts: 892, growth: '+28%', engagement: 7.5 },
@@ -403,15 +456,13 @@ export default function ProjectDetail() {
                         </div>
                         <CardContent className="p-4">
                           <div className="flex items-center gap-2 mb-2">
-                            {creator?.profile_picture && (
-                              <img
-                                src={creator.profile_picture}
-                                alt={creator.handle}
-                                className="w-6 h-6 rounded-full"
-                              />
-                            )}
+                            <img
+                              src={creator?.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.username}`}
+                              alt={post.username || 'creator'}
+                              className="w-6 h-6 rounded-full flex-shrink-0"
+                            />
                             <span 
-                              className="text-sm font-medium hover:text-primary"
+                              className="text-sm font-medium hover:text-primary cursor-pointer"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 navigate(`/projects/${id}/creator/${post.username}`);
