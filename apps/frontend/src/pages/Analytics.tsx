@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { engagementTrendData, topPerformingCreators } from '@/lib/mockData';
+import { BarChart3, TrendingUp, Users, Eye } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -58,7 +59,64 @@ export default function Analytics() {
           </Badge>
         </div>
 
+        {/* Quick Stats */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Reach</CardTitle>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">892.4K</div>
+              <p className="text-xs text-success flex items-center gap-1 mt-1">
+                <TrendingUp className="h-3 w-3" />
+                +24.3% vs last week
+              </p>
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Engagement Rate</CardTitle>
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">4.2%</div>
+              <p className="text-xs text-success flex items-center gap-1 mt-1">
+                <TrendingUp className="h-3 w-3" />
+                +0.8% vs last week
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Impressions</CardTitle>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">1.2M</div>
+              <p className="text-xs text-success flex items-center gap-1 mt-1">
+                <TrendingUp className="h-3 w-3" />
+                +18.7% vs last week
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Followers Growth</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">+2,847</div>
+              <p className="text-xs text-success flex items-center gap-1 mt-1">
+                <TrendingUp className="h-3 w-3" />
+                +34.2% vs last week
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Tabs */}
         <Tabs defaultValue="engagement" className="space-y-4">
