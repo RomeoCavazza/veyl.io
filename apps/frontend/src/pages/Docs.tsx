@@ -1,4 +1,4 @@
-import { ExternalLink, Brain } from 'lucide-react';
+import { ExternalLink, Sparkles, Search, Share2, Video } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/Navbar';
@@ -8,74 +8,93 @@ import tiktokLogo from '@/assets/img/tiktok-for-dev.png';
 import meilisearchLogo from '@/assets/img/meilisearch.png';
 
 export default function Docs() {
-  const metaScopes = [
+  const metaProducts = [
     {
-      name: 'instagram_business_basic',
-      product: 'Instagram Graph API',
-      description: 'Accès basique Instagram Business pour lecture profil et médias'
-    },
-    {
-      name: 'instagram_manage_insights',
-      product: 'Instagram Graph API',
-      description: 'Gestion des insights Instagram Business pour accès aux métriques'
-    },
-    {
-      name: 'instagram_business_manage_insights',
-      product: 'Instagram Graph API',
-      description: 'Gestion avancée insights pour comptes professionnels'
-    },
-    {
-      name: 'pages_show_list',
-      product: 'Facebook Pages API',
-      description: 'Liste des pages gérées pour afficher pages Facebook connectées'
-    },
-    {
-      name: 'pages_read_user_content',
-      product: 'Facebook Pages API',
-      description: 'Lecture contenu utilisateur : posts, commentaires, notes'
-    },
-    {
-      name: 'pages_read_engagement',
-      product: 'Facebook Pages API',
-      description: 'Lecture métriques d\'engagement : likes, followers, métriques de pages'
-    },
-    {
-      name: 'read_insights',
-      product: 'Facebook Pages API',
-      description: 'Lecture données Insights pour analytics pages, apps, domaines'
+      name: 'Instagram',
+      description: 'Manage messages, comments, publish content, track insights, hashtags and mentions.'
     },
     {
       name: 'Page Public Content Access',
-      product: 'Facebook Pages API',
-      description: 'Accès contenu public des pages pour analyser posts et engagement'
+      description: 'Access Pages Search API and read public data to analyze posts and engagement.'
     },
     {
       name: 'Instagram Public Content Access',
-      product: 'Instagram Graph API',
-      description: 'Accès contenu public Instagram pour endpoints Hashtag Search API'
+      description: 'Access Hashtag Search endpoints to discover content and understand public sentiment.'
+    },
+    {
+      name: 'Meta oEmbed Read',
+      description: 'Get embed HTML and basic metadata for public Facebook and Instagram pages, posts, and videos.'
+    },
+    {
+      name: 'Page Public Metadata Access',
+      description: 'Read public metadata to analyze engagement with public Pages (likes, followers, analytics).'
     }
   ];
+
+  const metaScopes = [
+    {
+      name: 'instagram_business_basic',
+      product: 'Instagram',
+      description: 'Read Instagram Business account profile info and media.'
+    },
+    {
+      name: 'instagram_manage_insights',
+      product: 'Instagram',
+      description: 'Get insights for Instagram Business account metadata and media.'
+    },
+    {
+      name: 'instagram_business_manage_insights',
+      product: 'Instagram',
+      description: 'Get insights for Instagram professional account metadata, posts, photos, and videos.'
+    },
+    {
+      name: 'pages_show_list',
+      product: 'Facebook Pages',
+      description: 'Access list of Pages a person manages.'
+    },
+    {
+      name: 'pages_read_user_content',
+      product: 'Facebook Pages',
+      description: 'Read user-generated content on the Page (posts, comments, ratings).'
+    },
+    {
+      name: 'pages_read_engagement',
+      product: 'Facebook Pages',
+      description: 'Read content posted by the Page, followers data, and insights.'
+    },
+    {
+      name: 'read_insights',
+      product: 'Facebook Pages',
+      description: 'Read Insights data for Pages, apps and web domains.'
+    },
+    {
+      name: 'public_profile',
+      product: 'Authentication',
+      description: 'Read Default Public Profile Fields for authentication and personalization.'
+    }
+  ];
+
+  const tiktokProduct = {
+    name: 'Login Kit',
+    description: 'Give users a quick and secure way to log in to your app or website.'
+  };
 
   const tiktokScopes = [
     {
       name: 'user.info.basic',
-      product: 'Login Kit',
-      description: 'Informations utilisateur basiques : open_id, avatar, display_name'
+      description: 'Read profile info (open id, avatar, display name).'
     },
     {
       name: 'user.info.profile',
-      product: 'Login Kit',
-      description: 'Informations profil utilisateur : profile_web_link, bio_description, is_verified'
+      description: 'Read profile_web_link, profile_deep_link, bio_description, is_verified.'
     },
     {
       name: 'user.info.stats',
-      product: 'Login Kit',
-      description: 'Statistiques utilisateur : likes, follower, following, video count'
+      description: 'Read statistical data (likes count, follower count, following count, video count).'
     },
     {
       name: 'video.list',
-      product: 'TikTok API',
-      description: 'Liste vidéos publiques pour accès aux vidéos publiques TikTok'
+      description: 'Read user\'s public videos on TikTok.'
     }
   ];
 
@@ -100,7 +119,7 @@ export default function Docs() {
                 {/* Description et badges à gauche */}
                 <div className="flex-1 space-y-4">
                   <div className="flex items-center gap-2">
-                    <Brain className="h-6 w-6 text-primary" />
+                    <Sparkles className="h-6 w-6 text-primary" />
                     <h3 className="text-xl font-bold">Strategic Intelligence Platform</h3>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
@@ -125,7 +144,7 @@ export default function Docs() {
                 {/* Logo à droite */}
                 <div className="flex-shrink-0">
                   <a href="/" className="block transition-transform hover:scale-105">
-                    <img src="/logo.svg" alt="veyl.io" className="h-20 w-auto" />
+                    <img src="/logo.svg" alt="veyl.io" className="h-28 w-auto max-w-none" />
                   </a>
                 </div>
               </div>
@@ -139,7 +158,7 @@ export default function Docs() {
                 {/* Description à gauche */}
                 <div className="flex-1 space-y-4">
                   <div className="flex items-center gap-2">
-                    <Brain className="h-6 w-6 text-primary" />
+                    <Search className="h-6 w-6 text-primary" />
                     <h3 className="text-xl font-bold">Meilisearch</h3>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
@@ -160,7 +179,7 @@ export default function Docs() {
                 {/* Logo à droite */}
                 <div className="flex-shrink-0">
                   <a href="https://www.meilisearch.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
-                    <img src={meilisearchLogo} alt="Meilisearch" className="h-20 w-auto" />
+                    <img src={meilisearchLogo} alt="Meilisearch" className="h-28 w-auto max-w-none" />
                   </a>
                 </div>
               </div>
@@ -174,7 +193,7 @@ export default function Docs() {
                 {/* Description à gauche */}
                 <div className="flex-1 space-y-4">
                   <div className="flex items-center gap-2">
-                    <Brain className="h-6 w-6 text-primary" />
+                    <Share2 className="h-6 w-6 text-primary" />
                     <h3 className="text-xl font-bold">Meta for Developers</h3>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
@@ -195,20 +214,34 @@ export default function Docs() {
                 {/* Logo à droite */}
                 <div className="flex-shrink-0">
                   <a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
-                    <img src={metaLogo} alt="Meta for Developers" className="h-20 w-auto" />
+                    <img src={metaLogo} alt="Meta for Developers" className="h-28 w-auto max-w-none" />
                   </a>
                 </div>
               </div>
 
-              {/* Scopes */}
-              <div className="space-y-4 border-t border-border pt-6">
-                {metaScopes.map((scope, index) => (
-                  <div key={index} className="border-l-2 border-primary/30 pl-4 py-2">
+              {/* Products */}
+              <div className="space-y-3 border-t border-border pt-6 mb-6">
+                <h4 className="text-sm font-semibold text-foreground mb-3">Products</h4>
+                {metaProducts.map((product, index) => (
+                  <div key={index} className="border-l-2 border-primary/30 pl-3 py-1.5">
                     <div className="flex items-start gap-2 mb-1">
-                      <code className="text-xs bg-muted px-2 py-1 rounded font-mono">{scope.name}</code>
+                      <span className="text-xs font-medium text-foreground">{product.name}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{product.description}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Scopes */}
+              <div className="space-y-3 border-t border-border pt-6">
+                <h4 className="text-sm font-semibold text-foreground mb-3">Scopes</h4>
+                {metaScopes.map((scope, index) => (
+                  <div key={index} className="border-l-2 border-primary/30 pl-3 py-1.5">
+                    <div className="flex items-start gap-2 mb-1">
+                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{scope.name}</code>
                       <Badge variant="outline" className="text-xs">{scope.product}</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">{scope.description}</p>
+                    <p className="text-xs text-muted-foreground">{scope.description}</p>
                   </div>
                 ))}
               </div>
@@ -222,12 +255,11 @@ export default function Docs() {
                 {/* Description à gauche */}
                 <div className="flex-1 space-y-4">
                   <div className="flex items-center gap-2">
-                    <Brain className="h-6 w-6 text-primary" />
+                    <Video className="h-6 w-6 text-primary" />
                     <h3 className="text-xl font-bold">TikTok for Developers</h3>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Intégration avec <strong>TikTok Login Kit</strong> et <strong>TikTok API</strong> 
-                    pour accéder aux vidéos publiques et aux statistiques des créateurs.
+                    {tiktokProduct.description}
                   </p>
                   <a 
                     href="https://developers.tiktok.com/" 
@@ -243,20 +275,31 @@ export default function Docs() {
                 {/* Logo à droite */}
                 <div className="flex-shrink-0">
                   <a href="https://developers.tiktok.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
-                    <img src={tiktokLogo} alt="TikTok for Developers" className="h-20 w-auto" />
+                    <img src={tiktokLogo} alt="TikTok for Developers" className="h-28 w-auto max-w-none" />
                   </a>
                 </div>
               </div>
 
+              {/* Product */}
+              <div className="space-y-3 border-t border-border pt-6 mb-6">
+                <h4 className="text-sm font-semibold text-foreground mb-3">Product</h4>
+                <div className="border-l-2 border-primary/30 pl-3 py-1.5">
+                  <div className="flex items-start gap-2 mb-1">
+                    <span className="text-xs font-medium text-foreground">{tiktokProduct.name}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{tiktokProduct.description}</p>
+                </div>
+              </div>
+
               {/* Scopes */}
-              <div className="space-y-4 border-t border-border pt-6">
+              <div className="space-y-3 border-t border-border pt-6">
+                <h4 className="text-sm font-semibold text-foreground mb-3">Scopes</h4>
                 {tiktokScopes.map((scope, index) => (
-                  <div key={index} className="border-l-2 border-primary/30 pl-4 py-2">
+                  <div key={index} className="border-l-2 border-primary/30 pl-3 py-1.5">
                     <div className="flex items-start gap-2 mb-1">
-                      <code className="text-xs bg-muted px-2 py-1 rounded font-mono">{scope.name}</code>
-                      <Badge variant="outline" className="text-xs">{scope.product}</Badge>
+                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{scope.name}</code>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">{scope.description}</p>
+                    <p className="text-xs text-muted-foreground">{scope.description}</p>
                   </div>
                 ))}
               </div>
