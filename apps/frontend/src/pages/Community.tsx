@@ -3,7 +3,7 @@ import { Footer } from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Github, MessageCircle, Users, GraduationCap, ExternalLink, Code2, Heart } from 'lucide-react';
+import { Github, MessageCircle, Users, GraduationCap, ExternalLink, Code2, Heart, TrendingUp, BookOpen, Sparkles, Link2 } from 'lucide-react';
 import '@/assets/css/github-window.css';
 import '@/assets/css/discord-button.css';
 import iscomLogo from '@/assets/img/iscom.png';
@@ -15,29 +15,29 @@ export default function Community() {
       <Navbar />
       
       <div className="container py-12 px-4 max-w-6xl">
-        {/* Section Contribution - En haut */}
+        {/* Section Contribution - Top */}
         <section className="mb-20">
           <Card className="p-8 bg-gradient-to-br from-card to-card/50 border-primary/20">
             <div className="text-center space-y-4">
               <div className="flex justify-center">
                 <Heart className="h-12 w-12 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold">Contribuer au projet</h2>
+              <h2 className="text-2xl font-bold">Contribute to the project</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Que vous soyez développeur, designer, marketeur ou simplement passionné par l'intelligence sociale, 
-                votre contribution est la bienvenue !
+                Whether you're a developer, designer, marketer or simply passionate about social intelligence, 
+                your contribution is welcome!
               </p>
               <div className="flex flex-wrap justify-center gap-4 pt-4">
                 <Button asChild variant="default">
                   <a href="https://github.com/RomeoCavazza/veyl.io" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                     <Github className="h-4 w-4" />
-                    Contribuer sur GitHub
+                    Contribute on GitHub
                   </a>
                 </Button>
                 <Button asChild variant="outline">
                   <a href="https://discord.gg/TKbNuuV4sX" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                     <MessageCircle className="h-4 w-4" />
-                    Rejoindre Discord
+                    Join Discord
                   </a>
                 </Button>
               </div>
@@ -50,21 +50,37 @@ export default function Community() {
           <div className="grid md:grid-cols-2 gap-8 items-center">
             {/* Illustration (50%) */}
             <div className="flex items-center justify-center">
-              <div className="p-8 rounded-lg border border-border bg-card/50 flex items-center justify-center">
+              <div className="p-8 rounded-lg border border-border bg-card/50 flex flex-col items-center justify-center gap-4">
                 <img 
                   src={iscomLogo} 
                   alt="ISCOM Paris" 
-                  className="max-w-[200px] h-auto object-contain"
+                  className="max-w-[200px] h-16 object-contain"
                 />
+                <Badge variant="outline" className="flex items-center gap-2">
+                  <Link2 className="h-3 w-3" />
+                  <a href="https://www.iscom.fr/formation/bac-4-planning-strategique-marketing-innovation" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                    iscom.fr
+                  </a>
+                </Badge>
               </div>
             </div>
             
             {/* Texte (50%) */}
-            <div className="space-y-3">
-              <h2 className="text-2xl font-bold">Projet né dans un contexte universitaire</h2>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold">Born in an academic context</h2>
+              </div>
               <p className="text-muted-foreground">
-                Imaginé et inspiré dans l'école <strong>ISCOM Paris</strong>, pour les insights métiers et l'audit de la niche choisie.
+                Conceived and inspired at <strong>ISCOM Paris</strong>, for business insights and niche auditing.
               </p>
+              <div className="flex gap-2 pt-2">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                <Code2 className="h-4 w-4 text-muted-foreground" />
+              </div>
             </div>
           </div>
         </section>
@@ -73,21 +89,37 @@ export default function Community() {
         <section className="mb-20">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             {/* Texte (50%) */}
-            <div className="space-y-3">
-              <h2 className="text-2xl font-bold">Rendu possible par les enseignements techniques</h2>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Code2 className="h-6 w-6 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold">Made possible by technical teachings</h2>
+              </div>
               <p className="text-muted-foreground">
-                Développement technique rendu possible grâce aux enseignements de <strong>EPITECH Paris</strong>.
+                Technical development made possible thanks to <strong>EPITECH Paris</strong> education.
               </p>
+              <div className="flex gap-2 pt-2">
+                <Code2 className="h-4 w-4 text-muted-foreground" />
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </div>
             </div>
             
             {/* Illustration (50%) */}
             <div className="flex items-center justify-center">
-              <div className="p-8 rounded-lg border border-border bg-card/50 flex items-center justify-center">
+              <div className="p-8 rounded-lg border border-border bg-card/50 flex flex-col items-center justify-center gap-4">
                 <img 
                   src={epitechLogo} 
                   alt="EPITECH Paris" 
-                  className="max-w-[200px] h-auto object-contain"
+                  className="max-w-[200px] h-16 object-contain"
                 />
+                <Badge variant="outline" className="flex items-center gap-2">
+                  <Link2 className="h-3 w-3" />
+                  <a href="https://www.epitech.eu/formation-alternance/pre-msc-post-bac2/" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                    epitech.eu
+                  </a>
+                </Badge>
               </div>
             </div>
           </div>
@@ -172,18 +204,21 @@ export default function Community() {
             </div>
             
             {/* Texte (50%) */}
-            <div className="space-y-3">
-              <h2 className="text-2xl font-bold">Projet Open Source</h2>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Github className="h-6 w-6 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold">Open Source Forever</h2>
+              </div>
               <p className="text-muted-foreground">
-                veyl.io est entièrement <strong>open source</strong> et disponible sur GitHub. Contribuez via des Pull Requests.
+                Fully <strong>open source</strong> and available on GitHub. Contribute via Pull Requests.
               </p>
-              <Button asChild variant="outline" size="sm">
-                <a href="https://github.com/RomeoCavazza/veyl.io" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                  <Github className="h-4 w-4" />
-                  Voir le repository
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </Button>
+              <div className="flex gap-2 pt-2">
+                <Code2 className="h-4 w-4 text-muted-foreground" />
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </div>
             </div>
           </div>
         </section>
@@ -192,18 +227,21 @@ export default function Community() {
         <section className="mb-20">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             {/* Texte (50%) */}
-            <div className="space-y-3">
-              <h2 className="text-2xl font-bold">Communauté en construction</h2>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <MessageCircle className="h-6 w-6 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold">Community Building</h2>
+              </div>
               <p className="text-muted-foreground">
-                Rejoignez notre serveur Discord pour échanger avec la communauté et contribuer au projet.
+                Join our Discord server to exchange with the community and contribute to the project.
               </p>
-              <Button asChild variant="outline" size="sm">
-                <a href="https://discord.gg/TKbNuuV4sX" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4" />
-                  Rejoindre Discord
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </Button>
+              <div className="flex gap-2 pt-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                <Heart className="h-4 w-4 text-muted-foreground" />
+              </div>
             </div>
             
             {/* Illustration (50%) - Bouton Discord */}
@@ -218,7 +256,7 @@ export default function Community() {
                   </div>
                   <div style={{ flex: 1, textAlign: 'left' }}>
                     <p style={{ color: '#818cf8', fontWeight: 'bold', fontSize: '18px', margin: 0 }}>Discord</p>
-                    <p style={{ color: 'rgba(129, 140, 248, 0.6)', fontSize: '14px', margin: 0 }}>Rejoindre la communauté</p>
+                    <p style={{ color: 'rgba(129, 140, 248, 0.6)', fontSize: '14px', margin: 0 }}>Join community</p>
                   </div>
                   <div className="discord-arrow">
                     <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" style={{ width: '20px', height: '20px', color: '#818cf8' }}>
