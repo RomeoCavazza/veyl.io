@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
+import { ProjectPanel } from '@/components/ProjectPanel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,14 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Settings, Bell, AtSign, Trash2, ExternalLink, Edit, Copy } from 'lucide-react';
+import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Bell, AtSign, Trash2, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getFakeProject, getFakeProjectPosts, fakeCreators, fakePosts } from '@/lib/fakeData';
@@ -273,117 +267,113 @@ export default function ProjectDetail() {
 
           {/* Tab 1: Watchlist - Feed + Creators + Hashtags/Commentaires/Mentions */}
           <TabsContent value="watchlist" className="space-y-6">
-            {/* Panneau Projet */}
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle>{project.name}</CardTitle>
-                    {project.description && (
-                      <CardDescription>{project.description}</CardDescription>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-                      {project.status}
-                    </Badge>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <Settings className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {
-                          setEditName(project.name || '');
-                          setEditDescription(project.description || '');
-                          setEditDialogOpen(true);
-                        }}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Modifier le projet
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={async () => {
-                          try {
-                            const token = localStorage.getItem('token');
-                            const apiBase = getApiBase();
-                            const url = apiBase ? `${apiBase}/api/v1/projects` : `/api/v1/projects`;
-                            
-                            const response = await fetch(url, {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token || ''}`,
-                              },
-                              body: JSON.stringify({
-                                name: `${project.name} (copie)`,
-                                description: project.description,
-                                platforms: project.platforms || [],
-                                scope_type: project.scope_type,
-                                scope_query: project.scope_query,
-                                hashtag_names: project.hashtag_names || [],
-                                creator_usernames: project.creator_usernames || [],
-                              }),
-                            });
+            {/* Layout 50/50 : Panneau Projet + Graphique/Creators */}
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Panneau Projet (Gauche - 50%) */}
+              <ProjectPanel
+                project={project}
+                creators={creators}
+                onEdit={() => {
+                  setEditName(project.name || '');
+                  setEditDescription(project.description || '');
+                  setEditDialogOpen(true);
+                }}
+                onDelete={() => setDeleteDialogOpen(true)}
+              />
 
-                            if (!response.ok) {
-                              throw new Error('Failed to duplicate project');
-                            }
-
-                            const duplicatedProject = await response.json();
-                            toast({
-                              title: 'Succès',
-                              description: 'Projet dupliqué avec succès',
-                            });
-                            navigate(`/projects/${duplicatedProject.id}`);
-                          } catch (error: any) {
-                            toast({
-                              title: 'Erreur',
-                              description: error.message || 'Erreur lors de la duplication',
-                              variant: 'destructive',
-                            });
-                          }
-                        }}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Dupliquer le projet
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => setDeleteDialogOpen(true)}
-                          className="text-destructive focus:text-destructive"
+              {/* Graphique Content Type Distribution + Creators (Droite - 50%) */}
+              <div className="space-y-4">
+                {/* Graphique */}
+                <Card className="bg-card border-border shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-white">Content Type Distribution</CardTitle>
+                    <CardDescription className="text-gray-400">
+                      Breakdown by media type
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Supprimer le projet
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Créateurs</p>
-                    <p className="text-2xl font-bold text-primary">{creators.length}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Posts (Jour)</p>
-                    <p className="text-2xl font-bold text-primary">{postStats.perDay}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Posts (Semaine)</p>
-                    <p className="text-2xl font-bold text-primary">{postStats.perWeek}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Posts (Mois)</p>
-                    <p className="text-2xl font-bold text-primary">{postStats.perMonth}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '6px',
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
 
-            {/* Section: Creators */}
-            {creators.length > 0 && (
-              <div>
+                {/* Section: Creators */}
+                {creators.length > 0 && (
+                  <Card className="bg-card border-border">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Creators ({creators.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {creators.slice(0, 5).map((creator) => (
+                          <div
+                            key={creator.id || creator.handle}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                            onClick={() => navigate(`/projects/${id}/creator/${creator.handle.replace('@', '')}`)}
+                          >
+                            <img
+                              src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
+                              alt={creator.handle}
+                              className="w-10 h-10 rounded-full"
+                            />
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{creator.handle}</p>
+                              {creator.followers && (
+                                <p className="text-xs text-muted-foreground">
+                                  {creator.followers.toLocaleString()} followers
+                                </p>
+                              )}
+                            </div>
+                            {creator.avg_engagement && (
+                              <Badge variant="outline">{creator.avg_engagement}%</Badge>
+                            )}
+                          </div>
+                        ))}
+                        {creators.length > 5 && (
+                          <Button
+                            variant="ghost"
+                            className="w-full"
+                            onClick={() => {
+                              // Scroll vers la section complète des creators plus bas
+                              document.querySelector('#creators-full')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                          >
+                            Voir tous ({creators.length})
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+
+            {/* Section: Creators complète (si plus de 5) */}
+            {creators.length > 5 && (
+              <div id="creators-full">
                 <h2 className="text-xl font-semibold mb-4">Creators ({creators.length})</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {creators.map((creator) => (
@@ -791,118 +781,24 @@ export default function ProjectDetail() {
 
           {/* Tab 2: Analytics */}
           <TabsContent value="analytics" className="space-y-6">
-            {/* Panneau Projet (identique à Watchlist) */}
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle>{project.name}</CardTitle>
-                    {project.description && (
-                      <CardDescription>{project.description}</CardDescription>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-                      {project.status}
-                    </Badge>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <Settings className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {
-                          setEditName(project.name || '');
-                          setEditDescription(project.description || '');
-                          setEditDialogOpen(true);
-                        }}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Modifier le projet
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={async () => {
-                          try {
-                            const token = localStorage.getItem('token');
-                            const apiBase = getApiBase();
-                            const url = apiBase ? `${apiBase}/api/v1/projects` : `/api/v1/projects`;
-                            
-                            const response = await fetch(url, {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token || ''}`,
-                              },
-                              body: JSON.stringify({
-                                name: `${project.name} (copie)`,
-                                description: project.description,
-                                platforms: project.platforms || [],
-                                scope_type: project.scope_type,
-                                scope_query: project.scope_query,
-                                hashtag_names: project.hashtag_names || [],
-                                creator_usernames: project.creator_usernames || [],
-                              }),
-                            });
+            {/* Layout 50/50 : Panneau Projet + Graphique/Creators */}
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Panneau Projet (Gauche - 50%) */}
+              <ProjectPanel
+                project={project}
+                creators={creators}
+                onEdit={() => {
+                  setEditName(project.name || '');
+                  setEditDescription(project.description || '');
+                  setEditDialogOpen(true);
+                }}
+                onDelete={() => setDeleteDialogOpen(true)}
+              />
 
-                            if (!response.ok) {
-                              throw new Error('Failed to duplicate project');
-                            }
-
-                            const duplicatedProject = await response.json();
-                            toast({
-                              title: 'Succès',
-                              description: 'Projet dupliqué avec succès',
-                            });
-                            navigate(`/projects/${duplicatedProject.id}`);
-                          } catch (error: any) {
-                            toast({
-                              title: 'Erreur',
-                              description: error.message || 'Erreur lors de la duplication',
-                              variant: 'destructive',
-                            });
-                          }
-                        }}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Dupliquer le projet
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => setDeleteDialogOpen(true)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Supprimer le projet
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Créateurs</p>
-                    <p className="text-2xl font-bold text-primary">{creators.length}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Posts (Jour)</p>
-                    <p className="text-2xl font-bold text-primary">{postStats.perDay}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Posts (Semaine)</p>
-                    <p className="text-2xl font-bold text-primary">{postStats.perWeek}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Posts (Mois)</p>
-                    <p className="text-2xl font-bold text-primary">{postStats.perMonth}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Header Stats + PieChart */}
-            <div className="grid gap-4 md:grid-cols-3">
-              {/* Right: Content Type Distribution PieChart */}
-              <Card className="bg-card border-border shadow-lg">
+              {/* Graphique Content Type Distribution + Creators (Droite - 50%) */}
+              <div className="space-y-4">
+                {/* Graphique */}
+                <Card className="bg-card border-border shadow-lg">
                 <CardHeader>
                   <CardTitle className="text-white">Content Type Distribution</CardTitle>
                   <CardDescription className="text-gray-400">
@@ -937,6 +833,56 @@ export default function ProjectDetail() {
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
+
+                {/* Section: Creators */}
+                {creators.length > 0 && (
+                  <Card className="bg-card border-border">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Creators ({creators.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {creators.slice(0, 5).map((creator) => (
+                          <div
+                            key={creator.id || creator.handle}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                            onClick={() => navigate(`/projects/${id}/creator/${creator.handle.replace('@', '')}`)}
+                          >
+                            <img
+                              src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
+                              alt={creator.handle}
+                              className="w-10 h-10 rounded-full"
+                            />
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{creator.handle}</p>
+                              {creator.followers && (
+                                <p className="text-xs text-muted-foreground">
+                                  {creator.followers.toLocaleString()} followers
+                                </p>
+                              )}
+                            </div>
+                            {creator.avg_engagement && (
+                              <Badge variant="outline">{creator.avg_engagement}%</Badge>
+                            )}
+                          </div>
+                        ))}
+                        {creators.length > 5 && (
+                          <Button
+                            variant="ghost"
+                            className="w-full"
+                            onClick={() => {
+                              // Scroll vers la section complète des creators plus bas
+                              document.querySelector('#creators-full')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                          >
+                            Voir tous ({creators.length})
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </div>
 
             {/* Analytics Content - Charts */}
