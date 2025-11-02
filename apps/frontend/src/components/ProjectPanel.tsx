@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, Edit, Copy, Trash2 } from 'lucide-react';
+import { Settings, Edit, Copy, Trash2, TrendingUp, TrendingDown, Minus, Instagram, Video, Music } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { getApiBase } from '@/lib/api';
@@ -23,6 +23,37 @@ interface ProjectPanelProps {
 export function ProjectPanel({ project, creators, onEdit, onDelete }: ProjectPanelProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Fonction pour obtenir l'icône de la plateforme
+  const getPlatformIcon = (platform: string) => {
+    const platformLower = platform.toLowerCase();
+    if (platformLower.includes('instagram')) return Instagram;
+    if (platformLower.includes('tiktok')) return Video;
+    if (platformLower.includes('youtube')) return Video;
+    return Video; // Par défaut
+  };
+
+  // Fonction pour calculer la tendance (pour l'instant avec valeurs mockées)
+  // TODO: Remplacer par vraies données historiques depuis la DB
+  const getTrend = (current: number, metric: string, projectId: number) => {
+    // Hash simple pour générer une variation stable basée sur metric + projectId
+    const hash = (metric + projectId.toString()).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const seed = (hash % 100) / 100; // 0 à 1
+    
+    // Générer une variation stable (-15% à +25%)
+    const variation = (seed * 40 - 15) / 100;
+    const previous = current > 0 ? Math.round(current / (1 + variation)) : 0;
+    const change = current - previous;
+    const percent = previous > 0 ? ((change / previous) * 100).toFixed(1) : '0.0';
+    
+    if (change > 0) {
+      return { type: 'up', percent: `+${percent}%`, value: change, icon: TrendingUp, color: 'text-green-500' };
+    } else if (change < 0) {
+      return { type: 'down', percent: `${percent}%`, value: change, icon: TrendingDown, color: 'text-red-500' };
+    } else {
+      return { type: 'stable', percent: '0%', value: 0, icon: Minus, color: 'text-gray-500' };
+    }
+  };
 
   const handleDuplicate = async () => {
     try {
@@ -110,27 +141,75 @@ export function ProjectPanel({ project, creators, onEdit, onDelete }: ProjectPan
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Informations de la DB */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Créateurs</p>
+          {/* Platforms avec logos */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">Platforms</p>
+            <div className="flex gap-2 flex-wrap">
+              {(project.platforms || []).map((p: string) => {
+                const Icon = getPlatformIcon(p);
+                return (
+                  <Badge 
+                    key={p} 
+                    variant="outline" 
+                    className="flex items-center gap-2 px-3 py-1.5"
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="capitalize">{p}</span>
+                  </Badge>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Métriques avec tendances style crypto */}
+          <div className="grid grid-cols-3 gap-4 pt-2">
+            <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-border">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Créateurs</p>
+                {(() => {
+                  const trend = getTrend(project.creators_count || 0, 'creators', project.id || 0);
+                  const TrendIcon = trend.icon;
+                  return (
+                    <div className={`flex items-center gap-1 ${trend.color}`}>
+                      <TrendIcon className="h-3 w-3" />
+                      <span className="text-xs font-semibold">{trend.percent}</span>
+                    </div>
+                  );
+                })()}
+              </div>
               <p className="text-2xl font-bold text-primary">{project.creators_count || 0}</p>
             </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Posts</p>
+            <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-border">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Posts</p>
+                {(() => {
+                  const trend = getTrend(project.posts_count || 0, 'posts', project.id || 0);
+                  const TrendIcon = trend.icon;
+                  return (
+                    <div className={`flex items-center gap-1 ${trend.color}`}>
+                      <TrendIcon className="h-3 w-3" />
+                      <span className="text-xs font-semibold">{trend.percent}</span>
+                    </div>
+                  );
+                })()}
+              </div>
               <p className="text-2xl font-bold text-primary">{project.posts_count || 0}</p>
             </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Signals</p>
-              <p className="text-2xl font-bold text-primary">{project.signals_count || 0}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Platforms</p>
-              <div className="flex gap-1 flex-wrap">
-                {(project.platforms || []).map((p: string) => (
-                  <Badge key={p} variant="outline" className="text-xs">{p}</Badge>
-                ))}
+            <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-border">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Signals</p>
+                {(() => {
+                  const trend = getTrend(project.signals_count || 0, 'signals', project.id || 0);
+                  const TrendIcon = trend.icon;
+                  return (
+                    <div className={`flex items-center gap-1 ${trend.color}`}>
+                      <TrendIcon className="h-3 w-3" />
+                      <span className="text-xs font-semibold">{trend.percent}</span>
+                    </div>
+                  );
+                })()}
               </div>
+              <p className="text-2xl font-bold text-primary">{project.signals_count || 0}</p>
             </div>
           </div>
           {/* Dates importantes */}

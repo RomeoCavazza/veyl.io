@@ -281,98 +281,58 @@ export default function ProjectDetail() {
                 onDelete={() => setDeleteDialogOpen(true)}
               />
 
-              {/* Graphique Content Type Distribution + Creators (Droite - 50%) */}
-              <div className="space-y-4">
-                {/* Graphique */}
-                <Card className="bg-card border-border shadow-lg">
+              {/* Section: Creators (Droite - 50%) */}
+              {creators.length > 0 && (
+                <Card className="bg-card border-border">
                   <CardHeader>
-                    <CardTitle className="text-white">Content Type Distribution</CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Breakdown by media type
-                    </CardDescription>
+                    <CardTitle className="text-lg">Creators ({creators.length})</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <PieChart>
-                        <Pie
-                          data={pieData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
+                    <div className="space-y-3">
+                      {creators.slice(0, 10).map((creator) => (
+                        <div
+                          key={creator.id || creator.handle}
+                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                          onClick={() => navigate(`/projects/${id}/creator/${creator.handle.replace('@', '')}`)}
                         >
-                          {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '6px',
-                          }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-
-                {/* Section: Creators */}
-                {creators.length > 0 && (
-                  <Card className="bg-card border-border">
-                    <CardHeader>
-                      <CardTitle className="text-lg">Creators ({creators.length})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {creators.slice(0, 5).map((creator) => (
-                          <div
-                            key={creator.id || creator.handle}
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                            onClick={() => navigate(`/projects/${id}/creator/${creator.handle.replace('@', '')}`)}
-                          >
-                            <img
-                              src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
-                              alt={creator.handle}
-                              className="w-10 h-10 rounded-full"
-                            />
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{creator.handle}</p>
-                              {creator.followers && (
-                                <p className="text-xs text-muted-foreground">
-                                  {creator.followers.toLocaleString()} followers
-                                </p>
-                              )}
-                            </div>
-                            {creator.avg_engagement && (
-                              <Badge variant="outline">{creator.avg_engagement}%</Badge>
+                          <img
+                            src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
+                            alt={creator.handle}
+                            className="w-10 h-10 rounded-full"
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{creator.handle}</p>
+                            {creator.followers && (
+                              <p className="text-xs text-muted-foreground">
+                                {creator.followers.toLocaleString()} followers
+                              </p>
                             )}
                           </div>
-                        ))}
-                        {creators.length > 5 && (
-                          <Button
-                            variant="ghost"
-                            className="w-full"
-                            onClick={() => {
-                              // Scroll vers la section complète des creators plus bas
-                              document.querySelector('#creators-full')?.scrollIntoView({ behavior: 'smooth' });
-                            }}
-                          >
-                            Voir tous ({creators.length})
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+                          {creator.avg_engagement && (
+                            <Badge variant="outline">{creator.avg_engagement}%</Badge>
+                          )}
+                        </div>
+                      ))}
+                      {creators.length > 10 && (
+                        <Button
+                          variant="ghost"
+                          className="w-full"
+                          onClick={() => {
+                            // Scroll vers la section complète des creators plus bas
+                            document.querySelector('#creators-full')?.scrollIntoView({ behavior: 'smooth' });
+                          }}
+                        >
+                          Voir tous ({creators.length})
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
-            {/* Section: Creators complète (si plus de 5) */}
-            {creators.length > 5 && (
+            {/* Section: Creators complète (si plus de 10) */}
+            {creators.length > 10 && (
               <div id="creators-full">
                 <h2 className="text-xl font-semibold mb-4">Creators ({creators.length})</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -795,10 +755,8 @@ export default function ProjectDetail() {
                 onDelete={() => setDeleteDialogOpen(true)}
               />
 
-              {/* Graphique Content Type Distribution + Creators (Droite - 50%) */}
-              <div className="space-y-4">
-                {/* Graphique */}
-                <Card className="bg-card border-border shadow-lg">
+              {/* Graphique Content Type Distribution (Droite - 50%) */}
+              <Card className="bg-card border-border shadow-lg">
                 <CardHeader>
                   <CardTitle className="text-white">Content Type Distribution</CardTitle>
                   <CardDescription className="text-gray-400">
@@ -833,56 +791,6 @@ export default function ProjectDetail() {
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
-
-                {/* Section: Creators */}
-                {creators.length > 0 && (
-                  <Card className="bg-card border-border">
-                    <CardHeader>
-                      <CardTitle className="text-lg">Creators ({creators.length})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {creators.slice(0, 5).map((creator) => (
-                          <div
-                            key={creator.id || creator.handle}
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                            onClick={() => navigate(`/projects/${id}/creator/${creator.handle.replace('@', '')}`)}
-                          >
-                            <img
-                              src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
-                              alt={creator.handle}
-                              className="w-10 h-10 rounded-full"
-                            />
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{creator.handle}</p>
-                              {creator.followers && (
-                                <p className="text-xs text-muted-foreground">
-                                  {creator.followers.toLocaleString()} followers
-                                </p>
-                              )}
-                            </div>
-                            {creator.avg_engagement && (
-                              <Badge variant="outline">{creator.avg_engagement}%</Badge>
-                            )}
-                          </div>
-                        ))}
-                        {creators.length > 5 && (
-                          <Button
-                            variant="ghost"
-                            className="w-full"
-                            onClick={() => {
-                              // Scroll vers la section complète des creators plus bas
-                              document.querySelector('#creators-full')?.scrollIntoView({ behavior: 'smooth' });
-                            }}
-                          >
-                            Voir tous ({creators.length})
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
             </div>
 
             {/* Analytics Content - Charts */}
