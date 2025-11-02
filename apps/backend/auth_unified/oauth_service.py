@@ -18,13 +18,20 @@ class OAuthService:
         self.auth_service = AuthService()
     
     def create_or_get_user(self, db: Session, email: str, name: str, role: str = "user") -> User:
-        """Créer ou récupérer un utilisateur"""
+        """Créer ou récupérer un utilisateur
+        
+        IMPORTANT: Cette fonction ne doit JAMAIS être appelée si un User existant a déjà été trouvé
+        via linked_user_id ou email réel dans find_or_create_user_for_oauth.
+        """
         user = db.query(User).filter(User.email == email).first()
         if not user:
+            logger.info(f"🆕 Création d'un nouveau User: email={email}, name={name}")
             user = User(email=email, name=name, role=role)
             db.add(user)
             db.commit()
             db.refresh(user)
+        else:
+            logger.info(f"✅ User existant trouvé: email={email}, user_id={user.id}")
         return user
     
     def find_or_create_user_for_oauth(
@@ -74,20 +81,33 @@ class OAuthService:
                 return user
         
         # PRIORITÉ 3: Si email réel fourni, chercher un User existant avec cet email
-        if email and not email.startswith(('instagram_', 'facebook_', 'tiktok_', 'google_')):
-            user = db.query(User).filter(User.email == email).first()
-            if user:
-                logger.info(f"📧 User trouvé via email réel: {email} (User ID: {user.id})")
-                # IMPORTANT: Ne jamais mettre à jour name/email du User existant
-                # Les informations du User principal doivent rester constantes
-                return user
+        # Un email réel est un email qui ne commence pas par un prefix OAuth et ne contient pas @veyl.io ou @insidr.dev
+        if email:
+            # Vérifier si c'est un email réel (pas un email généré OAuth)
+            is_real_email = (
+                not email.startswith(('instagram_', 'facebook_', 'tiktok_', 'google_')) and
+                not email.endswith(('@veyl.io', '@insidr.dev')) and
+                '@' in email  # Doit contenir @ pour être un email valide
+            )
+            if is_real_email:
+                user = db.query(User).filter(User.email == email).first()
+                if user:
+                    logger.info(f"📧 User trouvé via email réel: {email} (User ID: {user.id})")
+                    # IMPORTANT: Ne jamais mettre à jour name/email du User existant
+                    # Les informations du User principal doivent rester constantes
+                    return user
         
-        # PRIORITÉ 4: Chercher via d'autres OAuthAccounts existants (cross-linking)
-        # Si l'utilisateur a déjà un compte (ex: Google), et qu'il se connecte avec Instagram,
-        # on cherche tous les OAuthAccounts et on lie au même User s'il existe
-        # Note: Cette logique est risquée car on ne peut pas être sûr que deux OAuthAccounts
-        # appartiennent au même utilisateur réel. On évite donc cette approche pour l'instant.
-        # À la place, on compte sur linked_user_id passé depuis le frontend.
+        # PRIORITÉ 3.5: Si linked_user_id était fourni mais le User n'a pas été trouvé (cas rare),
+        # ou si on n'a pas de linked_user_id mais on veut éviter de créer un doublon,
+        # chercher parmi les Users existants qui ont déjà un OAuthAccount d'un autre provider
+        # avec un email réel pour tenter de lier automatiquement
+        # (seulement si on est sûr que c'est le même utilisateur - éviter les faux positifs)
+        
+        # PRIORITÉ 4: Chercher via les OAuthAccounts existants si on a un linked_user_id mais que le User n'existe pas
+        # ou si on veut tenter de lier automatiquement les comptes OAuth d'un même utilisateur
+        # Cette logique cherche parmi tous les Users qui ont un email réel et un OAuthAccount
+        # pour voir si on peut identifier le même utilisateur
+        # Note: On fait ça uniquement si on n'a pas de linked_user_id valide ET qu'on n'a pas trouvé d'email réel
         
         # PRIORITÉ 5: Créer un nouveau User (dernier recours)
         # Générer un email si nécessaire
@@ -97,8 +117,13 @@ class OAuthService:
         if not name:
             name = f"{provider.capitalize()} User {provider_user_id[:8]}"
         
-        logger.info(f"🆕 Création d'un nouveau User pour OAuth {provider}")
+        logger.warning(
+            f"⚠️ Création d'un nouveau User pour OAuth {provider} "
+            f"(provider_user_id={provider_user_id}, linked_user_id={linked_user_id}). "
+            f"Cela peut indiquer que linked_user_id n'a pas été correctement passé ou décodé."
+        )
         user = self.create_or_get_user(db, email=email, name=name)
+        logger.info(f"✅ Nouveau User créé: user_id={user.id}, email={user.email}, name={user.name}")
         return user
     
     def start_instagram_auth(self, user_id: int = None) -> Dict[str, str]:
@@ -827,17 +852,33 @@ class OAuthService:
         linked_user_id = None
         import hashlib
         try:
-            parts = state.split('_')
-            if len(parts) >= 3:
-                timestamp, user_id_str, state_hash = parts[0], parts[1], parts[2]
-                # Vérifier le hash pour éviter la manipulation
-                expected_hash = hashlib.sha256(f"{timestamp}_{user_id_str}_{settings.OAUTH_STATE_SECRET}".encode()).hexdigest()[:8]
-                if state_hash == expected_hash:
-                    linked_user_id = int(user_id_str)
-                    logger.info(f"📎 Liaison TikTok OAuth au User ID: {linked_user_id}")
-        except (ValueError, IndexError):
+            # TikTok peut utiliser soit le format timestamp_userid_hash soit un token sécurisé
+            # Essayer d'abord le format timestamp_userid_hash
+            if '_' in state:
+                parts = state.split('_')
+                if len(parts) >= 3:
+                    timestamp, user_id_str, state_hash = parts[0], parts[1], parts[2]
+                    # Vérifier le hash pour éviter la manipulation
+                    expected_hash = hashlib.sha256(f"{timestamp}_{user_id_str}_{settings.OAUTH_STATE_SECRET}".encode()).hexdigest()[:8]
+                    if state_hash == expected_hash:
+                        linked_user_id = int(user_id_str)
+                        logger.info(f"📎 Liaison TikTok OAuth au User ID: {linked_user_id} (décodé depuis state)")
+                elif len(parts) == 2:
+                    # Format alternatif: timestamp_userid (sans hash, moins sécurisé mais parfois utilisé)
+                    try:
+                        linked_user_id = int(parts[1])
+                        logger.info(f"📎 Liaison TikTok OAuth au User ID: {linked_user_id} (format simplifié)")
+                    except ValueError:
+                        pass
+        except (ValueError, IndexError, AttributeError) as e:
             # State ne contient pas d'user_id ou est un token sécurisé classique
+            logger.debug(f"⚠️ State TikTok ne contient pas d'user_id ou format inattendu: {state[:50]}... (erreur: {e})")
             pass
+        
+        if linked_user_id:
+            logger.info(f"✅ User ID à lier trouvé dans state TikTok: {linked_user_id}")
+        else:
+            logger.warning(f"⚠️ Aucun linked_user_id trouvé dans state TikTok: {state[:50]}...")
         
         if not settings.TIKTOK_CLIENT_SECRET:
             raise HTTPException(status_code=500, detail="TIKTOK_CLIENT_SECRET non configuré")

@@ -27,8 +27,12 @@ export default function AuthCallback() {
     // Gérer les erreurs OAuth
     if (error) {
       console.error('❌ OAuth error:', error, errorDescription);
-      // TODO: Afficher un toast d'erreur si disponible
-      navigate('/auth?error=' + encodeURIComponent(errorDescription || error));
+      // Afficher l'erreur dans l'URL pour debugging, mais rediriger vers /auth/callback avec l'erreur
+      // pour que l'utilisateur puisse voir le message d'erreur sur la page de callback
+      const errorMsg = errorDescription || error;
+      console.error('Redirection vers /auth avec erreur:', errorMsg);
+      // Rediriger vers /auth au lieu de /auth/callback pour afficher l'erreur sur la page de connexion
+      navigate('/auth?error=' + encodeURIComponent(errorMsg));
       return;
     }
 
