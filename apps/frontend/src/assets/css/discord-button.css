@@ -1,0 +1,82 @@
+/* Discord Button Styles - Inspired by portfolio/social-platform.html */
+
+.discord-button {
+  position: relative;
+  padding: 1rem;
+  border-radius: 1rem;
+  backdrop-filter: blur(12px);
+  border: 2px solid rgba(129, 140, 248, 0.3);
+  background: linear-gradient(135deg, rgba(129, 140, 248, 0.4), rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.5s ease-out;
+  text-decoration: none;
+  width: 100%;
+  max-width: 300px;
+  display: block;
+}
+
+.discord-button:hover {
+  box-shadow: 0 10px 30px rgba(129, 140, 248, 0.3), 0 10px 30px rgba(0, 0, 0, 0.5);
+  transform: scale(1.02) translateY(-4px);
+}
+
+.discord-button:active {
+  transform: scale(0.95) translateY(0);
+}
+
+.discord-button-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, transparent, rgba(129, 140, 248, 0.3), transparent);
+  transform: translateX(-100%);
+  transition: transform 1s ease-out;
+}
+
+.discord-button:hover .discord-button-bg {
+  transform: translateX(100%);
+}
+
+.discord-button-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.discord-icon-wrapper {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, rgba(129, 140, 248, 0.3), rgba(99, 102, 241, 0.1));
+  backdrop-filter: blur(4px);
+  transition: all 0.3s;
+}
+
+.discord-icon {
+  width: 28px;
+  height: 28px;
+  fill: #818cf8;
+  transition: all 0.3s;
+}
+
+.discord-button:hover .discord-icon-wrapper {
+  background: linear-gradient(135deg, rgba(129, 140, 248, 0.4), rgba(129, 140, 248, 0.2));
+}
+
+.discord-button:hover .discord-icon {
+  fill: #a5b4fc;
+  transform: scale(1.1);
+}
+
+.discord-arrow {
+  opacity: 0.4;
+  transition: all 0.3s;
+}
+
+.discord-button:hover .discord-arrow {
+  opacity: 1;
+  transform: translateX(4px);
+}
+

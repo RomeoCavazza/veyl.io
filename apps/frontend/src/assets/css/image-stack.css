@@ -1,0 +1,40 @@
+/* Image Stack Styles - For cascade effect from portfolio/pages/social-platform.html */
+
+.image-stack {
+  position: relative;
+  width: 100%;
+  max-width: 450px;
+  height: 450px;
+  cursor: pointer;
+  margin: 0 auto;
+}
+
+.stack-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  transition: all 0.5s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.stack-image.active {
+  opacity: 1;
+  z-index: 3;
+  transform: translate(0, 0);
+}
+
+.stack-image.hidden {
+  opacity: 0.6;
+  z-index: 2;
+  transform: translate(-20px, -20px);
+}
+
+.stack-image.back {
+  opacity: 0.35;
+  z-index: 1;
+  transform: translate(-40px, -40px);
+}
+

@@ -930,7 +930,7 @@ export default function ProjectDetail() {
                     const url = apiBase ? `${apiBase}/api/v1/projects/${id}` : `/api/v1/projects/${id}`;
                     
                     const response = await fetch(url, {
-                      method: 'PATCH',
+                      method: 'PUT',
                       headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token || ''}`,

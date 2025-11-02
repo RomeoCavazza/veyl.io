@@ -1,6 +1,6 @@
 # Database Schema - veyl.io
 
-**Dernière mise à jour**: Novembre 2024  
+**Dernière mise à jour**: 02 novembre 2025  
 **Objectif**: Analyse schéma base de données, tables existantes, réutilisation pour Projects
 
 ---
@@ -204,4 +204,4 @@ ProjectCreator:
 
 ---
 
-**Référence**: `BACKEND_STATUS.md` pour état backend, `ARCHITECTURE.md` pour architecture complète.
+**Référence**: [backend.md](./backend.md) pour état backend, [architecture.md](./architecture.md) pour architecture complète.
