@@ -405,7 +405,7 @@ export default function ProjectDetail() {
                 const mentions = selectedPost.mentions || caption.match(/@\w+/g) || [];
 
                 return (
-                  <div className="flex bg-white dark:bg-background">
+                  <div className="flex bg-background">
                     {/* Photo à gauche */}
                     <div className="flex-shrink-0 w-full md:w-[60%] bg-black flex items-center justify-center">
                       <img
@@ -416,9 +416,9 @@ export default function ProjectDetail() {
                     </div>
 
                     {/* Panneau infos à droite */}
-                    <div className="flex flex-col w-full md:w-[40%] max-h-[90vh] border-l">
+                    <div className="flex flex-col w-full md:w-[40%] max-h-[90vh] border-l border-border">
                       {/* Header */}
-                      <div className="flex items-center justify-between p-4 border-b">
+                      <div className="flex items-center justify-between p-4 border-b border-border">
                         <div className="flex items-center gap-3">
                           <img
                             src={profilePic}
@@ -487,7 +487,7 @@ export default function ProjectDetail() {
                         )}
 
                         {/* Stats */}
-                        <div className="pt-4 border-t space-y-2">
+                        <div className="pt-4 border-t border-border space-y-2">
                           <div className="flex items-center gap-4 text-sm">
                             <div className="flex items-center gap-1">
                               <Heart className="h-4 w-4 text-red-500" />
@@ -508,7 +508,7 @@ export default function ProjectDetail() {
                         </div>
 
                         {/* Commentaires */}
-                        <div className="pt-4 border-t space-y-3">
+                        <div className="pt-4 border-t border-border space-y-3">
                           <h4 className="font-semibold text-sm mb-3">Commentaires</h4>
                           {[
                             {
