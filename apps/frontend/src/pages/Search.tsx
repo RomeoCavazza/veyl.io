@@ -139,13 +139,23 @@ export default function Search() {
               {posts.map((post) => (
                 <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="aspect-square relative overflow-hidden bg-muted">
-                    <img
-                      src={post.media_url}
-                      alt={post.caption}
-                      className="object-cover w-full h-full"
-                    />
+                    {post.media_url ? (
+                      <img
+                        src={post.media_url}
+                        alt={post.caption}
+                        className="object-cover w-full h-full"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://picsum.photos/800/800?random=${post.id}`;
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-muted/50">
+                        <span className="text-muted-foreground text-sm">No image</span>
+                      </div>
+                    )}
                     <Badge className="absolute top-2 right-2 bg-accent">
-                      {post.media_type}
+                      {post.media_type || 'IMAGE'}
                     </Badge>
                   </div>
                   
