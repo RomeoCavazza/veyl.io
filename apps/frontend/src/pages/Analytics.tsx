@@ -1,5 +1,4 @@
-import { Navbar } from '@/components/Navbar';
-import { Footer } from '@/components/Footer';
+import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -41,17 +40,14 @@ export default function Analytics() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      
-      <div className="container py-8">
-        <div className="space-y-8">
+    <Layout>
+      <div className="space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold tracking-tight">Analytics</h1>
             <p className="text-muted-foreground mt-2">
-              Deep dive into your Instagram performance with detailed analytics and insights
+              Deep dive into engagement metrics and performance insights.
             </p>
           </div>
           <Badge variant="outline" className="text-sm">
@@ -432,9 +428,7 @@ export default function Analytics() {
             </Card>
           </TabsContent>
         </Tabs>
-        </div>
       </div>
-      <Footer />
-    </div>
+    </Layout>
   );
 }
