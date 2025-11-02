@@ -12,8 +12,16 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
-import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Settings, Bell, AtSign, Trash2, ExternalLink } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Settings, Bell, AtSign, Trash2, ExternalLink, Edit, Copy } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getFakeProject, getFakeProjectPosts, fakeCreators, fakePosts } from '@/lib/fakeData';
@@ -49,6 +57,10 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [postDialogOpen, setPostDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
 
   // Mock data for charts
   const pieData = [
@@ -174,6 +186,51 @@ export default function ProjectDetail() {
     });
   };
 
+  // Calcul des statistiques de posts basées sur les dates
+  const calculatePostStats = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const monthAgo = new Date(today);
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+
+    const postsToday = posts.filter(post => {
+      if (!post.posted_at) return false;
+      const postDate = new Date(post.posted_at);
+      return postDate >= today;
+    }).length;
+
+    const postsThisWeek = posts.filter(post => {
+      if (!post.posted_at) return false;
+      const postDate = new Date(post.posted_at);
+      return postDate >= weekAgo;
+    }).length;
+
+    const postsThisMonth = posts.filter(post => {
+      if (!post.posted_at) return false;
+      const postDate = new Date(post.posted_at);
+      return postDate >= monthAgo;
+    }).length;
+
+    // Si pas de dates, utiliser des approximations
+    if (posts.length > 0 && !posts.some(p => p.posted_at)) {
+      return {
+        perDay: Math.round(posts.length / 7) || 0,
+        perWeek: posts.length,
+        perMonth: posts.length * 4,
+      };
+    }
+
+    return {
+      perDay: postsToday,
+      perWeek: postsThisWeek,
+      perMonth: postsThisMonth,
+    };
+  };
+
+  const postStats = calculatePostStats();
+
   if (loading || !project) {
     return (
       <div className="min-h-screen bg-background">
@@ -191,31 +248,16 @@ export default function ProjectDetail() {
       
       <div className="container py-8">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/projects')}
-              className="mb-2"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Projects
-            </Button>
-            <h1 className="text-4xl font-bold tracking-tight">{project.name}</h1>
-            {project.description && (
-              <p className="text-muted-foreground mt-2">{project.description}</p>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-              {project.status}
-            </Badge>
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
-          </div>
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/projects')}
+            className="mb-2"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Projects
+          </Button>
         </div>
 
         {/* Tabs */}
@@ -231,137 +273,232 @@ export default function ProjectDetail() {
 
           {/* Tab 1: Watchlist - Feed + Creators + Hashtags/Commentaires/Mentions */}
           <TabsContent value="watchlist" className="space-y-6">
-            {/* Watchlist Tabs */}
-            <Tabs defaultValue="feed" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="feed">
-                  <Eye className="h-4 w-4 mr-2" />
-                  Feed Posts
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="feed" className="space-y-6">
-                {/* Section: Creators */}
-                {creators.length > 0 && (
-                  <div>
-                    <h2 className="text-xl font-semibold mb-4">Creators ({creators.length})</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {creators.map((creator) => (
-                        <Card
-                          key={creator.id || creator.handle}
-                          className="cursor-pointer hover:border-primary transition-colors"
-                          onClick={() => navigate(`/projects/${id}/creator/${creator.handle.replace('@', '')}`)}
-                        >
-                          <CardContent className="p-6">
-                            <div className="flex flex-col items-center text-center gap-4">
-                              <img
-                                src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
-                                alt={creator.handle}
-                                className="w-20 h-20 rounded-full"
-                              />
-                              <div>
-                                <h3 className="font-semibold">{creator.handle}</h3>
-                                {creator.followers && (
-                                  <p className="text-sm text-muted-foreground">
-                                    {creator.followers.toLocaleString()} followers
-                                  </p>
-                                )}
-                              </div>
-                              {creator.avg_engagement && (
-                                <div className="w-full p-3 bg-primary/10 rounded-lg">
-                                  <div className="text-center">
-                                    <span className="font-medium">{creator.avg_engagement}%</span>
-                                    <p className="text-xs text-muted-foreground">Engagement</p>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Section: Feed Posts */}
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Posts Feed</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {posts.length > 0 ? (
-                      posts.map((post) => {
-                        const creator = creators.find(c => c.handle === post.username);
-                        return (
-                          <Card 
-                            key={post.id} 
-                            className="overflow-hidden cursor-pointer hover:border-primary transition-colors"
-                            onClick={() => {
-                              setSelectedPost(post);
-                              setPostDialogOpen(true);
-                            }}
-                          >
-                            <div className="relative">
-                              <img
-                                src={post.media_url}
-                                alt={post.caption}
-                                className="w-full h-64 object-cover"
-                              />
-                              <div className="absolute top-2 right-2 flex gap-2">
-                                <Badge variant="secondary" className="bg-black/50 text-white">
-                                  {post.platform}
-                                </Badge>
-                              </div>
-                            </div>
-                            <CardContent className="p-4">
-                              <div className="flex items-center gap-2 mb-2">
-                                {creator?.profile_picture && (
-                                  <img
-                                    src={creator.profile_picture}
-                                    alt={creator.handle}
-                                    className="w-6 h-6 rounded-full"
-                                  />
-                                )}
-                                <span 
-                                  className="text-sm font-medium hover:text-primary"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/projects/${id}/creator/${post.username}`);
-                                  }}
-                                >
-                                  {post.username}
-                                </span>
-                              </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                                {post.caption}
-                              </p>
-                              <div className="flex items-center justify-between text-sm">
-                                <div className="flex items-center gap-4">
-                                  <div className="flex items-center gap-1">
-                                    <Heart className="h-4 w-4" />
-                                    <span>{post.like_count?.toLocaleString() || 0}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <MessageCircle className="h-4 w-4" />
-                                    <span>{post.comment_count?.toLocaleString() || 0}</span>
-                                  </div>
-                                </div>
-                                <Button variant="ghost" size="sm">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })
-                    ) : (
-                      <div className="col-span-full text-center py-12 text-muted-foreground">
-                        No posts found
-                      </div>
+            {/* Panneau Projet */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle>{project.name}</CardTitle>
+                    {project.description && (
+                      <CardDescription>{project.description}</CardDescription>
                     )}
                   </div>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
+                      {project.status}
+                    </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => {
+                          setEditName(project.name || '');
+                          setEditDescription(project.description || '');
+                          setEditDialogOpen(true);
+                        }}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Modifier le projet
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={async () => {
+                          try {
+                            const token = localStorage.getItem('token');
+                            const apiBase = getApiBase();
+                            const url = apiBase ? `${apiBase}/api/v1/projects` : `/api/v1/projects`;
+                            
+                            const response = await fetch(url, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token || ''}`,
+                              },
+                              body: JSON.stringify({
+                                name: `${project.name} (copie)`,
+                                description: project.description,
+                                platforms: project.platforms || [],
+                                scope_type: project.scope_type,
+                                scope_query: project.scope_query,
+                                hashtag_names: project.hashtag_names || [],
+                                creator_usernames: project.creator_usernames || [],
+                              }),
+                            });
 
-              </TabsContent>
-            </Tabs>
+                            if (!response.ok) {
+                              throw new Error('Failed to duplicate project');
+                            }
+
+                            const duplicatedProject = await response.json();
+                            toast({
+                              title: 'Succès',
+                              description: 'Projet dupliqué avec succès',
+                            });
+                            navigate(`/projects/${duplicatedProject.id}`);
+                          } catch (error: any) {
+                            toast({
+                              title: 'Erreur',
+                              description: error.message || 'Erreur lors de la duplication',
+                              variant: 'destructive',
+                            });
+                          }
+                        }}>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Dupliquer le projet
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => setDeleteDialogOpen(true)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Supprimer le projet
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Créateurs</p>
+                    <p className="text-2xl font-bold text-primary">{creators.length}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Posts (Jour)</p>
+                    <p className="text-2xl font-bold text-primary">{postStats.perDay}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Posts (Semaine)</p>
+                    <p className="text-2xl font-bold text-primary">{postStats.perWeek}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Posts (Mois)</p>
+                    <p className="text-2xl font-bold text-primary">{postStats.perMonth}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Section: Creators */}
+            {creators.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Creators ({creators.length})</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {creators.map((creator) => (
+                    <Card
+                      key={creator.id || creator.handle}
+                      className="cursor-pointer hover:border-primary transition-colors"
+                      onClick={() => navigate(`/projects/${id}/creator/${creator.handle.replace('@', '')}`)}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex flex-col items-center text-center gap-4">
+                          <img
+                            src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
+                            alt={creator.handle}
+                            className="w-20 h-20 rounded-full"
+                          />
+                          <div>
+                            <h3 className="font-semibold">{creator.handle}</h3>
+                            {creator.followers && (
+                              <p className="text-sm text-muted-foreground">
+                                {creator.followers.toLocaleString()} followers
+                              </p>
+                            )}
+                          </div>
+                          {creator.avg_engagement && (
+                            <div className="w-full p-3 bg-primary/10 rounded-lg">
+                              <div className="text-center">
+                                <span className="font-medium">{creator.avg_engagement}%</span>
+                                <p className="text-xs text-muted-foreground">Engagement</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Section: Feed Posts */}
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Posts Feed</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {posts.length > 0 ? (
+                  posts.map((post) => {
+                    const creator = creators.find(c => c.handle === post.username);
+                    return (
+                      <Card 
+                        key={post.id} 
+                        className="overflow-hidden cursor-pointer hover:border-primary transition-colors"
+                        onClick={() => {
+                          setSelectedPost(post);
+                          setPostDialogOpen(true);
+                        }}
+                      >
+                        <div className="relative">
+                          <img
+                            src={post.media_url}
+                            alt={post.caption}
+                            className="w-full h-64 object-cover"
+                          />
+                          <div className="absolute top-2 right-2 flex gap-2">
+                            <Badge variant="secondary" className="bg-black/50 text-white">
+                              {post.platform}
+                            </Badge>
+                          </div>
+                        </div>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            {creator?.profile_picture && (
+                              <img
+                                src={creator.profile_picture}
+                                alt={creator.handle}
+                                className="w-6 h-6 rounded-full"
+                              />
+                            )}
+                            <span 
+                              className="text-sm font-medium hover:text-primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/projects/${id}/creator/${post.username}`);
+                              }}
+                            >
+                              {post.username}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                            {post.caption}
+                          </p>
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-1">
+                                <Heart className="h-4 w-4" />
+                                <span>{post.like_count?.toLocaleString() || 0}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <MessageCircle className="h-4 w-4" />
+                                <span>{post.comment_count?.toLocaleString() || 0}</span>
+                              </div>
+                            </div>
+                            <Button variant="ghost" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                ) : (
+                  <div className="col-span-full text-center py-12 text-muted-foreground">
+                    No posts found
+                  </div>
+                )}
+              </div>
+            </div>
           </TabsContent>
 
           {/* Post Detail Dialog - Style Instagram */}
@@ -526,54 +663,244 @@ export default function ProjectDetail() {
             </DialogContent>
           </Dialog>
 
+          {/* Dialog: Modifier le projet */}
+          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Modifier le projet</DialogTitle>
+                <DialogDescription>
+                  Modifiez le nom et la description du projet
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Nom</label>
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Nom du projet"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Description</label>
+                  <Input
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="Description du projet"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                  Annuler
+                </Button>
+                <Button onClick={async () => {
+                  try {
+                    const token = localStorage.getItem('token');
+                    const apiBase = getApiBase();
+                    const url = apiBase ? `${apiBase}/api/v1/projects/${id}` : `/api/v1/projects/${id}`;
+                    
+                    const response = await fetch(url, {
+                      method: 'PATCH',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token || ''}`,
+                      },
+                      body: JSON.stringify({
+                        name: editName,
+                        description: editDescription,
+                      }),
+                    });
+
+                    if (!response.ok) {
+                      throw new Error('Failed to update project');
+                    }
+
+                    const updatedProject = await response.json();
+                    setProject(updatedProject);
+                    setEditDialogOpen(false);
+                    toast({
+                      title: 'Succès',
+                      description: 'Projet modifié avec succès',
+                    });
+                  } catch (error: any) {
+                    toast({
+                      title: 'Erreur',
+                      description: error.message || 'Erreur lors de la modification',
+                      variant: 'destructive',
+                    });
+                  }
+                }}>
+                  Enregistrer
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Dialog: Supprimer le projet */}
+          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Supprimer le projet</DialogTitle>
+                <DialogDescription>
+                  Êtes-vous sûr de vouloir supprimer le projet "{project.name}" ? Cette action est irréversible.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                  Annuler
+                </Button>
+                <Button 
+                  variant="destructive"
+                  onClick={async () => {
+                    try {
+                      const token = localStorage.getItem('token');
+                      const apiBase = getApiBase();
+                      const url = apiBase ? `${apiBase}/api/v1/projects/${id}` : `/api/v1/projects/${id}`;
+                      
+                      const response = await fetch(url, {
+                        method: 'DELETE',
+                        headers: {
+                          'Authorization': `Bearer ${token || ''}`,
+                        },
+                      });
+
+                      if (!response.ok) {
+                        throw new Error('Failed to delete project');
+                      }
+
+                      toast({
+                        title: 'Succès',
+                        description: 'Projet supprimé avec succès',
+                      });
+                      navigate('/projects');
+                    } catch (error: any) {
+                      toast({
+                        title: 'Erreur',
+                        description: error.message || 'Erreur lors de la suppression',
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                >
+                  Supprimer
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {/* Tab 2: Analytics */}
           <TabsContent value="analytics" className="space-y-6">
+            {/* Panneau Projet (identique à Watchlist) */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle>{project.name}</CardTitle>
+                    {project.description && (
+                      <CardDescription>{project.description}</CardDescription>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
+                      {project.status}
+                    </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => {
+                          setEditName(project.name || '');
+                          setEditDescription(project.description || '');
+                          setEditDialogOpen(true);
+                        }}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Modifier le projet
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={async () => {
+                          try {
+                            const token = localStorage.getItem('token');
+                            const apiBase = getApiBase();
+                            const url = apiBase ? `${apiBase}/api/v1/projects` : `/api/v1/projects`;
+                            
+                            const response = await fetch(url, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token || ''}`,
+                              },
+                              body: JSON.stringify({
+                                name: `${project.name} (copie)`,
+                                description: project.description,
+                                platforms: project.platforms || [],
+                                scope_type: project.scope_type,
+                                scope_query: project.scope_query,
+                                hashtag_names: project.hashtag_names || [],
+                                creator_usernames: project.creator_usernames || [],
+                              }),
+                            });
+
+                            if (!response.ok) {
+                              throw new Error('Failed to duplicate project');
+                            }
+
+                            const duplicatedProject = await response.json();
+                            toast({
+                              title: 'Succès',
+                              description: 'Projet dupliqué avec succès',
+                            });
+                            navigate(`/projects/${duplicatedProject.id}`);
+                          } catch (error: any) {
+                            toast({
+                              title: 'Erreur',
+                              description: error.message || 'Erreur lors de la duplication',
+                              variant: 'destructive',
+                            });
+                          }
+                        }}>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Dupliquer le projet
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => setDeleteDialogOpen(true)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Supprimer le projet
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Créateurs</p>
+                    <p className="text-2xl font-bold text-primary">{creators.length}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Posts (Jour)</p>
+                    <p className="text-2xl font-bold text-primary">{postStats.perDay}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Posts (Semaine)</p>
+                    <p className="text-2xl font-bold text-primary">{postStats.perWeek}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Posts (Mois)</p>
+                    <p className="text-2xl font-bold text-primary">{postStats.perMonth}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Header Stats + PieChart */}
             <div className="grid gap-4 md:grid-cols-3">
-              {/* Left: Key Stats */}
-              <Card className="bg-card border-border shadow-lg md:col-span-2">
-                <CardHeader>
-                  <CardTitle className="text-white">Project Overview</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    {project?.name || 'Project'} statistics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-sm text-gray-400">Creators</p>
-                      <p className="text-2xl font-bold text-primary">{project?.creators_count || 0}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-gray-400">Posts</p>
-                      <p className="text-2xl font-bold text-primary">{project?.posts_count || 0}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-gray-400">Hashtags</p>
-                      <p className="text-2xl font-bold text-primary">{niches.length}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-gray-400">Signals</p>
-                      <p className="text-2xl font-bold text-primary">{project?.signals_count || 0}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-gray-400">Status</p>
-                      <Badge variant={project?.status === 'active' ? 'default' : 'secondary'} className="mt-1">
-                        {project?.status || 'draft'}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm text-gray-400">Platform</p>
-                      <div className="flex gap-2 mt-1">
-                        {(project?.platforms || []).map((p: string) => (
-                          <Badge key={p} variant="outline">{p}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
               {/* Right: Content Type Distribution PieChart */}
               <Card className="bg-card border-border shadow-lg">
                 <CardHeader>
