@@ -79,9 +79,9 @@ export default function Auth() {
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <Link to="/">
-            <img src="/logo.svg" alt="Insider" className="h-12 w-auto mx-auto mb-4" />
+        <div className="text-center mb-10">
+          <Link to="/" className="inline-block">
+            <img src="/logo.svg" alt="veyl.io" className="h-10 w-auto mx-auto" />
           </Link>
         </div>
 

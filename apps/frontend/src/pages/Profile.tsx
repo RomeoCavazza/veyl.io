@@ -136,24 +136,24 @@ export default function Profile() {
 
         <div className="max-w-2xl mx-auto">
           {/* Profile Section */}
-          <div>
+          <div className="space-y-6">
             {/* Profile Card */}
-            <Card className="mb-4">
-              <CardContent className="pt-6 text-center">
+            <Card className="mb-6">
+              <CardContent className="pt-8 pb-6 text-center">
                 <img
                   src={`https://api.dicebear.com/7.x/shapes/svg?seed=${user?.email || 'user'}`}
                   alt="avatar"
-                  className="rounded-full w-32 h-32 mx-auto mb-4"
+                  className="rounded-full w-24 h-24 mx-auto mb-4 border-2 border-primary/20"
                 />
-                <p className="text-sm font-medium mb-1">{user?.name || 'Utilisateur'}</p>
+                <h2 className="text-lg font-semibold mb-1">{user?.name || 'Utilisateur'}</h2>
                 <p className="text-sm text-muted-foreground">{user?.email || 'user@example.com'}</p>
               </CardContent>
             </Card>
 
             {/* Social Links */}
             <Card>
-              <CardHeader>
-                <CardTitle>Réseaux sociaux</CardTitle>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Réseaux sociaux</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {['instagram', 'facebook', 'tiktok'].map((provider) => {
@@ -163,13 +163,15 @@ export default function Profile() {
                   return (
                     <div
                       key={provider}
-                      className="flex items-center justify-between p-3 border rounded-lg"
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                     >
-                      <div className="flex items-center gap-3">
-                        {getProviderIcon(provider)}
+                      <div className="flex items-center gap-4">
+                        <div className="flex-shrink-0">
+                          {getProviderIcon(provider)}
+                        </div>
                         <div>
                           <p className="text-sm font-medium">{getProviderName(provider)}</p>
-                          <p className={`text-xs ${isConnected ? 'text-green-500' : 'text-muted-foreground'}`}>
+                          <p className={`text-xs mt-0.5 ${isConnected ? 'text-green-500' : 'text-muted-foreground'}`}>
                             {isConnected ? 'Connecté' : 'Non connecté'}
                           </p>
                         </div>
@@ -179,7 +181,7 @@ export default function Profile() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDisconnect(account!.id, provider)}
-                          className="text-destructive hover:text-destructive"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
                           Déconnecter
                         </Button>
@@ -198,15 +200,17 @@ export default function Profile() {
               </CardContent>
             </Card>
 
-            {/* Sign Out Button - Simplified */}
-            <Button 
-              variant="outline" 
-              className="w-full gap-2"
-              onClick={handleSignOut}
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
+            {/* Sign Out Button */}
+            <div className="pt-4">
+              <Button 
+                variant="outline" 
+                className="w-full gap-2 border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={handleSignOut}
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </Button>
+            </div>
           </div>
 
         </div>
