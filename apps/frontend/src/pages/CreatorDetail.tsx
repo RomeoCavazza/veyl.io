@@ -1,25 +1,99 @@
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Heart, MessageCircle, Eye, Grid3x3, Table, BarChart3, TrendingUp } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { ArrowLeft, Heart, MessageCircle, Eye, Grid3x3, BarChart3, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { fakeCreators, fakePosts } from '@/lib/fakeData';
 import { engagementTrendData, topPerformingCreators } from '@/lib/mockData';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
+import { formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 export default function CreatorDetail() {
   const { id, username } = useParams<{ id: string; username: string }>();
   const navigate = useNavigate();
+  const [sortColumn, setSortColumn] = useState<string>('posted_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [postDialogOpen, setPostDialogOpen] = useState(false);
 
   // Simuler chargement créateur
   const creator = fakeCreators.find(c => c.handle.replace('@', '') === username);
 
   // Simuler posts du créateur
   const creatorPosts = fakePosts.filter(p => p.username === creator?.handle.replace('@', '') || p.username === username);
+
+  // Fonction pour trier les posts
+  const sortedPosts = useMemo(() => {
+    const sorted = [...creatorPosts];
+    sorted.sort((a: any, b: any) => {
+      let aVal: any = a[sortColumn];
+      let bVal: any = b[sortColumn];
+
+      // Gérer les valeurs nulles/undefined
+      if (aVal === null || aVal === undefined) aVal = '';
+      if (bVal === null || bVal === undefined) bVal = '';
+
+      // Tri par date
+      if (sortColumn === 'posted_at' || sortColumn === 'fetched_at') {
+        const aDate = aVal ? new Date(aVal).getTime() : 0;
+        const bDate = bVal ? new Date(bVal).getTime() : 0;
+        return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
+      }
+
+      // Tri numérique
+      if (sortColumn === 'like_count' || sortColumn === 'comment_count' || sortColumn === 'view_count' || sortColumn === 'score') {
+        const aNum = Number(aVal) || 0;
+        const bNum = Number(bVal) || 0;
+        return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+      }
+
+      // Tri textuel
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        const cmp = aVal.localeCompare(bVal);
+        return sortDirection === 'asc' ? cmp : -cmp;
+      }
+
+      return 0;
+    });
+    return sorted;
+  }, [creatorPosts, sortColumn, sortDirection]);
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    }
+    return sortDirection === 'asc' ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />;
+  };
 
   if (!creator) {
     return (
@@ -125,6 +199,10 @@ export default function CreatorDetail() {
                   <Card 
                     key={post.id} 
                     className="overflow-hidden cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => {
+                      setSelectedPost(post);
+                      setPostDialogOpen(true);
+                    }}
                   >
                     <div className="relative">
                       <img
@@ -171,87 +249,197 @@ export default function CreatorDetail() {
             </div>
           </TabsContent>
 
-          {/* Tab 2: Grid */}
+          {/* Tab 2: Grid - Tableau */}
           <TabsContent value="grid" className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {creatorPosts.map((post) => (
-                <Card key={post.id} className="overflow-hidden cursor-pointer hover:border-primary transition-colors">
-                  <div className="relative">
-                    <img
-                      src={post.media_url}
-                      alt={post.caption}
-                      className="w-full aspect-square object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white">
-                      <div className="flex items-center gap-2">
-                        <Heart className="h-5 w-5" />
-                        <span className="font-semibold">{post.like_count.toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MessageCircle className="h-5 w-5" />
-                        <span className="font-semibold">{post.comment_count.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <CardContent className="p-3">
-                    <p className="text-xs text-muted-foreground line-clamp-2">{post.caption}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle>Posts ({sortedPosts.length})</CardTitle>
+                <CardDescription>
+                  Vue tabulaire de tous les posts avec tri et filtres
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[60px]">Image</TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('caption')}
+                        >
+                          <div className="flex items-center">
+                            Description
+                            {getSortIcon('caption')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('posted_at')}
+                        >
+                          <div className="flex items-center">
+                            Date
+                            {getSortIcon('posted_at')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="text-right cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('like_count')}
+                        >
+                          <div className="flex items-center justify-end">
+                            Likes
+                            {getSortIcon('like_count')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="text-right cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('comment_count')}
+                        >
+                          <div className="flex items-center justify-end">
+                            Comments
+                            {getSortIcon('comment_count')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="text-right cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('score')}
+                        >
+                          <div className="flex items-center justify-end">
+                            Score
+                            {getSortIcon('score')}
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-right">Platform</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedPosts.length > 0 ? (
+                        sortedPosts.map((post: any) => (
+                          <TableRow
+                            key={post.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                          >
+                            <TableCell>
+                              <img
+                                src={post.media_url}
+                                alt={post.caption}
+                                className="w-12 h-12 rounded object-cover"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <p className="max-w-md line-clamp-2 text-sm">
+                                {post.caption || '-'}
+                              </p>
+                            </TableCell>
+                            <TableCell>
+                              {post.posted_at ? (
+                                <div className="text-sm">
+                                  <div>{new Date(post.posted_at).toLocaleDateString('fr-FR')}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {formatDistanceToNow(new Date(post.posted_at), { addSuffix: true, locale: fr })}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Heart className="h-4 w-4" />
+                                <span>{post.like_count?.toLocaleString() || 0}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <MessageCircle className="h-4 w-4" />
+                                <span>{post.comment_count?.toLocaleString() || 0}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {post.score ? (
+                                <Badge variant={post.score > 7 ? 'default' : post.score > 4 ? 'secondary' : 'outline'}>
+                                  {post.score.toFixed(1)}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant="outline">{post.platform || creator.platform || 'instagram'}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            Aucun post trouvé
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Tab 3: Analytics */}
           <TabsContent value="analytics" className="space-y-4">
-            {/* Quick Stats */}
-            <div className="grid gap-4 md:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Posts</CardTitle>
-                  <Grid3x3 className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{creatorPosts.length}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg Engagement</CardTitle>
-                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{creator.avg_engagement || 0}%</div>
-                  <p className="text-xs text-success flex items-center gap-1 mt-1">
-                    <TrendingUp className="h-3 w-3" />
-                    vs average
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Likes</CardTitle>
-                  <Heart className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {creatorPosts.reduce((sum, p) => sum + (p.like_count || 0), 0).toLocaleString()}
+            {/* Quick Stats - Rassemblées dans une seule Card */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-4 gap-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-primary/10">
+                      <Grid3x3 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Posts</p>
+                      <p className="text-2xl font-bold">{creatorPosts.length}</p>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Comments</CardTitle>
-                  <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {creatorPosts.reduce((sum, p) => sum + (p.comment_count || 0), 0).toLocaleString()}
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-accent/10">
+                      <BarChart3 className="h-5 w-5 text-accent" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Avg Engagement</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-2xl font-bold">{creator.avg_engagement || 0}%</p>
+                        <p className="text-xs text-success flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3" />
+                          vs average
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-red-500/10">
+                      <Heart className="h-5 w-5 text-red-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Likes</p>
+                      <p className="text-2xl font-bold">
+                        {creatorPosts.reduce((sum, p) => sum + (p.like_count || 0), 0).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-blue-500/10">
+                      <MessageCircle className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Comments</p>
+                      <p className="text-2xl font-bold">
+                        {creatorPosts.reduce((sum, p) => sum + (p.comment_count || 0), 0).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Charts */}
+            {/* Charts - 4 graphiques en 2x2 */}
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader>
@@ -316,9 +504,227 @@ export default function CreatorDetail() {
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Likes Over Time</CardTitle>
+                  <CardDescription>Daily likes trend</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={creatorPosts.slice(0, 7).map(p => ({
+                      date: p.posted_at ? new Date(p.posted_at).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }) : 'N/A',
+                      likes: p.like_count || 0,
+                    }))}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-gray-700" />
+                      <XAxis dataKey="date" className="text-gray-400" />
+                      <YAxis className="text-gray-400" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '6px',
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="likes"
+                        stroke="#ef4444"
+                        fill="#ef4444"
+                        fillOpacity={0.2}
+                        name="Likes"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Comments Over Time</CardTitle>
+                  <CardDescription>Daily comments trend</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={creatorPosts.slice(0, 7).map(p => ({
+                      date: p.posted_at ? new Date(p.posted_at).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }) : 'N/A',
+                      comments: p.comment_count || 0,
+                    }))}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-gray-700" />
+                      <XAxis dataKey="date" className="text-gray-400" />
+                      <YAxis className="text-gray-400" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '6px',
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="comments"
+                        stroke="#3b82f6"
+                        fill="#3b82f6"
+                        fillOpacity={0.2}
+                        name="Comments"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Post Detail Dialog - Style Instagram */}
+        <Dialog open={postDialogOpen} onOpenChange={setPostDialogOpen}>
+          {selectedPost && (() => {
+            const profilePic = creator?.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator?.handle}`;
+            const postedDate = selectedPost.posted_at ? new Date(selectedPost.posted_at) : new Date();
+            const relativeTime = formatDistanceToNow(postedDate, { addSuffix: true, locale: fr });
+            const caption = selectedPost.caption || '';
+
+            return (
+              <DialogContent className="max-w-5xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+                <div className="flex bg-background">
+                  {/* Photo à gauche */}
+                  <div className="flex-shrink-0 w-full md:w-[60%] bg-black flex items-center justify-center">
+                    <img
+                      src={selectedPost.media_url}
+                      alt={selectedPost.caption}
+                      className="max-h-[90vh] w-full object-contain"
+                    />
+                  </div>
+
+                  {/* Panneau infos à droite */}
+                  <div className="flex flex-col w-full md:w-[40%] max-h-[90vh] border-l border-border">
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-4 border-b border-border">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={profilePic}
+                          alt={creator?.handle}
+                          className="w-10 h-10 rounded-full cursor-pointer hover:opacity-80"
+                        />
+                        <div>
+                          <div className="font-semibold text-sm">
+                            {creator?.handle}
+                          </div>
+                          {selectedPost.location && (
+                            <div className="text-xs text-muted-foreground">{selectedPost.location}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                      <div className="text-sm whitespace-pre-wrap">
+                        <span className="font-semibold mr-2">{creator?.handle}</span>
+                        {(() => {
+                          // Formater la caption avec hashtags et mentions en texte normal mais stylisés
+                          const parts: (string | JSX.Element)[] = [];
+                          let lastIndex = 0;
+                          
+                          // Regex pour trouver hashtags et mentions
+                          const regex = /(#\w+|@\w+)/g;
+                          let match;
+                          
+                          while ((match = regex.exec(caption)) !== null) {
+                            // Ajouter le texte avant le match
+                            if (match.index > lastIndex) {
+                              parts.push(caption.substring(lastIndex, match.index));
+                            }
+                            
+                            // Ajouter le hashtag ou mention stylisé
+                            parts.push(
+                              <span
+                                key={match.index}
+                                className="text-primary hover:underline cursor-pointer"
+                              >
+                                {match[0]}
+                              </span>
+                            );
+                            
+                            lastIndex = regex.lastIndex;
+                          }
+                          
+                          // Ajouter le reste du texte
+                          if (lastIndex < caption.length) {
+                            parts.push(caption.substring(lastIndex));
+                          }
+                          
+                          return parts.length > 0 ? parts : <span>{caption}</span>;
+                        })()}
+                      </div>
+
+                      {/* Stats */}
+                      <div className="pt-4 border-t border-border space-y-2">
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            <Heart className="h-4 w-4 text-red-500" />
+                            <span className="font-semibold">{selectedPost.like_count?.toLocaleString() || '0'}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MessageCircle className="h-4 w-4" />
+                            <span className="font-semibold">{selectedPost.comment_count?.toLocaleString() || '0'}</span>
+                          </div>
+                          {selectedPost.view_count && (
+                            <div className="flex items-center gap-1">
+                              <Eye className="h-4 w-4" />
+                              <span className="font-semibold">{selectedPost.view_count.toLocaleString()}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{relativeTime}</div>
+                      </div>
+
+                      {/* Commentaires */}
+                      <div className="pt-4 border-t border-border space-y-3">
+                        <h4 className="font-semibold text-sm mb-3">Commentaires</h4>
+                        {[
+                          {
+                            id: '1',
+                            user: 'fashionlover23',
+                            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user1',
+                            comment: 'Love this collection! When will it be available? 😍',
+                            timestamp: '2h',
+                            likes: 24,
+                          },
+                          {
+                            id: '2',
+                            user: 'styleicon',
+                            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user2',
+                            comment: 'Amazing quality! Just received my order 🎉',
+                            timestamp: '5h',
+                            likes: 18,
+                          },
+                        ].map((comment) => (
+                          <div key={comment.id} className="flex items-start gap-3">
+                            <img src={comment.avatar} alt={comment.user} className="w-8 h-8 rounded-full flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="mb-1">
+                                <span className="font-semibold text-sm">{comment.user}</span>
+                              </div>
+                              <div className="text-sm mb-2">{comment.comment}</div>
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                <span>{comment.timestamp}</span>
+                                <div className="flex items-center gap-1 cursor-pointer hover:opacity-80">
+                                  <Heart className="h-3 w-3" />
+                                  <span>{comment.likes}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            );
+          })()}
+        </Dialog>
       </div>
     </div>
   );
