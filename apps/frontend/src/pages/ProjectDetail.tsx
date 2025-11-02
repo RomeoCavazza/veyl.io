@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { ProjectPanel } from '@/components/ProjectPanel';
@@ -15,6 +15,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -22,7 +30,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Bell, AtSign, Trash2, ExternalLink } from 'lucide-react';
+import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Bell, AtSign, Trash2, ExternalLink, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getFakeProject, getFakeProjectPosts, fakeCreators, fakePosts } from '@/lib/fakeData';
@@ -63,6 +71,8 @@ export default function ProjectDetail() {
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('week');
+  const [sortColumn, setSortColumn] = useState<string>('posted_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Mock data for charts
   const pieData = [
@@ -320,6 +330,58 @@ export default function ProjectDetail() {
     };
   };
 
+  // Fonction pour trier les posts
+  const sortedPosts = useMemo(() => {
+    const sorted = [...posts];
+    sorted.sort((a: any, b: any) => {
+      let aVal: any = a[sortColumn];
+      let bVal: any = b[sortColumn];
+
+      // Gérer les valeurs nulles/undefined
+      if (aVal === null || aVal === undefined) aVal = '';
+      if (bVal === null || bVal === undefined) bVal = '';
+
+      // Tri par date
+      if (sortColumn === 'posted_at' || sortColumn === 'fetched_at') {
+        const aDate = aVal ? new Date(aVal).getTime() : 0;
+        const bDate = bVal ? new Date(bVal).getTime() : 0;
+        return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
+      }
+
+      // Tri numérique
+      if (sortColumn === 'like_count' || sortColumn === 'comment_count' || sortColumn === 'view_count' || sortColumn === 'score') {
+        const aNum = Number(aVal) || 0;
+        const bNum = Number(bVal) || 0;
+        return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+      }
+
+      // Tri textuel
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        const cmp = aVal.localeCompare(bVal);
+        return sortDirection === 'asc' ? cmp : -cmp;
+      }
+
+      return 0;
+    });
+    return sorted;
+  }, [posts, sortColumn, sortDirection]);
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    }
+    return sortDirection === 'asc' ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />;
+  };
+
   if (loading || !project) {
     return (
       <div className="min-h-screen bg-background">
@@ -354,6 +416,9 @@ export default function ProjectDetail() {
           <TabsList>
             <TabsTrigger value="watchlist">
               Watchlist
+            </TabsTrigger>
+            <TabsTrigger value="grid">
+              Grille
             </TabsTrigger>
             <TabsTrigger value="analytics">
               Analytics
@@ -395,8 +460,8 @@ export default function ProjectDetail() {
                     </div>
                   </CardHeader>
                   <CardContent className="flex-1 overflow-hidden">
-                    <div className="space-y-3 h-[400px] overflow-y-auto pr-2">
-                      {creators.map((creator) => {
+                    <div className="space-y-3">
+                      {creators.slice(0, 4).map((creator) => {
                         const stats = getCreatorStats(creator.handle, selectedPeriod);
                         return (
                           <div
@@ -426,6 +491,21 @@ export default function ProjectDetail() {
                           </div>
                         );
                       })}
+                      {creators.length > 4 && (
+                        <Button
+                          variant="ghost"
+                          className="w-full text-sm"
+                          onClick={() => {
+                            // Scroll vers la section complète des creators dans la grille
+                            const gridTab = document.querySelector('[value="grid"]');
+                            if (gridTab) {
+                              (gridTab as HTMLElement).click();
+                            }
+                          }}
+                        >
+                          Voir tous les {creators.length} creators →
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -501,6 +581,178 @@ export default function ProjectDetail() {
                 )}
               </div>
             </div>
+          </TabsContent>
+
+          {/* Tab 2: Grille - Tableau des posts */}
+          <TabsContent value="grid" className="space-y-6">
+            {/* Panneau Projet */}
+            <ProjectPanel
+              project={project}
+              creators={creators}
+              onEdit={() => {
+                setEditName(project.name || '');
+                setEditDescription(project.description || '');
+                setEditDialogOpen(true);
+              }}
+              onDelete={() => setDeleteDialogOpen(true)}
+            />
+
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle>Posts ({sortedPosts.length})</CardTitle>
+                <CardDescription>
+                  Vue tabulaire de tous les posts avec tri et filtres
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[60px]">Image</TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('username')}
+                        >
+                          <div className="flex items-center">
+                            Auteur
+                            {getSortIcon('username')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('caption')}
+                        >
+                          <div className="flex items-center">
+                            Description
+                            {getSortIcon('caption')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('posted_at')}
+                        >
+                          <div className="flex items-center">
+                            Date
+                            {getSortIcon('posted_at')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="text-right cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('like_count')}
+                        >
+                          <div className="flex items-center justify-end">
+                            Likes
+                            {getSortIcon('like_count')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="text-right cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('comment_count')}
+                        >
+                          <div className="flex items-center justify-end">
+                            Comments
+                            {getSortIcon('comment_count')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="text-right cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('score')}
+                        >
+                          <div className="flex items-center justify-end">
+                            Score
+                            {getSortIcon('score')}
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-right">Platform</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedPosts.length > 0 ? (
+                        sortedPosts.map((post: any) => {
+                          const creator = creators.find((c: any) => c.handle?.toLowerCase() === post.username?.toLowerCase());
+                          return (
+                            <TableRow
+                              key={post.id}
+                              className="cursor-pointer hover:bg-muted/50"
+                              onClick={() => {
+                                setSelectedPost(post);
+                                setPostDialogOpen(true);
+                              }}
+                            >
+                              <TableCell>
+                                <img
+                                  src={post.media_url}
+                                  alt={post.caption}
+                                  className="w-12 h-12 rounded object-cover"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={creator?.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.username}`}
+                                    alt={post.username}
+                                    className="w-6 h-6 rounded-full"
+                                  />
+                                  <span className="font-medium">{post.username}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <p className="max-w-md line-clamp-2 text-sm">
+                                  {post.caption || '-'}
+                                </p>
+                              </TableCell>
+                              <TableCell>
+                                {post.posted_at ? (
+                                  <div className="text-sm">
+                                    <div>{new Date(post.posted_at).toLocaleDateString('fr-FR')}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {formatDistanceToNow(new Date(post.posted_at), { addSuffix: true, locale: fr })}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Heart className="h-4 w-4" />
+                                  <span>{post.like_count?.toLocaleString() || 0}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <MessageCircle className="h-4 w-4" />
+                                  <span>{post.comment_count?.toLocaleString() || 0}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {post.score ? (
+                                  <Badge variant={post.score > 7 ? 'default' : post.score > 4 ? 'secondary' : 'outline'}>
+                                    {post.score.toFixed(1)}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant="outline">{post.platform || 'instagram'}</Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                            Aucun post trouvé
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Post Detail Dialog - Style Instagram */}
