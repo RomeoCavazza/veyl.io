@@ -54,6 +54,8 @@ class OAuthService:
             user = db.query(User).filter(User.id == linked_user_id).first()
             if user:
                 logger.info(f"📎 Liaison OAuth {provider} au User ID: {linked_user_id}")
+                # IMPORTANT: Ne jamais mettre à jour name/email du User existant
+                # Les informations du User principal doivent rester constantes
                 return user
             logger.warning(f"⚠️ User ID {linked_user_id} non trouvé, poursuite de la recherche...")
         
@@ -67,6 +69,8 @@ class OAuthService:
             user = db.query(User).filter(User.id == existing_oauth.user_id).first()
             if user:
                 logger.info(f"🔗 OAuthAccount {provider} existe déjà pour User ID: {user.id}")
+                # IMPORTANT: Ne jamais mettre à jour name/email du User existant
+                # Les informations du User principal doivent rester constantes
                 return user
         
         # PRIORITÉ 3: Si email réel fourni, chercher un User existant avec cet email
@@ -74,6 +78,8 @@ class OAuthService:
             user = db.query(User).filter(User.email == email).first()
             if user:
                 logger.info(f"📧 User trouvé via email réel: {email} (User ID: {user.id})")
+                # IMPORTANT: Ne jamais mettre à jour name/email du User existant
+                # Les informations du User principal doivent rester constantes
                 return user
         
         # PRIORITÉ 4: Chercher via d'autres OAuthAccounts existants (cross-linking)
