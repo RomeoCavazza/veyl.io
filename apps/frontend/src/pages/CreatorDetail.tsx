@@ -149,33 +149,48 @@ export default function CreatorDetail() {
                       <CardDescription className="text-base mb-2">{creator.full_name}</CardDescription>
                     )}
                     {creator.bio && (
-                      <p className="text-sm text-muted-foreground mt-2">{creator.bio}</p>
+                      <p className="text-sm text-muted-foreground mt-2 mb-4">{creator.bio}</p>
                     )}
-                  </div>
 
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border">
-                    <div>
-                      <p className="text-2xl font-bold text-primary">{creator.followers.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">Followers</p>
+                    {/* Stats regroupées sous la description - 6 chiffres max */}
+                    <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border">
+                      <div>
+                        <p className="text-2xl font-bold text-primary">{creator.followers.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">Followers</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-primary">{creator.following?.toLocaleString() || 'N/A'}</p>
+                        <p className="text-xs text-muted-foreground">Following</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-primary">{creatorPosts.length}</p>
+                        <p className="text-xs text-muted-foreground">Posts</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-primary">{creator.avg_engagement || 0}%</p>
+                        <p className="text-xs text-muted-foreground">Avg Engagement</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-primary">
+                          {creatorPosts.reduce((sum, p) => sum + (p.like_count || 0), 0).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Total Likes</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-primary">
+                          {creatorPosts.reduce((sum, p) => sum + (p.comment_count || 0), 0).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Total Comments</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-2xl font-bold text-primary">{creator.following?.toLocaleString() || 'N/A'}</p>
-                      <p className="text-xs text-muted-foreground">Following</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-primary">{creatorPosts.length}</p>
-                      <p className="text-xs text-muted-foreground">Posts</p>
-                    </div>
-                  </div>
 
-                  {/* Badges */}
-                  <div className="flex items-center gap-2 pt-2">
-                    <Badge variant="secondary">{creator.platform}</Badge>
-                    <Badge variant="outline">{creator.avg_engagement}% engagement</Badge>
-                    {creator.category && (
-                      <Badge variant="outline">{creator.category}</Badge>
-                    )}
+                    {/* Badges */}
+                    <div className="flex items-center gap-2 pt-4">
+                      <Badge variant="secondary">{creator.platform}</Badge>
+                      {creator.category && (
+                        <Badge variant="outline">{creator.category}</Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -385,60 +400,6 @@ export default function CreatorDetail() {
 
           {/* Tab 3: Analytics */}
           <TabsContent value="analytics" className="space-y-4">
-            {/* Quick Stats - Rassemblées dans une seule Card */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-4 gap-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-primary/10">
-                      <Grid3x3 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Posts</p>
-                      <p className="text-2xl font-bold">{creatorPosts.length}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-accent/10">
-                      <BarChart3 className="h-5 w-5 text-accent" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Avg Engagement</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-2xl font-bold">{creator.avg_engagement || 0}%</p>
-                        <p className="text-xs text-success flex items-center gap-1">
-                          <TrendingUp className="h-3 w-3" />
-                          vs average
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-red-500/10">
-                      <Heart className="h-5 w-5 text-red-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Likes</p>
-                      <p className="text-2xl font-bold">
-                        {creatorPosts.reduce((sum, p) => sum + (p.like_count || 0), 0).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-blue-500/10">
-                      <MessageCircle className="h-5 w-5 text-blue-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Comments</p>
-                      <p className="text-2xl font-bold">
-                        {creatorPosts.reduce((sum, p) => sum + (p.comment_count || 0), 0).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Charts - 4 graphiques en 2x2 */}
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
