@@ -12,68 +12,57 @@ export default function Community() {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="container py-8 px-4 max-w-7xl">
-        {/* Header avec badges partenariats */}
-        <div className="mb-12 text-center space-y-4">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Communauté veyl.io
-          </h1>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Rejoignez une communauté open source dédiée à l'intelligence sociale et la veille des tendances
-          </p>
-          
-          {/* Badges partenariats */}
-          <div className="flex flex-wrap justify-center gap-4 mt-6">
-            <Badge variant="outline" className="px-4 py-2 text-sm border-primary/50">
-              <span className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                Partenaire Meta for Developers
-              </span>
-            </Badge>
-            <Badge variant="outline" className="px-4 py-2 text-sm border-primary/50">
-              <span className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                Partenaire TikTok for Developers
-              </span>
-            </Badge>
-          </div>
-        </div>
+      <div className="container py-12 px-4 max-w-6xl">
 
-        {/* Section GitHub - Open Source */}
-        <section className="mb-16">
-          <div className="flex flex-col lg:flex-row gap-8 items-center">
-            {/* Texte à gauche */}
-            <div className="flex-1 space-y-4">
-              <div className="flex items-center gap-3 mb-4">
-                <Code2 className="h-8 w-8 text-primary" />
-                <h2 className="text-2xl font-bold">Open Source Forever</h2>
-              </div>
-              <p className="text-muted-foreground text-lg leading-relaxed">
-                veyl.io est entièrement open source et s'engage à le rester. Nous recherchons des contributeurs 
-                pour façonner l'avenir de l'intelligence sociale.
-              </p>
-              <p className="text-muted-foreground">
-                Le projet est développé en collaboration avec les étudiants de <strong>ISCOM Paris</strong> et 
-                <strong> EPITECH Paris</strong>, créant une communauté dynamique autour de la veille culturelle.
-              </p>
-              <div className="flex gap-4 pt-4">
-                <Button asChild variant="default">
-                  <a href="https://github.com/RomeoCavazza/veyl.io" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                    <Github className="h-4 w-4" />
-                    Voir le repository
-                  </a>
-                </Button>
-                <Button asChild variant="outline">
-                  <a href="https://github.com/RomeoCavazza/veyl.io/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                    <Heart className="h-4 w-4" />
-                    Contribuer
-                  </a>
-                </Button>
+        {/* Rang 1 : ISCOM Paris */}
+        <section className="mb-20">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            {/* Illustration (50%) */}
+            <div className="flex items-center justify-center">
+              <div className="p-8 rounded-lg border border-border bg-card/50">
+                <Badge variant="outline" className="px-6 py-3 text-base">
+                  ISCOM PARIS
+                </Badge>
               </div>
             </div>
+            
+            {/* Texte (50%) */}
+            <div className="space-y-3">
+              <h2 className="text-2xl font-bold">Projet né dans un contexte universitaire</h2>
+              <p className="text-muted-foreground">
+                Imaginé et inspiré dans l'école <strong>ISCOM Paris</strong>, pour les insights métiers et l'audit de la niche choisie.
+              </p>
+            </div>
+          </div>
+        </section>
 
-            {/* Widget GitHub à droite */}
-            <div className="w-full lg:w-auto lg:flex-shrink-0">
+        {/* Rang 2 : EPITECH Paris */}
+        <section className="mb-20">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            {/* Texte (50%) */}
+            <div className="space-y-3">
+              <h2 className="text-2xl font-bold">Rendu possible par les enseignements techniques</h2>
+              <p className="text-muted-foreground">
+                Développement technique rendu possible grâce aux enseignements de <strong>EPITECH Paris</strong>.
+              </p>
+            </div>
+            
+            {/* Illustration (50%) */}
+            <div className="flex items-center justify-center">
+              <div className="p-8 rounded-lg border border-border bg-card/50">
+                <Badge variant="outline" className="px-6 py-3 text-base">
+                  EPITECH PARIS
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Rang 3 : Projet Open Source - GitHub */}
+        <section className="mb-20">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            {/* Illustration (50%) - Fenêtre GitHub */}
+            <div className="w-full flex justify-center">
               <a href="https://github.com/RomeoCavazza/veyl.io" target="_blank" rel="noopener noreferrer" className="block">
                 <div className="card-container hover:scale-[1.02] transition-transform cursor-pointer">
                   <div className="card-border"></div>
@@ -141,38 +130,44 @@ export default function Community() {
                 </div>
               </a>
             </div>
+            
+            {/* Texte (50%) */}
+            <div className="space-y-3">
+              <h2 className="text-2xl font-bold">Projet Open Source</h2>
+              <p className="text-muted-foreground">
+                veyl.io est entièrement <strong>open source</strong> et disponible sur GitHub. Contribuez via des Pull Requests.
+              </p>
+              <Button asChild variant="outline" size="sm">
+                <a href="https://github.com/RomeoCavazza/veyl.io" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                  <Github className="h-4 w-4" />
+                  Voir le repository
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
           </div>
         </section>
 
-        {/* Section Discord - Communauté */}
-        <section className="mb-16">
-          <div className="flex flex-col lg:flex-row-reverse gap-8 items-center">
-            {/* Texte à droite */}
-            <div className="flex-1 space-y-4">
-              <div className="flex items-center gap-3 mb-4">
-                <MessageCircle className="h-8 w-8 text-primary" />
-                <h2 className="text-2xl font-bold">Communauté Discord</h2>
-              </div>
-              <p className="text-muted-foreground text-lg leading-relaxed">
-                Rejoignez notre serveur Discord pour échanger avec la communauté, poser des questions, 
-                partager vos découvertes et contribuer au développement du projet.
-              </p>
+        {/* Rang 4 : Communauté Discord */}
+        <section className="mb-20">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            {/* Texte (50%) */}
+            <div className="space-y-3">
+              <h2 className="text-2xl font-bold">Communauté en construction</h2>
               <p className="text-muted-foreground">
-                La communauté rassemble des étudiants de <strong>ISCOM Paris</strong> et <strong>EPITECH Paris</strong>, 
-                ainsi que des agences partenaires intéressées par le beta testing.
+                Rejoignez notre serveur Discord pour échanger avec la communauté et contribuer au projet.
               </p>
-              <div className="flex gap-4 pt-4">
-                <Button asChild variant="default" className="bg-[#5865F2] hover:bg-[#4752C4]">
-                  <a href="https://discord.gg/TKbNuuV4sX" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                    <MessageCircle className="h-4 w-4" />
-                    Rejoindre Discord
-                  </a>
-                </Button>
-              </div>
+              <Button asChild variant="outline" size="sm">
+                <a href="https://discord.gg/TKbNuuV4sX" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  Rejoindre Discord
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
             </div>
-
-            {/* Widget Discord à gauche */}
-            <div className="w-full lg:w-auto lg:flex-shrink-0 flex justify-center">
+            
+            {/* Illustration (50%) - Bouton Discord */}
+            <div className="w-full flex justify-center">
               <a href="https://discord.gg/TKbNuuV4sX" target="_blank" rel="noopener noreferrer" className="discord-button">
                 <div className="discord-button-bg"></div>
                 <div className="discord-button-content">
@@ -194,48 +189,6 @@ export default function Community() {
               </a>
             </div>
           </div>
-        </section>
-
-        {/* Section Écoles */}
-        <section className="mb-16">
-          <Card className="p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <GraduationCap className="h-8 w-8 text-primary" />
-              <h2 className="text-2xl font-bold">Partenariats Académiques</h2>
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="px-3 py-1">ISCOM PARIS</Badge>
-                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <p className="text-muted-foreground">
-                  Collaboration avec les étudiants de <strong>ISCOM Paris</strong> pour le développement 
-                  et l'analyse des tendances marketing et communication.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Les étudiants contribuent au projet via des projets de fin d'études, des stages et 
-                  des initiatives communautaires autour du GitHub et du Discord.
-                </p>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="px-3 py-1">EPITECH PARIS</Badge>
-                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <p className="text-muted-foreground">
-                  Partenariat avec <strong>EPITECH Paris</strong> pour le développement technique, 
-                  l'architecture backend et les intégrations API.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Les étudiants développeurs participent activement au codebase open source, 
-                  contribuant aux fonctionnalités backend et frontend via des Pull Requests.
-                </p>
-              </div>
-            </div>
-          </Card>
         </section>
 
         {/* Section Contribution */}
