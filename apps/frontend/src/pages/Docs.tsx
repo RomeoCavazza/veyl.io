@@ -144,7 +144,7 @@ export default function Docs() {
                 {/* Logo à droite */}
                 <div className="flex-shrink-0">
                   <a href="/" className="block transition-transform hover:scale-105">
-                    <img src="/logo.svg" alt="veyl.io" className="h-32 w-auto max-w-none" />
+                    <img src="/logo.svg" alt="veyl.io" className="h-20 w-auto max-w-none" />
                   </a>
                 </div>
               </div>
@@ -179,7 +179,7 @@ export default function Docs() {
                 {/* Logo à droite */}
                 <div className="flex-shrink-0">
                   <a href="https://www.meilisearch.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
-                    <img src={meilisearchLogo} alt="Meilisearch" className="h-32 w-auto max-w-none" />
+                    <img src={meilisearchLogo} alt="Meilisearch" className="h-28 w-auto max-w-none" />
                   </a>
                 </div>
               </div>
@@ -214,7 +214,7 @@ export default function Docs() {
                 {/* Logo à droite */}
                 <div className="flex-shrink-0">
                   <a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
-                    <img src={metaLogo} alt="Meta for Developers" className="h-32 w-auto max-w-none" />
+                    <img src={metaLogo} alt="Meta for Developers" className="h-28 w-auto max-w-none" />
                   </a>
                 </div>
               </div>
@@ -275,7 +275,7 @@ export default function Docs() {
                 {/* Logo à droite */}
                 <div className="flex-shrink-0">
                   <a href="https://developers.tiktok.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
-                    <img src={tiktokLogo} alt="TikTok for Developers" className="h-32 w-auto max-w-none" />
+                    <img src={tiktokLogo} alt="TikTok for Developers" className="h-28 w-auto max-w-none" />
                   </a>
                 </div>
               </div>
