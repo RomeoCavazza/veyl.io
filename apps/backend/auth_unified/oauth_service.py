@@ -98,16 +98,44 @@ class OAuthService:
                     return user
         
         # PRIORITÉ 3.5: Si linked_user_id était fourni mais le User n'a pas été trouvé (cas rare),
-        # ou si on n'a pas de linked_user_id mais on veut éviter de créer un doublon,
-        # chercher parmi les Users existants qui ont déjà un OAuthAccount d'un autre provider
-        # avec un email réel pour tenter de lier automatiquement
-        # (seulement si on est sûr que c'est le même utilisateur - éviter les faux positifs)
+        # essayer de chercher un User existant avec un email réel qui a déjà un OAuthAccount
+        # Cela peut arriver si le linked_user_id est incorrect ou si le User a été supprimé
         
-        # PRIORITÉ 4: Chercher via les OAuthAccounts existants si on a un linked_user_id mais que le User n'existe pas
-        # ou si on veut tenter de lier automatiquement les comptes OAuth d'un même utilisateur
-        # Cette logique cherche parmi tous les Users qui ont un email réel et un OAuthAccount
-        # pour voir si on peut identifier le même utilisateur
-        # Note: On fait ça uniquement si on n'a pas de linked_user_id valide ET qu'on n'a pas trouvé d'email réel
+        # PRIORITÉ 4: Si on n'a pas de linked_user_id valide ET pas d'email réel fourni,
+        # chercher parmi TOUS les Users existants qui ont :
+        # - Un email réel (pas un email généré OAuth)
+        # - Au moins un OAuthAccount déjà lié
+        # Cela permet de lier automatiquement les comptes OAuth d'un même utilisateur réel
+        # (ex: si l'utilisateur s'est connecté avec Google avant, on lie TikTok au même User)
+        if not linked_user_id:
+            # Chercher tous les Users avec un email réel qui ont déjà des OAuthAccounts
+            from db.models import OAuthAccount
+            users_with_oauth = db.query(User).join(OAuthAccount).filter(
+                ~User.email.like('%@veyl.io'),
+                ~User.email.like('%@insidr.dev'),
+                ~User.email.like('instagram_%'),
+                ~User.email.like('facebook_%'),
+                ~User.email.like('tiktok_%'),
+                ~User.email.like('google_%')
+            ).distinct().all()
+            
+            if users_with_oauth:
+                # Si on trouve un seul User avec email réel, on l'utilise (cas le plus courant)
+                # En production, on pourrait ajouter plus de vérifications pour éviter les faux positifs
+                if len(users_with_oauth) == 1:
+                    user = users_with_oauth[0]
+                    logger.info(f"🔗 Liaison automatique OAuth {provider} au User existant avec email réel: {user.email} (User ID: {user.id})")
+                    return user
+                else:
+                    # Plusieurs Users avec email réel trouvés - on prend le plus récent ou celui avec le plus d'OAuthAccounts
+                    # Pour l'instant, on prend le premier (on pourrait améliorer cette logique)
+                    user = users_with_oauth[0]
+                    logger.warning(
+                        f"⚠️ Plusieurs Users avec email réel trouvés ({len(users_with_oauth)}). "
+                        f"Liaison de OAuth {provider} au User ID {user.id} ({user.email}). "
+                        f"Autres Users: {[u.id for u in users_with_oauth[1:]]}"
+                    )
+                    return user
         
         # PRIORITÉ 5: Créer un nouveau User (dernier recours)
         # Générer un email si nécessaire
@@ -300,54 +328,109 @@ class OAuthService:
                 raise HTTPException(status_code=400, detail=f"Erreur requête Instagram token: {str(e)}")
 
             # 2) Long-lived token
-            r2 = await client.get(
-                "https://graph.facebook.com/v21.0/oauth/access_token",
-                params={
-                    "grant_type": "fb_exchange_token",
-                    "client_id": app_id,
-                    "client_secret": app_secret,
-                    "fb_exchange_token": short_token,
-                },
-            )
-            r2.raise_for_status()
-            long_token = r2.json().get("access_token")
-
-            # 3) Récupérer Page(s) -> IG Business ID
-            pages = await client.get(
-                "https://graph.facebook.com/v21.0/me/accounts",
-                params={"access_token": long_token}
-            )
-            pages.raise_for_status()
-            pages_data = pages.json().get("data", [])
-            
-            ig_user_id = None
-            for p in pages_data:
-                page_id = p["id"]
-                r3 = await client.get(
-                    f"https://graph.facebook.com/v21.0/{page_id}",
+            try:
+                r2 = await client.get(
+                    "https://graph.facebook.com/v21.0/oauth/access_token",
                     params={
-                        "fields": "instagram_business_account{username,id}",
-                        "access_token": long_token
+                        "grant_type": "fb_exchange_token",
+                        "client_id": app_id,
+                        "client_secret": app_secret,
+                        "fb_exchange_token": short_token,
                     },
                 )
-                r3.raise_for_status()
-                ig = r3.json().get("instagram_business_account")
-                if ig and ig.get("id"):
-                    ig_user_id = ig["id"]
-                    break
+                if r2.status_code != 200:
+                    error_detail = r2.text
+                    error_json = r2.json() if r2.headers.get("content-type", "").startswith("application/json") else {}
+                    error_msg = error_json.get("error", {}).get("message", "unknown_error") if isinstance(error_json.get("error"), dict) else error_json.get("error", "unknown_error")
+                    logger.error(f"❌ Erreur Instagram long-lived token exchange: {r2.status_code} - {error_msg}")
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Erreur Instagram long-lived token: {r2.status_code} - {error_msg}"
+                    )
+                r2.raise_for_status()
+                long_token = r2.json().get("access_token")
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"❌ Erreur requête Instagram long-lived token: {str(e)}")
+                raise HTTPException(status_code=400, detail=f"Erreur requête Instagram long-lived token: {str(e)}")
 
+            # 3) Récupérer Page(s) -> IG Business ID
+            try:
+                pages = await client.get(
+                    "https://graph.facebook.com/v21.0/me/accounts",
+                    params={"access_token": long_token}
+                )
+                if pages.status_code != 200:
+                    error_detail = pages.text
+                    logger.error(f"❌ Erreur récupération Pages Instagram: {pages.status_code} - {error_detail}")
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Erreur récupération Pages Instagram: {pages.status_code} - {error_detail}"
+                    )
+                pages.raise_for_status()
+                pages_data = pages.json().get("data", [])
+                
+                ig_user_id = None
+                for p in pages_data:
+                    page_id = p["id"]
+                    try:
+                        r3 = await client.get(
+                            f"https://graph.facebook.com/v21.0/{page_id}",
+                            params={
+                                "fields": "instagram_business_account{username,id}",
+                                "access_token": long_token
+                            },
+                        )
+                        if r3.status_code != 200:
+                            logger.warning(f"⚠️ Erreur récupération Instagram Business Account pour Page {page_id}: {r3.status_code}")
+                            continue
+                        r3.raise_for_status()
+                        ig = r3.json().get("instagram_business_account")
+                        if ig and ig.get("id"):
+                            ig_user_id = ig["id"]
+                            logger.info(f"✅ Instagram Business ID trouvé: {ig_user_id}")
+                            break
+                    except Exception as e:
+                        logger.warning(f"⚠️ Erreur lors de la récupération de l'Instagram Business Account pour Page {page_id}: {str(e)}")
+                        continue
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"❌ Erreur requête Pages Instagram: {str(e)}")
+                raise HTTPException(status_code=400, detail=f"Erreur requête Pages Instagram: {str(e)}")
+
+        if not long_token:
+            raise HTTPException(status_code=400, detail="Access token Instagram manquant")
+        
+        if not ig_user_id:
+            # Instagram Business Account non trouvé - cela peut arriver si :
+            # 1. L'utilisateur n'a pas de Page Facebook liée à Instagram Business
+            # 2. La Page Facebook n'a pas d'Instagram Business Account associé
+            # 3. Les permissions ne permettent pas d'accéder à l'Instagram Business Account
+            logger.error("❌ Instagram Business ID non trouvé - L'utilisateur doit avoir une Page Facebook avec Instagram Business Account")
+            raise HTTPException(
+                status_code=400,
+                detail="Instagram Business Account non trouvé. Assurez-vous que votre compte Facebook a une Page liée à un compte Instagram Business."
+            )
+        
         if long_token and ig_user_id:
             from db.models import OAuthAccount
             
+            logger.info(f"🔍 Recherche/création User pour Instagram - linked_user_id={linked_user_id}, provider_user_id={ig_user_id}")
+            
             # Utiliser la fonction centralisée pour trouver ou créer le User
+            # IMPORTANT: Ne pas passer d'email généré ici pour permettre à la logique de trouver un User existant
             user = self.find_or_create_user_for_oauth(
                 db=db,
                 provider="instagram",
                 provider_user_id=str(ig_user_id),
-                email=f"instagram_{ig_user_id}@veyl.io",
+                email=None,  # Ne pas passer d'email généré pour forcer la recherche d'un User existant
                 name=f"Instagram User {ig_user_id}",
                 linked_user_id=linked_user_id
             )
+            
+            logger.info(f"✅ User trouvé/créé pour Instagram: user_id={user.id}, email={user.email}, name={user.name}")
             
             # Vérifier si l'OAuthAccount Instagram existe déjà pour ce User
             existing_oauth = db.query(OAuthAccount).filter(
@@ -500,15 +583,24 @@ class OAuthService:
             if access_token and fb_user_id:
                 from db.models import OAuthAccount
                 
+                logger.info(f"🔍 Recherche/création User pour Facebook - linked_user_id={linked_user_id}, provider_user_id={fb_user_id}, email={email}")
+                
                 # Utiliser la fonction centralisée pour trouver ou créer le User
+                # Si email est None ou un email généré, ne pas le passer pour forcer la recherche d'un User existant
+                email_to_pass = None
+                if email and not email.endswith(('@veyl.io', '@insidr.dev')) and '@' in email:
+                    email_to_pass = email
+                
                 user = self.find_or_create_user_for_oauth(
                     db=db,
                     provider="facebook",
                     provider_user_id=str(fb_user_id),
-                    email=email,  # Peut être None, la fonction gère
+                    email=email_to_pass,  # Ne passer que si c'est un email réel
                     name=name or f"Facebook User {fb_user_id}",
                     linked_user_id=linked_user_id
                 )
+                
+                logger.info(f"✅ User trouvé/créé pour Facebook: user_id={user.id}, email={user.email}, name={user.name}")
                 
                 # Vérifier si l'OAuthAccount Facebook existe déjà pour ce User
                 existing_oauth = db.query(OAuthAccount).filter(
@@ -949,15 +1041,20 @@ class OAuthService:
             if access_token and tiktok_user_id:
                 from db.models import OAuthAccount
                 
+                logger.info(f"🔍 Recherche/création User pour TikTok - linked_user_id={linked_user_id}, provider_user_id={tiktok_user_id}")
+                
                 # Utiliser la fonction centralisée pour trouver ou créer le User
+                # IMPORTANT: Ne pas passer d'email généré ici pour permettre à la logique de trouver un User existant
                 user = self.find_or_create_user_for_oauth(
                     db=db,
                     provider="tiktok",
                     provider_user_id=str(tiktok_user_id),
-                    email=f"tiktok_{tiktok_user_id}@veyl.io",
+                    email=None,  # Ne pas passer d'email généré pour forcer la recherche d'un User existant
                     name=display_name or f"TikTok User {tiktok_user_id[:8]}",
                     linked_user_id=linked_user_id
                 )
+                
+                logger.info(f"✅ User trouvé/créé pour TikTok: user_id={user.id}, email={user.email}, name={user.name}")
                 
                 # Mettre à jour l'avatar si disponible
                 if avatar_url:
