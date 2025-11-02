@@ -571,47 +571,86 @@ export default function ProjectDetail() {
 
           {/* Tab 2: Analytics */}
           <TabsContent value="analytics" className="space-y-6">
-            {/* Quick Stats */}
-            <div className="grid gap-4 md:grid-cols-4">
-              <Card className="bg-card border-border shadow-lg">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-white">Total Posts</CardTitle>
+            {/* Header Stats + PieChart */}
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* Left: Key Stats */}
+              <Card className="bg-card border-border shadow-lg md:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-white">Project Overview</CardTitle>
+                  <CardDescription className="text-gray-400">
+                    {project?.name || 'Project'} statistics
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-primary">{project?.posts_count || 0}</div>
-                  <p className="text-xs text-gray-400 mt-1">Posts tracked</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border shadow-lg">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-white">Total Signals</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-primary">{project?.signals_count || 0}</div>
-                  <p className="text-xs text-gray-400 mt-1">Trends detected</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border shadow-lg">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-white">Creators</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-primary">{project?.creators_count || 0}</div>
-                  <p className="text-xs text-gray-400 mt-1">Monitored</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border shadow-lg">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-white">Last Signal</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-primary">
-                    {project?.last_signal_at ? new Date(project.last_signal_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : 'N/A'}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-400">Creators</p>
+                      <p className="text-2xl font-bold text-primary">{project?.creators_count || 0}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-400">Posts</p>
+                      <p className="text-2xl font-bold text-primary">{project?.posts_count || 0}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-400">Hashtags</p>
+                      <p className="text-2xl font-bold text-primary">{niches.length}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-400">Signals</p>
+                      <p className="text-2xl font-bold text-primary">{project?.signals_count || 0}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-400">Status</p>
+                      <Badge variant={project?.status === 'active' ? 'default' : 'secondary'} className="mt-1">
+                        {project?.status || 'draft'}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-400">Platform</p>
+                      <div className="flex gap-2 mt-1">
+                        {(project?.platforms || []).map((p: string) => (
+                          <Badge key={p} variant="outline">{p}</Badge>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">Latest detection</p>
+                </CardContent>
+              </Card>
+
+              {/* Right: Content Type Distribution PieChart */}
+              <Card className="bg-card border-border shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-white">Content Type Distribution</CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Breakdown by media type
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '6px',
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
             </div>
@@ -734,83 +773,6 @@ export default function ProjectDetail() {
               </CardContent>
             </Card>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card className="bg-card border-border shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-white">Content Type Distribution</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Breakdown by media type
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '6px',
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-white">Project Stats</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Project configuration and status
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 rounded-lg border border-gray-700 bg-gray-800/30">
-                      <span className="text-sm text-gray-300">Status:</span>
-                      <Badge variant={project?.status === 'active' ? 'default' : 'secondary'}>
-                        {project?.status || 'draft'}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center p-3 rounded-lg border border-gray-700 bg-gray-800/30">
-                      <span className="text-sm text-gray-300">Platforms:</span>
-                      <div className="flex gap-2">
-                        {(project?.platforms || []).map((p: string) => (
-                          <Badge key={p} variant="outline">{p}</Badge>
-                        ))}
-                        {(!project?.platforms || project.platforms.length === 0) && <span className="text-gray-400">N/A</span>}
-                      </div>
-                    </div>
-                    {project?.last_run_at && (
-                      <div className="flex justify-between items-center p-3 rounded-lg border border-gray-700 bg-gray-800/30">
-                        <span className="text-sm text-gray-300">Last Run:</span>
-                        <span className="text-sm text-gray-400">{new Date(project.last_run_at).toLocaleDateString('fr-FR')}</span>
-                      </div>
-                    )}
-                    {project?.created_at && (
-                      <div className="flex justify-between items-center p-3 rounded-lg border border-gray-700 bg-gray-800/30">
-                        <span className="text-sm text-gray-300">Created:</span>
-                        <span className="text-sm text-gray-400">{new Date(project.created_at).toLocaleDateString('fr-FR')}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </TabsContent>
         </Tabs>
       </div>
