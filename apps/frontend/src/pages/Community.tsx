@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Github, MessageCircle, Users, GraduationCap, ExternalLink, Code2, Heart } from 'lucide-react';
 import '@/assets/css/github-window.css';
 import '@/assets/css/discord-button.css';
+import iscomLogo from '@/assets/img/iscom.png';
+import epitechLogo from '@/assets/img/epitech.png';
 
 export default function Community() {
   return (
@@ -48,10 +50,12 @@ export default function Community() {
           <div className="grid md:grid-cols-2 gap-8 items-center">
             {/* Illustration (50%) */}
             <div className="flex items-center justify-center">
-              <div className="p-8 rounded-lg border border-border bg-card/50">
-                <Badge variant="outline" className="px-6 py-3 text-base">
-                  ISCOM PARIS
-                </Badge>
+              <div className="p-8 rounded-lg border border-border bg-card/50 flex items-center justify-center">
+                <img 
+                  src={iscomLogo} 
+                  alt="ISCOM Paris" 
+                  className="max-w-[200px] h-auto object-contain"
+                />
               </div>
             </div>
             
@@ -78,10 +82,12 @@ export default function Community() {
             
             {/* Illustration (50%) */}
             <div className="flex items-center justify-center">
-              <div className="p-8 rounded-lg border border-border bg-card/50">
-                <Badge variant="outline" className="px-6 py-3 text-base">
-                  EPITECH PARIS
-                </Badge>
+              <div className="p-8 rounded-lg border border-border bg-card/50 flex items-center justify-center">
+                <img 
+                  src={epitechLogo} 
+                  alt="EPITECH Paris" 
+                  className="max-w-[200px] h-auto object-contain"
+                />
               </div>
             </div>
           </div>
