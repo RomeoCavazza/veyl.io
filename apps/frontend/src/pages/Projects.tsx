@@ -121,10 +121,9 @@ export default function Projects() {
               /* Projects List - Pleine largeur */
               <div className="space-y-4">
                 {projects.map((project) => {
-                  // Obtenir les créateurs (plus de têtes - au moins 5-7)
+                  // Obtenir tous les créateurs réels
                   const projectCreators = (project.creators || []);
-                  // Si pas de créateurs mais scope_query, extraire plus
-                  let creatorsList = projectCreators.length > 0 
+                  let allCreators = projectCreators.length > 0 
                     ? projectCreators 
                     : (project.scope_query || '').split(',').map((q: string) => ({
                         id: 0,
@@ -132,18 +131,34 @@ export default function Projects() {
                         platform_id: 0,
                       })).filter((c: any) => c.creator_username);
                   
-                  // Si toujours pas assez, générer des créateurs mock supplémentaires
-                  if (creatorsList.length < 5) {
-                    const additionalCreators = Array.from({ length: 7 - creatorsList.length }, (_, i) => ({
-                      id: 1000 + i,
-                      creator_username: `creator_${project.id}_${i}`,
-                      platform_id: 0,
-                    }));
-                    creatorsList = [...creatorsList, ...additionalCreators].slice(0, 7);
-                  }
-                  
-                  // Obtenir les posts récents (plus de posts pour s'étaler)
+                  // Extraire aussi les créateurs depuis les posts (comme dans ProjectDetail)
                   const recentPosts = getFakeProjectPosts(project.id).slice(0, 10);
+                  const postUsernames = new Set(
+                    recentPosts
+                      .map((p: any) => p.username?.toLowerCase())
+                      .filter(Boolean)
+                  );
+                  
+                  // Ajouter les créateurs depuis les posts
+                  const existingUsernames = new Set(allCreators.map((c: any) => c.creator_username.toLowerCase()));
+                  const newCreatorsFromPosts = Array.from(postUsernames)
+                    .filter((username: string) => !existingUsernames.has(username))
+                    .map((username: string) => {
+                      const originalPost = recentPosts.find((p: any) => p.username?.toLowerCase() === username);
+                      return {
+                        id: 2000 + allCreators.length,
+                        creator_username: originalPost?.username || username,
+                        platform_id: 0,
+                      };
+                    });
+                  
+                  allCreators = [...allCreators, ...newCreatorsFromPosts];
+                  
+                  // Nombre total de créateurs
+                  const totalCreatorsCount = allCreators.length;
+                  
+                  // Afficher seulement les 3 premiers visuellement
+                  const displayedCreators = allCreators.slice(0, 3);
                   
                   return (
                     <Card 
@@ -185,23 +200,23 @@ export default function Projects() {
                             )}
                           </div>
                           
-                          {/* Photos de profil des créateurs en cascade */}
-                          {creatorsList.length > 0 && (
+                          {/* Photos de profil des créateurs en cascade - 3 premiers seulement */}
+                          {displayedCreators.length > 0 && (
                             <div className="flex items-center gap-2 mt-3">
                               <div className="flex -space-x-2">
-                                {creatorsList.map((creator, idx) => (
+                                {displayedCreators.map((creator, idx) => (
                                   <img
                                     key={creator.id || creator.creator_username}
                                     src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.creator_username}`}
                                     alt={creator.creator_username}
                                     className="w-10 h-10 rounded-full border-2 border-background"
-                                    style={{ zIndex: creatorsList.length - idx }}
+                                    style={{ zIndex: displayedCreators.length - idx }}
                                     title={creator.creator_username}
                                   />
                                 ))}
                               </div>
                               <span className="text-xs text-muted-foreground">
-                                {creatorsList.length} {creatorsList.length > 1 ? 'créateurs' : 'créateur'}
+                                {totalCreatorsCount} {totalCreatorsCount > 1 ? 'créateurs' : 'créateur'}
                               </span>
                             </div>
                           )}
