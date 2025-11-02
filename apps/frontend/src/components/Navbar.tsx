@@ -1,30 +1,30 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 
 export function Navbar() {
   const { user } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Navigation pour utilisateurs non-connectés
-  const publicNavItems = [
-    { path: '/', label: 'Product' },
-    { path: '/enterprise', label: 'Enterprise' },
-    { path: '/docs', label: 'Docs' },
+  // Navigation commune (toujours visible)
+  const commonNavItems = [
+    { path: '/docs', label: 'Documentation' },
+    { path: '/enterprise', label: 'Entreprise' },
+    { path: '/community', label: 'Communauté' },
   ];
 
-        // Navigation pour utilisateurs connectés
-        const authenticatedNavItems = [
-          { path: '/search', label: 'Search' },
-          { path: '/projects', label: 'Projects' },
-          { path: '/community', label: 'Community' },
-        ];
-
   const isActive = (path: string) => location.pathname === path;
-  const isProfileActive = location.pathname === '/profile' || location.pathname === '/community';
+  const isProductActive = location.pathname === '/' || location.pathname === '/search' || location.pathname === '/projects';
+  const isProfileActive = location.pathname === '/profile';
 
   return (
     <>
@@ -37,7 +37,41 @@ export function Navbar() {
 
           {/* Desktop Navigation - LEFT ALIGNED with spacing */}
           <nav className="hidden lg:flex items-center gap-6 ml-8">
-            {(user ? authenticatedNavItems : publicNavItems).map((item) => (
+            {/* Product - Simple link si non connecté, menu déroulant si connecté */}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger className={`text-sm transition-all flex items-center gap-1 ${
+                  isProductActive
+                    ? 'text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}>
+                  Product
+                  <ChevronDown className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem asChild>
+                    <Link to="/search">Search</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/projects">My projects</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link
+                to="/"
+                className={`text-sm transition-all ${
+                  isActive('/')
+                    ? 'text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Product
+              </Link>
+            )}
+
+            {/* Navigation commune */}
+            {commonNavItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
@@ -55,7 +89,7 @@ export function Navbar() {
           {/* Spacer */}
           <div className="hidden lg:block flex-1" />
 
-          {/* Desktop Actions */}
+          {/* Desktop Actions - Profile à droite */}
           <div className="hidden lg:flex items-center gap-3">
             {user ? (
               <Link to="/profile" className={`text-sm transition-all ${
@@ -66,9 +100,13 @@ export function Navbar() {
                 Profile
               </Link>
             ) : (
-              <Button size="sm" asChild>
-                <Link to="/auth">Get started</Link>
-              </Button>
+              <Link to="/profile" className={`text-sm transition-all ${
+                isProfileActive
+                  ? 'text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}>
+                Profile
+              </Link>
             )}
           </div>
 
@@ -86,7 +124,51 @@ export function Navbar() {
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-border bg-background">
             <nav className="flex flex-col py-4 px-4 gap-1">
-              {(user ? authenticatedNavItems : publicNavItems).map((item) => (
+              {/* Product */}
+              {user ? (
+                <>
+                  <div className="py-2 px-4 text-sm font-medium text-white border-b border-border mb-1">
+                    Product
+                  </div>
+                  <Link
+                    to="/search"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`py-2 px-4 text-sm transition-colors pl-8 ${
+                      isActive('/search')
+                        ? 'text-white font-medium'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Search
+                  </Link>
+                  <Link
+                    to="/projects"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`py-2 px-4 text-sm transition-colors pl-8 ${
+                      isActive('/projects')
+                        ? 'text-white font-medium'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    My projects
+                  </Link>
+                </>
+              ) : (
+                <Link
+                  to="/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`py-2 px-4 text-sm transition-colors ${
+                    isActive('/')
+                      ? 'text-white font-medium'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Product
+                </Link>
+              )}
+
+              {/* Navigation commune */}
+              {commonNavItems.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
@@ -100,24 +182,19 @@ export function Navbar() {
                   {item.label}
                 </Link>
               ))}
-              {user && (
-                <Link
-                  to="/profile"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`py-2 px-4 text-sm transition-colors ${
-                    isProfileActive
-                      ? 'text-white font-medium'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Profile
-                </Link>
-              )}
-              {!user && (
-                <Button size="sm" asChild className="mt-2">
-                  <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>Get started</Link>
-                </Button>
-              )}
+
+              {/* Profile */}
+              <Link
+                to="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`py-2 px-4 text-sm transition-colors ${
+                  isProfileActive
+                    ? 'text-white font-medium'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Profile
+              </Link>
             </nav>
           </div>
         )}
