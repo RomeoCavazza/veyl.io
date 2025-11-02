@@ -179,7 +179,7 @@ export default function Docs() {
                 {/* Logo à droite */}
                 <div className="flex-shrink-0">
                   <a href="https://www.meilisearch.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
-                    <img src={meilisearchLogo} alt="Meilisearch" className="h-[200px] w-auto max-w-none" />
+                    <img src={meilisearchLogo} alt="Meilisearch" className="h-[240px] w-auto max-w-none" />
                   </a>
                 </div>
               </div>
@@ -214,7 +214,7 @@ export default function Docs() {
                 {/* Logo à droite */}
                 <div className="flex-shrink-0">
                   <a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
-                    <img src={metaLogo} alt="Meta for Developers" className="h-[180px] w-auto max-w-none" />
+                    <img src={metaLogo} alt="Meta for Developers" className="h-[220px] w-auto max-w-none" />
                   </a>
                 </div>
               </div>
@@ -275,7 +275,7 @@ export default function Docs() {
                 {/* Logo à droite */}
                 <div className="flex-shrink-0">
                   <a href="https://developers.tiktok.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
-                    <img src={tiktokLogo} alt="TikTok for Developers" className="h-[160px] w-auto max-w-none" />
+                    <img src={tiktokLogo} alt="TikTok for Developers" className="h-[200px] w-auto max-w-none" />
                   </a>
                 </div>
               </div>
