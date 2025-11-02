@@ -106,18 +106,6 @@ export default function Docs() {
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Born from strategic planning in influence agencies. Real-time social media intelligence and trend analysis.
                   </p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-2">
-                    Powered by{' '}
-                    <a 
-                      href="https://www.meilisearch.com" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline font-semibold flex items-center gap-1"
-                    >
-                      MeiliSearch
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </p>
                   <div className="flex flex-wrap gap-2">
                     <img src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white" alt="Python" className="h-5" />
                     <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI" className="h-5" />
@@ -145,57 +133,75 @@ export default function Docs() {
           </Card>
 
           {/* Powered by Meilisearch */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-4 mb-4">
-                <a href="https://www.meilisearch.com/" target="_blank" rel="noopener noreferrer">
-                  <img src={meilisearchLogo} alt="Meilisearch" className="h-12" />
-                </a>
-                <div className="flex-1">
-                  <CardTitle className="text-xl">Powered by Meilisearch</CardTitle>
+          <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row gap-8 items-center">
+                {/* Description à gauche */}
+                <div className="flex-1 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-6 w-6 text-primary" />
+                    <h3 className="text-xl font-bold">Meilisearch</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    L'indexation et la recherche de millions de posts sont alimentées par <strong>Meilisearch</strong>, 
+                    un moteur de recherche ultra-rapide et typo-tolerant permettant une recherche instantanée avec facettes et filtres avancés.
+                  </p>
                   <a 
                     href="https://www.meilisearch.com/" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline flex items-center gap-1 mt-1"
+                    className="text-sm text-primary hover:underline flex items-center gap-1"
                   >
                     meilisearch.com
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
+
+                {/* Logo à droite */}
+                <div className="flex-shrink-0">
+                  <a href="https://www.meilisearch.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
+                    <img src={meilisearchLogo} alt="Meilisearch" className="h-20 w-auto" />
+                  </a>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                L'indexation et la recherche de millions de posts sont alimentées par <strong>Meilisearch</strong>, 
-                un moteur de recherche ultra-rapide et typo-tolerant permettant une recherche instantanée avec facettes et filtres avancés.
-              </p>
             </CardContent>
           </Card>
 
           {/* Meta for Developers */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-4 mb-4">
-                <a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer">
-                  <img src={metaLogo} alt="Meta for Developers" className="h-12" />
-                </a>
-                <div className="flex-1">
-                  <CardTitle className="text-xl">Meta for Developers</CardTitle>
+          <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row gap-8 items-center mb-6">
+                {/* Description à gauche */}
+                <div className="flex-1 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-6 w-6 text-primary" />
+                    <h3 className="text-xl font-bold">Meta for Developers</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Intégration avec <strong>Instagram Graph API</strong> et <strong>Facebook Pages API</strong> 
+                    pour accéder aux contenus publics et aux métriques d'engagement.
+                  </p>
                   <a 
                     href="https://developers.facebook.com/" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline flex items-center gap-1 mt-1"
+                    className="text-sm text-primary hover:underline flex items-center gap-1"
                   >
                     developers.facebook.com
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
+
+                {/* Logo à droite */}
+                <div className="flex-shrink-0">
+                  <a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
+                    <img src={metaLogo} alt="Meta for Developers" className="h-20 w-auto" />
+                  </a>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+
+              {/* Scopes */}
+              <div className="space-y-4 border-t border-border pt-6">
                 {metaScopes.map((scope, index) => (
                   <div key={index} className="border-l-2 border-primary/30 pl-4 py-2">
                     <div className="flex items-start gap-2 mb-1">
@@ -210,28 +216,40 @@ export default function Docs() {
           </Card>
 
           {/* TikTok for Developers */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-4 mb-4">
-                <a href="https://developers.tiktok.com/" target="_blank" rel="noopener noreferrer">
-                  <img src={tiktokLogo} alt="TikTok for Developers" className="h-12" />
-                </a>
-                <div className="flex-1">
-                  <CardTitle className="text-xl">TikTok for Developers</CardTitle>
+          <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row gap-8 items-center mb-6">
+                {/* Description à gauche */}
+                <div className="flex-1 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-6 w-6 text-primary" />
+                    <h3 className="text-xl font-bold">TikTok for Developers</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Intégration avec <strong>TikTok Login Kit</strong> et <strong>TikTok API</strong> 
+                    pour accéder aux vidéos publiques et aux statistiques des créateurs.
+                  </p>
                   <a 
                     href="https://developers.tiktok.com/" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline flex items-center gap-1 mt-1"
+                    className="text-sm text-primary hover:underline flex items-center gap-1"
                   >
                     developers.tiktok.com
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
+
+                {/* Logo à droite */}
+                <div className="flex-shrink-0">
+                  <a href="https://developers.tiktok.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
+                    <img src={tiktokLogo} alt="TikTok for Developers" className="h-20 w-auto" />
+                  </a>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+
+              {/* Scopes */}
+              <div className="space-y-4 border-t border-border pt-6">
                 {tiktokScopes.map((scope, index) => (
                   <div key={index} className="border-l-2 border-primary/30 pl-4 py-2">
                     <div className="flex items-start gap-2 mb-1">
