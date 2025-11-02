@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Loader2, Hash, User, Plus } from 'lucide-react';
+import { ArrowLeft, Loader2, Hash, User, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createProject } from '@/lib/api';
 
@@ -81,6 +81,16 @@ export default function ProjectsNew() {
     setCreators([...creators, creator]);
     setCreatorInput('');
     setShowCreatorSuggestions(false);
+  };
+
+  // Supprimer un hashtag
+  const removeHashtag = (tag: string) => {
+    setHashtags(hashtags.filter(t => t !== tag));
+  };
+
+  // Supprimer un créateur
+  const removeCreator = (creator: string) => {
+    setCreators(creators.filter(c => c !== creator));
   };
 
   // Créer le projet
@@ -189,11 +199,36 @@ export default function ProjectsNew() {
             {/* Hashtags */}
             <div className="space-y-2 relative">
               <Label htmlFor="hashtags">Hashtags</Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    id="hashtags"
-                    placeholder="Add hashtags (e.g., fashion, style)"
+              <div className="relative">
+                {/* Container qui ressemble à un Input avec tags à l'intérieur */}
+                <div
+                  className="flex flex-wrap items-center gap-2 min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+                  onClick={() => {
+                    const input = document.getElementById('hashtags-input') as HTMLInputElement;
+                    input?.focus();
+                  }}
+                >
+                  {/* Tags à l'intérieur */}
+                  {hashtags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeHashtag(tag);
+                      }}
+                    >
+                      <Hash className="h-3 w-3" />
+                      {tag}
+                      <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+                  {/* Input invisible/inline */}
+                  <input
+                    id="hashtags-input"
+                    type="text"
+                    placeholder={hashtags.length === 0 ? "Add hashtags (e.g., fashion, style)" : ""}
                     value={hashtagInput}
                     onChange={(e) => {
                       setHashtagInput(e.target.value);
@@ -205,7 +240,6 @@ export default function ProjectsNew() {
                       }
                     }}
                     onBlur={() => {
-                      // Délai pour permettre le clic sur les suggestions
                       setTimeout(() => setShowHashtagSuggestions(false), 200);
                     }}
                     onKeyDown={(e) => {
@@ -216,58 +250,68 @@ export default function ProjectsNew() {
                         } else {
                           handleAddHashtag();
                         }
+                      } else if (e.key === 'Backspace' && hashtagInput === '' && hashtags.length > 0) {
+                        removeHashtag(hashtags[hashtags.length - 1]);
                       }
                     }}
+                    className="flex-1 min-w-[120px] outline-none bg-transparent"
                   />
-                  {/* Suggestions */}
-                  {showHashtagSuggestions && filteredHashtags.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                      {filteredHashtags.map((tag) => (
-                        <div
-                          key={tag}
-                          className="px-4 py-2 hover:bg-muted cursor-pointer flex items-center gap-2"
-                          onClick={() => handleAddHashtag(tag)}
-                        >
-                          <Hash className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-sm">{tag}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleAddHashtag()}
-                  disabled={!hashtagInput.trim()}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+                {/* Suggestions */}
+                {showHashtagSuggestions && filteredHashtags.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {filteredHashtags.map((tag) => (
+                      <div
+                        key={tag}
+                        className="px-4 py-2 hover:bg-muted cursor-pointer flex items-center gap-2"
+                        onClick={() => handleAddHashtag(tag)}
+                      >
+                        <Hash className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-sm">{tag}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              {hashtags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {hashtags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      className="flex items-center gap-1"
-                    >
-                      <Hash className="h-3 w-3" />
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Creators */}
             <div className="space-y-2 relative">
               <Label htmlFor="creators">Creators</Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    id="creators"
-                    placeholder="Add creators (e.g., username1, username2)"
+              <div className="relative">
+                {/* Container qui ressemble à un Input avec tags à l'intérieur */}
+                <div
+                  className="flex flex-wrap items-center gap-2 min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+                  onClick={() => {
+                    const input = document.getElementById('creators-input') as HTMLInputElement;
+                    input?.focus();
+                  }}
+                >
+                  {/* Tags à l'intérieur */}
+                  {creators.map((creator) => (
+                    <Badge
+                      key={creator}
+                      variant="secondary"
+                      className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeCreator(creator);
+                      }}
+                    >
+                      <img
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${creator}`}
+                        alt={creator}
+                        className="w-3 h-3 rounded-full"
+                      />
+                      {creator}
+                      <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+                  {/* Input invisible/inline */}
+                  <input
+                    id="creators-input"
+                    type="text"
+                    placeholder={creators.length === 0 ? "Add creators (e.g., username1, username2)" : ""}
                     value={creatorInput}
                     onChange={(e) => {
                       setCreatorInput(e.target.value);
@@ -279,7 +323,6 @@ export default function ProjectsNew() {
                       }
                     }}
                     onBlur={() => {
-                      // Délai pour permettre le clic sur les suggestions
                       setTimeout(() => setShowCreatorSuggestions(false), 200);
                     }}
                     onKeyDown={(e) => {
@@ -290,48 +333,33 @@ export default function ProjectsNew() {
                         } else {
                           handleAddCreator();
                         }
+                      } else if (e.key === 'Backspace' && creatorInput === '' && creators.length > 0) {
+                        removeCreator(creators[creators.length - 1]);
                       }
                     }}
+                    className="flex-1 min-w-[120px] outline-none bg-transparent"
                   />
-                  {/* Suggestions */}
-                  {showCreatorSuggestions && filteredCreators.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                      {filteredCreators.map((creator) => (
-                        <div
-                          key={creator}
-                          className="px-4 py-2 hover:bg-muted cursor-pointer flex items-center gap-2"
-                          onClick={() => handleAddCreator(creator)}
-                        >
-                          <User className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-sm">{creator}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleAddCreator()}
-                  disabled={!creatorInput.trim()}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+                {/* Suggestions */}
+                {showCreatorSuggestions && filteredCreators.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {filteredCreators.map((creator) => (
+                      <div
+                        key={creator}
+                        className="px-4 py-2 hover:bg-muted cursor-pointer flex items-center gap-2"
+                        onClick={() => handleAddCreator(creator)}
+                      >
+                        <img
+                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${creator}`}
+                          alt={creator}
+                          className="w-6 h-6 rounded-full"
+                        />
+                        <span className="text-sm">{creator}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              {creators.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {creators.map((creator) => (
-                    <Badge
-                      key={creator}
-                      variant="secondary"
-                      className="flex items-center gap-1"
-                    >
-                      <User className="h-3 w-3" />
-                      {creator}
-                    </Badge>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Create Button */}
