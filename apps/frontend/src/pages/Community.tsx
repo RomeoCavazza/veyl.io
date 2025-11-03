@@ -61,17 +61,6 @@ export default function Community() {
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 Developers, designers, marketers—your contribution is welcome!
               </p>
-              <div className="mt-6">
-                <Button
-                  onClick={() => {
-                    document.getElementById('contact-form-section')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  variant="outline"
-                  className="border-primary/20 hover:bg-primary/10"
-                >
-                  Devenir beta tester
-                </Button>
-              </div>
             </div>
           </Card>
         </section>
@@ -274,45 +263,41 @@ export default function Community() {
 
         {/* Contact Form Section */}
         <section id="contact-form-section" className="mb-20">
-          <Card className="p-8">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Contact</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-                <Input
-                  type="text"
-                  name="name"
-                  placeholder="Name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  className="w-full"
-                />
-                <Input
-                  type="email"
-                  name="email"
-                  placeholder="Email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  className="w-full"
-                />
-                <Textarea
-                  name="message"
-                  placeholder="Message"
-                  rows={6}
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  required
-                  className="w-full"
-                />
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? 'Envoi...' : 'Send'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold">Contact</h2>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
+            <Input
+              type="text"
+              name="name"
+              placeholder="Name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              className="w-full"
+            />
+            <Input
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+              className="w-full"
+            />
+            <Textarea
+              name="message"
+              placeholder="Message"
+              rows={6}
+              value={formData.message}
+              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+              required
+              className="w-full"
+            />
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? 'Envoi...' : 'Devenir beta tester'}
+            </Button>
+          </form>
         </section>
       </div>
       
