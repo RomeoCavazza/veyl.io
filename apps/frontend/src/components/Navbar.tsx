@@ -8,10 +8,10 @@ export function Navbar() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Navigation commune (toujours visible)
+  // Common navigation (always visible)
   const commonNavItems = [
     { path: '/docs', label: 'Documentation' },
-    { path: '/community', label: 'Communauté' },
+    { path: '/community', label: 'Community' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -159,7 +159,7 @@ export function Navbar() {
                 </Link>
               )}
 
-              {/* Navigation commune */}
+              {/* Common navigation */}
               {commonNavItems.map((item) => (
                 <Link
                   key={item.path}

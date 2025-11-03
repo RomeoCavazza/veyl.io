@@ -1,4 +1,4 @@
-import { ExternalLink, Sparkles, Search, Share2, Video } from 'lucide-react';
+import { ExternalLink, Sparkles, Search, Share2, Video, Circle, Binoculars } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/Navbar';
@@ -116,10 +116,10 @@ export default function Docs() {
           <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-8 items-center">
-                {/* Description et badges à gauche */}
+                {/* Description and badges on the left */}
                 <div className="flex-1 space-y-4">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="h-6 w-6 text-primary" />
+                    <Binoculars className="h-6 w-6 text-primary" />
                     <h3 className="text-xl font-bold">Strategic Intelligence Platform</h3>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
@@ -141,7 +141,7 @@ export default function Docs() {
                   </div>
                 </div>
 
-                {/* Logo à droite */}
+                {/* Logo on the right */}
                 <div className="flex-shrink-0">
                   <a href="/" className="block transition-transform hover:scale-105">
                     <img src="/logo.svg" alt="veyl.io" className="h-16 w-auto max-w-none" />
@@ -155,10 +155,10 @@ export default function Docs() {
           <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-8 items-center">
-                {/* Description à gauche */}
+                {/* Description on the left */}
                 <div className="flex-1 space-y-4">
                   <div className="flex items-center gap-2">
-                    <Search className="h-6 w-6 text-primary" />
+                    <Circle className="h-6 w-6 text-primary fill-primary" />
                     <h3 className="text-xl font-bold">Meilisearch</h3>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
@@ -176,7 +176,7 @@ export default function Docs() {
                   </a>
                 </div>
 
-                {/* Logo à droite */}
+                {/* Logo on the right */}
                 <div className="flex-shrink-0">
                   <a href="https://www.meilisearch.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
                     <img src={meilisearchLogo} alt="Meilisearch" className="h-[300px] w-auto max-w-none" />
@@ -190,7 +190,7 @@ export default function Docs() {
           <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-8 items-center mb-6">
-                {/* Description à gauche */}
+                {/* Description on the left */}
                 <div className="flex-1 space-y-4">
                   <div className="flex items-center gap-2">
                     <Share2 className="h-6 w-6 text-primary" />
@@ -211,7 +211,7 @@ export default function Docs() {
                   </a>
                 </div>
 
-                {/* Logo à droite */}
+                {/* Logo on the right */}
                 <div className="flex-shrink-0">
                   <a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
                     <img src={metaLogo} alt="Meta for Developers" className="h-[280px] w-auto max-w-none" />
@@ -252,7 +252,7 @@ export default function Docs() {
           <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-8 items-center mb-6">
-                {/* Description à gauche */}
+                {/* Description on the left */}
                 <div className="flex-1 space-y-4">
                   <div className="flex items-center gap-2">
                     <Video className="h-6 w-6 text-primary" />
@@ -272,7 +272,7 @@ export default function Docs() {
                   </a>
                 </div>
 
-                {/* Logo à droite */}
+                {/* Logo on the right */}
                 <div className="flex-shrink-0">
                   <a href="https://developers.tiktok.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
                     <img src={tiktokLogo} alt="TikTok for Developers" className="h-[260px] w-auto max-w-none" />
