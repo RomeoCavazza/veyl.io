@@ -1,4 +1,4 @@
-import { ExternalLink, Sparkles, Search, Share2, Video, Circle, Binoculars } from 'lucide-react';
+import { ExternalLink, Sparkles, Search, Share2, Video, Microchip, Binoculars } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/Navbar';
@@ -158,7 +158,7 @@ export default function Docs() {
                 {/* Description on the left */}
                 <div className="flex-1 space-y-4">
                   <div className="flex items-center gap-2">
-                    <Circle className="h-6 w-6 text-primary fill-primary" />
+                    <Microchip className="h-6 w-6 text-primary" />
                     <h3 className="text-xl font-bold">Meilisearch</h3>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
