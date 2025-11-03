@@ -6,29 +6,29 @@ import { Footer } from '@/components/Footer';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function Landing() {
-  const cadrans = [
+      const cadrans = [
     {
       icon: Database,
-      title: 'Indexation de Posts',
-      description: 'Indexation automatique de posts via API Meta for Developers et TikTok for Developers.',
+      title: 'Post Indexing',
+      description: 'Automatic post indexing via Meta for Developers and TikTok for Developers APIs.',
       status: 'live',
     },
     {
       icon: Search,
-      title: 'Recherche Sémantique',
-      description: 'Recherche sémantique vs sémiotique via Meilisearch pour une exploration intelligente du contenu.',
+      title: 'Semantic Search',
+      description: 'Semantic vs semiotic search via Meilisearch for intelligent content exploration.',
       status: 'live',
     },
     {
       icon: Zap,
-      title: 'Recherche Avancée',
-      description: 'Meilisearch : search UX, filtres avancés et ranking rules personnalisées.',
+      title: 'Advanced Search',
+      description: 'Meilisearch: search UX, advanced filters, and custom ranking rules.',
       status: 'future',
     },
     {
       icon: Brain,
-      title: 'Stockage & Ingestion',
-      description: 'Supabase + pgvector (semantic storage, RAG, similarity search). Make / n8n (ingestion). Dust (agent reasoning si besoin).',
+      title: 'Storage & Ingestion',
+      description: 'Supabase + pgvector (semantic storage, RAG, similarity search). Make / n8n (ingestion). Dust (agent reasoning if needed).',
       status: 'future',
     },
   ];
@@ -43,29 +43,22 @@ export default function Landing() {
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
             veyl.io
           </h1>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/projects/new">
-              <Button size="lg" className="gradient-primary shadow-glow">
-                Créer un projet
-              </Button>
-            </Link>
-          </div>
         </div>
       </section>
 
       {/* Video Section */}
       <section className="container py-8 md:py-12">
         <div className="max-w-4xl mx-auto">
-          <div className="aspect-video rounded-lg bg-muted/30 border border-border/50 overflow-hidden">
-            {/* Placeholder pour vidéo - à remplacer par <video> ou <iframe> */}
-            <div className="w-full h-full flex items-center justify-center">
-              <p className="text-muted-foreground text-sm">Vidéo à venir</p>
+            <div className="aspect-video rounded-lg bg-muted/30 border border-border/50 overflow-hidden">
+              {/* Placeholder for video - to be replaced with <video> or <iframe> */}
+              <div className="w-full h-full flex items-center justify-center">
+                <p className="text-muted-foreground text-sm">Video coming soon</p>
+              </div>
             </div>
-          </div>
         </div>
       </section>
 
-      {/* 4 Cadrans - Présentation du Projet */}
+      {/* 4 Panels - Project Presentation */}
       <section className="container py-12 md:py-16">
         <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {cadrans.map((cadran, index) => (
@@ -101,6 +94,17 @@ export default function Landing() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      </section>
+
+      {/* CTA & Documentation */}
+      <section className="container py-4 md:py-6">
+        <div className="max-w-4xl mx-auto text-center space-y-6">
+          <Link to="/projects/new">
+            <Button size="lg" className="gradient-primary shadow-glow">
+              Create a project
+            </Button>
+          </Link>
         </div>
       </section>
 

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FileText, Calendar, Plus } from 'lucide-react';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { getFakeProjectPosts } from '@/lib/fakeData';
 
@@ -176,7 +176,7 @@ export default function Projects() {
                               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <Calendar className="h-3 w-3" />
                                 <span>
-                                  {format(new Date(project.updatedAt), 'dd MMM yyyy', { locale: fr })}
+                                  {format(new Date(project.updatedAt), 'MMM dd, yyyy', { locale: enUS })}
                                 </span>
                               </div>
                               <Badge 
@@ -216,7 +216,7 @@ export default function Projects() {
                                 ))}
                               </div>
                               <span className="text-xs text-muted-foreground">
-                                {totalCreatorsCount} {totalCreatorsCount > 1 ? 'créateurs' : 'créateur'}
+                                {totalCreatorsCount} {totalCreatorsCount > 1 ? 'creators' : 'creator'}
                               </span>
                             </div>
                           )}

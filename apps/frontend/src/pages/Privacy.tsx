@@ -3,201 +3,422 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Lock, Eye, Database, ExternalLink } from 'lucide-react';
+import { Shield, Lock, Eye, Database, Building2, Globe, Clock, Mail, ExternalLink, FileText } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function Privacy() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="container py-8">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Politique de Confidentialité
+      <div className="container py-8 md:py-12">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="text-center space-y-4 pb-6">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+              Privacy Policy
             </h1>
-            <p className="text-muted-foreground">Dernière mise à jour : 02 novembre 2025</p>
+            <p className="text-muted-foreground">Last updated: November 2, 2025</p>
             
-            {/* Badges conformité */}
-            <div className="flex flex-wrap justify-center gap-3 pt-4">
+            <div className="flex flex-wrap justify-center gap-3 pt-2">
               <Badge variant="outline" className="px-4 py-2">
                 <Shield className="h-3 w-3 mr-2" />
-                Conforme RGPD
+                GDPR Compliant
               </Badge>
               <Badge variant="outline" className="px-4 py-2">
                 <Lock className="h-3 w-3 mr-2" />
-                Conforme CCPA
+                CCPA Compliant
               </Badge>
             </div>
           </div>
 
+          {/* Responsable du Traitement - RGPD Art. 13.1(a) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                1. Data Controller
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                In accordance with Article 13.1(a) of the GDPR, we inform you that the controller of your personal data is:
+              </p>
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2 text-sm">
+                <p><strong>veyl.io</strong></p>
+                <p>Cultural intelligence and trend analysis platform</p>
+                <p>
+                  <strong>Contact:</strong>{' '}
+                  <a href="mailto:romeo.cavazza@gmail.com" className="text-primary hover:underline">
+                    romeo.cavazza@gmail.com
+                  </a>
+                </p>
+                <p>
+                  <strong>Support:</strong>{' '}
+                  <a href="https://discord.gg/TKbNuuV4sX" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                    Discord
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                For any questions regarding the processing of your data, you can also consult our{' '}
+                <Link to="/data-deletion" className="text-primary hover:underline">data deletion page</Link>.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Collecte de Données */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-primary" />
-                1. Collecte de Données
+                2. Data Collection
               </CardTitle>
             </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
-              <p>
-                <strong>veyl.io</strong> ("nous", "notre", "nos") collecte et traite des données publiques Instagram et TikTok 
-                via les endpoints autorisés des <strong>Meta Graph API</strong> et <strong>TikTok API</strong>. 
-                Nous collectons uniquement les données que vous nous autorisez explicitement à accéder.
+            <CardContent className="space-y-4">
+              <p className="text-sm">
+                <strong>veyl.io</strong> collects and processes public Instagram and TikTok data via authorized endpoints 
+                of the <strong>Meta Graph API</strong> and <strong>TikTok API</strong>. We only collect data that 
+                you explicitly authorize us to access during OAuth connection.
               </p>
-              <h4 className="font-semibold mt-4 mb-2">Données que nous collectons :</h4>
-              <ul className="space-y-2">
-                <li>Posts Instagram et TikTok publics et données de hashtags</li>
-                <li>Métadonnées de pages (likes, followers, métriques d'engagement)</li>
-                <li>Contenu généré par les utilisateurs sur les Pages connectées (commentaires, notes)</li>
-                <li>Informations de profil de compte (nom d'utilisateur, bio, photo de profil)</li>
-                <li>Insights analytiques (agrégés et anonymisés)</li>
-                <li>Données de projets créés par l'utilisateur (nom, description, hashtags, créateurs suivis)</li>
-              </ul>
-              <p className="mt-4 text-sm bg-muted p-3 rounded-lg">
-                <strong>Conformité App Review :</strong> Notre application est soumise aux politiques et exigences 
-                des programmes <strong>Meta for Developers</strong> et <strong>TikTok for Developers</strong>. 
-                Nous respectons strictement leurs conditions d'utilisation et leurs politiques de données.
-              </p>
+              
+              <div>
+                <h4 className="font-semibold text-sm mb-2">Collected data:</h4>
+                <ul className="space-y-2 text-sm list-disc list-inside text-muted-foreground">
+                  <li>Public Instagram and TikTok posts and hashtag data</li>
+                  <li>Page metadata (likes, followers, engagement metrics)</li>
+                  <li>User-generated content on connected Pages (comments, notes)</li>
+                  <li>Account profile information (username, bio, profile picture)</li>
+                  <li>Analytical insights (aggregated and anonymized)</li>
+                  <li>User-created project data (name, description, hashtags, followed creators)</li>
+                  <li>Authentication data (email, name via OAuth)</li>
+                  <li>Automatic technical data (IP address, user-agent, access logs)</li>
+                </ul>
+              </div>
+
+              <Alert>
+                <Shield className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  <strong>App Review Compliance:</strong> Our application is subject to the policies and requirements 
+                  of the <strong>Meta for Developers</strong> and <strong>TikTok for Developers</strong> programs. 
+                  We strictly comply with their terms of use and data policies.
+                </AlertDescription>
+              </Alert>
             </CardContent>
           </Card>
 
+          {/* Base Légale du Traitement - RGPD Art. 13.1(c) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                3. Legal Basis for Processing
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <p>
+                In accordance with Article 6 of the GDPR, the processing of your personal data is based on the following legal bases:
+              </p>
+              <ul className="space-y-2 list-disc list-inside text-muted-foreground">
+                <li>
+                  <strong>Consent (Art. 6.1.a):</strong> You explicitly give us your consent during 
+                  OAuth connection (Meta, TikTok, Google). You can withdraw your consent at any time.
+                </li>
+                <li>
+                  <strong>Contract performance (Art. 6.1.b):</strong> Processing is necessary for the performance of the service 
+                  contract you have entered into with us by using veyl.io.
+                </li>
+                <li>
+                  <strong>Legitimate interest (Art. 6.1.f):</strong> For improving our services, aggregated and anonymized usage 
+                  analysis, and platform security.
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* Utilisation des Données */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Eye className="h-5 w-5 text-primary" />
-                2. Utilisation de Vos Données
+                4. Use of Your Data
               </CardTitle>
             </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
-              <p>Nous utilisons les données collectées pour :</p>
-              <ul className="space-y-2">
-                <li>Fournir des services d'intelligence des tendances et d'analytics</li>
-                <li>Générer des insights pour le marketing et la publicité</li>
-                <li>Améliorer notre application et l'expérience utilisateur</li>
-                <li>Agréger et anonymiser les données à des fins de recherche</li>
-                <li>Indexer les posts dans notre moteur de recherche <strong>Meilisearch</strong> pour des recherches rapides</li>
+            <CardContent className="space-y-3 text-sm">
+              <p>We use the collected data to:</p>
+              <ul className="space-y-2 list-disc list-inside text-muted-foreground">
+                <li>Provide trend intelligence and analytics services</li>
+                <li>Generate insights for marketing and advertising</li>
+                <li>Improve our application and user experience</li>
+                <li>Aggregate and anonymize data for research purposes</li>
+                <li>Index posts in our <strong>Meilisearch</strong> search engine for fast searches</li>
+                <li>Ensure security and prevent abuse</li>
               </ul>
-              <p className="font-semibold mt-4 bg-destructive/10 p-3 rounded-lg border border-destructive/20">
-                <strong className="text-destructive">Nous n'utilisons PAS vos données</strong> à des fins de profilage individuel 
-                ou de ré-identification. Tous les insights analytiques sont agrégés, dé-identifiés et anonymisés.
+              <Alert className="mt-4 border-destructive/20 bg-destructive/5">
+                <Shield className="h-4 w-4 text-destructive" />
+                <AlertDescription className="text-xs">
+                  <strong className="text-destructive">We DO NOT use your data</strong> for individual profiling 
+                  or re-identification purposes. All analytical insights are aggregated, de-identified, and anonymized.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+
+          {/* Délais de Conservation - RGPD Art. 13.2(a) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" />
+                5. Data Retention Periods
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <p>
+                In accordance with Article 13.2(a) of the GDPR, your data is retained for the following periods:
+              </p>
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <div>
+                  <strong>User data (profile, projects):</strong>{' '}
+                  <span className="text-muted-foreground">Until account deletion or erasure request</span>
+                </div>
+                <div>
+                  <strong>Instagram/TikTok post data:</strong>{' '}
+                  <span className="text-muted-foreground">90 days after last consultation of the associated project</span>
+                </div>
+                <div>
+                  <strong>OAuth tokens:</strong>{' '}
+                  <span className="text-muted-foreground">Until revocation or disconnection</span>
+                </div>
+                <div>
+                  <strong>Access logs and technical data:</strong>{' '}
+                  <span className="text-muted-foreground">30 days</span>
+                </div>
+                <div>
+                  <strong>Anonymized/aggregated data:</strong>{' '}
+                  <span className="text-muted-foreground">Indefinitely (does not allow identification)</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                After these periods, your data is automatically deleted from our systems, except for legal retention obligations.
               </p>
             </CardContent>
           </Card>
 
+          {/* Stockage & Sécurité */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Lock className="h-5 w-5 text-primary" />
-                3. Stockage & Sécurité des Données
+                6. Data Storage & Security
               </CardTitle>
             </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
-              <p>
-                Nous mettons en œuvre des mesures de sécurité de niveau industrie pour protéger vos données :
-              </p>
-              <ul className="space-y-2">
-                <li><strong>Chiffrement des transmissions</strong> : HTTPS/TLS pour toutes les communications</li>
-                <li><strong>Infrastructure cloud sécurisée</strong> : Hébergement sur Railway (backend) et Vercel (frontend) avec contrôles d'accès</li>
-                <li><strong>Base de données PostgreSQL</strong> : Chiffrement au repos avec connexions SSL</li>
-                <li><strong>Redis</strong> : Cache sécurisé avec authentification</li>
-                <li><strong>Meilisearch</strong> : Index de recherche sécurisé avec clé API maître</li>
-                <li><strong>Audits de sécurité réguliers</strong> : Mises à jour et revues périodiques</li>
-                <li><strong>Rétention limitée</strong> : Données conservées 90 jours par défaut (configurable)</li>
+            <CardContent className="space-y-3 text-sm">
+              <p>We implement industry-standard security measures:</p>
+              <ul className="space-y-2 list-disc list-inside text-muted-foreground">
+                <li><strong>Transmission encryption:</strong> HTTPS/TLS for all communications</li>
+                <li><strong>Secure cloud infrastructure:</strong> Railway (backend) and Vercel (frontend) with access controls</li>
+                <li><strong>PostgreSQL database:</strong> Encryption at rest with SSL connections</li>
+                <li><strong>Redis:</strong> Secure cache with authentication</li>
+                <li><strong>Meilisearch:</strong> Secure search index with master API key</li>
+                <li><strong>Regular security audits:</strong> Updates and periodic reviews</li>
               </ul>
             </CardContent>
           </Card>
 
+          {/* Transferts Internationaux - RGPD Art. 13.1(f) */}
           <Card>
             <CardHeader>
-              <CardTitle>4. Services Tiers & Intégrations</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5 text-primary" />
+                7. International Data Transfers
+              </CardTitle>
             </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
+            <CardContent className="space-y-3 text-sm">
               <p>
-                Nous intégrons avec les services suivants et respectons leurs conditions :
+                In accordance with Article 13.1(f) of the GDPR, we inform you that some of your data may be transferred 
+                to third countries (United States) via our hosting providers:
               </p>
-              <ul className="space-y-3">
+              <ul className="space-y-2 list-disc list-inside text-muted-foreground">
                 <li>
-                  <strong>Meta (Instagram/Facebook)</strong> : Conformité avec les{' '}
-                  <a href="https://developers.facebook.com/policies" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
-                    Platform Terms et Developer Policies de Meta
+                  <strong>Railway (United States):</strong> Backend hosting (PostgreSQL, Redis) - 
+                  Compliance via <a href="https://www.railway.app/legal/privacy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                    Railway Privacy Policy
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </li>
                 <li>
-                  <strong>TikTok</strong> : Conformité avec les{' '}
+                  <strong>Vercel (United States):</strong> Frontend hosting and CDN - 
+                  Compliance via <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                    Vercel Privacy Policy
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </li>
+                <li>
+                  <strong>Meilisearch:</strong> Search engine (self-hosted or cloud depending on configuration)
+                </li>
+              </ul>
+              <Alert className="mt-4">
+                <Shield className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  These transfers are governed by <strong>Standard Contractual Clauses (SCC)</strong> approved by the European Commission 
+                  and data protection guarantees. You have the right to object to these transfers by contacting us.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+
+          {/* Services Tiers */}
+          <Card>
+            <CardHeader>
+              <CardTitle>8. Third-Party Services & Integrations</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <p>We integrate with the following services:</p>
+              <ul className="space-y-2 list-disc list-inside text-muted-foreground">
+                <li>
+                  <strong>Meta (Instagram/Facebook):</strong>{' '}
+                  <a href="https://developers.facebook.com/policies" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                    Platform Terms and Developer Policies
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </li>
+                <li>
+                  <strong>TikTok:</strong>{' '}
                   <a href="https://developers.tiktok.com/doc/tiktok-api-terms-of-service" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
                     TikTok API Terms of Service
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </li>
-                <li><strong>Railway</strong> : Hébergement backend (PostgreSQL, Redis)</li>
-                <li><strong>Vercel</strong> : Hébergement frontend et CDN</li>
-                <li><strong>Meilisearch</strong> : Moteur de recherche (self-hosted ou cloud)</li>
               </ul>
-              <p className="mt-4">
-                Nous ne partageons pas vos données personnelles avec des tiers, sauf si nécessaire pour fournir nos services 
-                ou pour se conformer à des obligations légales.
+              <p className="mt-3">
+                We do not share your personal data with third parties, except when necessary to provide our services 
+                or to comply with legal obligations.
               </p>
             </CardContent>
           </Card>
 
+          {/* Vos Droits RGPD */}
           <Card>
             <CardHeader>
-              <CardTitle>5. Vos Droits (Conformité RGPD)</CardTitle>
+              <CardTitle>9. Your Rights (GDPR Compliance)</CardTitle>
             </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
-              <p>En vertu du RGPD et des lois sur la protection des données, vous avez le droit de :</p>
-              <ul className="space-y-2">
-                <li><strong>Accès :</strong> Demander une copie de vos données</li>
-                <li><strong>Rectification :</strong> Corriger les données inexactes</li>
-                <li><strong>Effacement :</strong> Demander la suppression de vos données</li>
-                <li><strong>Restriction :</strong> Limiter le traitement de vos données</li>
-                <li><strong>Portabilité :</strong> Recevoir vos données dans un format structuré (JSON)</li>
-                <li><strong>Opposition :</strong> Vous opposer au traitement de vos données</li>
-                <li><strong>Retrait du consentement :</strong> Retirer votre consentement à tout moment</li>
+            <CardContent className="space-y-3 text-sm">
+              <p>Under the GDPR, you have the following rights:</p>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <strong className="text-sm">Access (Art. 15)</strong>
+                  <p className="text-xs text-muted-foreground mt-1">Request a copy of your data</p>
+                </div>
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <strong className="text-sm">Rectification (Art. 16)</strong>
+                  <p className="text-xs text-muted-foreground mt-1">Correct inaccurate data</p>
+                </div>
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <strong className="text-sm">Erasure (Art. 17)</strong>
+                  <p className="text-xs text-muted-foreground mt-1">Request deletion of your data</p>
+                </div>
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <strong className="text-sm">Restriction (Art. 18)</strong>
+                  <p className="text-xs text-muted-foreground mt-1">Limit processing</p>
+                </div>
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <strong className="text-sm">Portability (Art. 20)</strong>
+                  <p className="text-xs text-muted-foreground mt-1">Receive your data (JSON)</p>
+                </div>
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <strong className="text-sm">Objection (Art. 21)</strong>
+                  <p className="text-xs text-muted-foreground mt-1">Object to processing</p>
+                </div>
+              </div>
+              <div className="mt-4 space-y-2">
+                <p className="text-xs">
+                  <strong>To exercise these rights:</strong>
+                </p>
+                <ul className="space-y-1 text-xs text-muted-foreground list-disc list-inside">
+                  <li>
+                    Visit our{' '}
+                    <Link to="/data-deletion" className="text-primary hover:underline font-semibold">
+                      data deletion page
+                    </Link>
+                  </li>
+                  <li>
+                    Contact us by email:{' '}
+                    <a href="mailto:romeo.cavazza@gmail.com" className="text-primary hover:underline">
+                      romeo.cavazza@gmail.com
+                    </a>
+                  </li>
+                </ul>
+                <p className="text-xs text-muted-foreground mt-3">
+                  <strong>Response time:</strong> We respond to all requests within <strong>30 days</strong> 
+                  in accordance with the GDPR (Art. 12.3).
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <strong>Recourse:</strong> You have the right to lodge a complaint with the competent supervisory authority 
+                  (in France: <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                    CNIL
+                    <ExternalLink className="h-3 w-3" />
+                  </a>) if you believe that the processing of your data constitutes a violation of the GDPR.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Conformité Meta & TikTok */}
+          <Card>
+            <CardHeader>
+              <CardTitle>10. Meta & TikTok Compliance</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <p>
+                As a partner of <strong>Meta for Developers</strong> and <strong>TikTok for Developers</strong>, 
+                we commit to:
+              </p>
+              <ul className="space-y-2 list-disc list-inside text-muted-foreground">
+                <li>Respecting Meta and TikTok data policies</li>
+                <li>Using only authorized and documented API endpoints</li>
+                <li>Not storing data beyond the authorized period</li>
+                <li>Providing a data deletion mechanism compliant with platform requirements</li>
+                <li>Maintaining a test/demo environment for App Review with mock data</li>
               </ul>
-              <p className="mt-4">
-                Pour exercer ces droits, visitez notre{' '}
-                <Link to="/data-deletion" className="text-primary hover:underline font-semibold">
-                  page de suppression de données
-                </Link>{' '}
-                ou contactez-nous à <a href="mailto:privacy@veyl.io" className="text-primary hover:underline">privacy@veyl.io</a>
+              <p className="mt-3 text-xs text-muted-foreground">
+                To remove veyl.io's access to your Instagram/TikTok accounts, you can also do so directly 
+                from your Meta/TikTok account settings.
               </p>
             </CardContent>
           </Card>
 
+          {/* Contact */}
           <Card>
             <CardHeader>
-              <CardTitle>6. Conformité Meta & TikTok</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-primary" />
+                11. Contact
+              </CardTitle>
             </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
-              <p className="mb-4">
-                En tant que partenaire <strong>Meta for Developers</strong> et <strong>TikTok for Developers</strong>, 
-                nous nous engageons à :
-              </p>
+            <CardContent className="space-y-3 text-sm">
+              <p>For any questions or concerns regarding privacy:</p>
               <ul className="space-y-2">
-                <li>Respecter les politiques de données de Meta et TikTok</li>
-                <li>Utiliser uniquement les endpoints API autorisés et documentés</li>
-                <li>Ne pas stocker de données au-delà de la période autorisée</li>
-                <li>Fournir un mécanisme de suppression des données conforme aux exigences des plateformes</li>
-                <li>Maintenir un environnement de test/démo pour l'App Review avec des données mock</li>
+                <li>
+                  <strong>Email:</strong>{' '}
+                  <a href="mailto:romeo.cavazza@gmail.com" className="text-primary hover:underline">
+                    romeo.cavazza@gmail.com
+                  </a>
+                </li>
+                <li>
+                  <strong>Deletion requests:</strong>{' '}
+                  <Link to="/data-deletion" className="text-primary hover:underline">/data-deletion</Link>
+                </li>
+                <li>
+                  <strong>Support:</strong>{' '}
+                  <a href="https://discord.gg/TKbNuuV4sX" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                    Discord
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </li>
               </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>7. Contact</CardTitle>
-            </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
-              <p>Pour toute question ou préoccupation liée à la confidentialité :</p>
-              <ul className="space-y-2">
-                <li><strong>Email :</strong> <a href="mailto:privacy@veyl.io" className="text-primary hover:underline">privacy@veyl.io</a></li>
-                <li><strong>Demandes de suppression :</strong> <Link to="/data-deletion" className="text-primary hover:underline">/data-deletion</Link></li>
-                <li><strong>Support :</strong> <a href="mailto:support@veyl.io" className="text-primary hover:underline">support@veyl.io</a></li>
-              </ul>
-              <p className="mt-4 text-xs text-muted-foreground">
-                Nous répondons à toutes les demandes dans un délai de 30 jours conformément au RGPD.
+              <p className="text-xs text-muted-foreground mt-4">
+                We respond to all requests within <strong>30 days</strong> in accordance with the GDPR (Art. 12.3).
               </p>
             </CardContent>
           </Card>

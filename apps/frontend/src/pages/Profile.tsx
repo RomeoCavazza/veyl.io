@@ -29,10 +29,10 @@ export default function Profile() {
   useEffect(() => {
     fetchConnectedAccounts();
     
-    // Recharger les comptes après connexion OAuth (vérifier les paramètres URL)
+    // Reload accounts after OAuth connection (check URL parameters)
     const params = new URLSearchParams(window.location.search);
     if (params.get('token') || params.get('error')) {
-      // Recharger après un délai pour laisser le temps au backend de sauvegarder
+      // Reload after a delay to give the backend time to save
       const timer = setTimeout(() => {
         fetchConnectedAccounts();
       }, 1500);
@@ -43,7 +43,7 @@ export default function Profile() {
   const fetchConnectedAccounts = async () => {
     try {
       const token = localStorage.getItem('token');
-      // Utiliser le proxy Vercel (chemin relatif)
+      // Use Vercel proxy (relative path)
       const response = await fetch('/api/v1/auth/accounts/connected', {
         mode: 'cors',
         credentials: 'same-origin',
@@ -64,7 +64,7 @@ export default function Profile() {
 
 
   const handleDisconnect = async (accountId: number, provider: string) => {
-    if (!confirm(`Voulez-vous déconnecter votre compte ${provider} ?`)) {
+    if (!confirm(`Do you want to disconnect your ${provider} account?`)) {
       return;
     }
 
@@ -80,13 +80,13 @@ export default function Profile() {
       });
 
       if (response.ok) {
-        toast.success(`Compte ${provider} déconnecté`);
+        toast.success(`${provider} account disconnected`);
         fetchConnectedAccounts();
       } else {
-        toast.error('Erreur lors de la déconnexion');
+        toast.error('Error during disconnection');
       }
     } catch (error) {
-      toast.error('Erreur lors de la déconnexion');
+      toast.error('Error during disconnection');
     }
   };
 
@@ -145,7 +145,7 @@ export default function Profile() {
                   alt="avatar"
                   className="rounded-full w-24 h-24 mx-auto mb-4 border-2 border-primary/20"
                 />
-                <h2 className="text-lg font-semibold mb-1">{user?.name || 'Utilisateur'}</h2>
+                <h2 className="text-lg font-semibold mb-1">{user?.name || 'User'}</h2>
                 <p className="text-sm text-muted-foreground">{user?.email || 'user@example.com'}</p>
               </CardContent>
             </Card>
@@ -153,7 +153,7 @@ export default function Profile() {
             {/* Social Links */}
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg">Réseaux sociaux</CardTitle>
+                <CardTitle className="text-lg">Social Networks</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {['instagram', 'facebook', 'tiktok'].map((provider) => {
@@ -172,7 +172,7 @@ export default function Profile() {
                         <div>
                           <p className="text-sm font-medium">{getProviderName(provider)}</p>
                           <p className={`text-xs mt-0.5 ${isConnected ? 'text-green-500' : 'text-muted-foreground'}`}>
-                            {isConnected ? 'Connecté' : 'Non connecté'}
+                            {isConnected ? 'Connected' : 'Not connected'}
                           </p>
                         </div>
                       </div>
@@ -183,7 +183,7 @@ export default function Profile() {
                           onClick={() => handleDisconnect(account!.id, provider)}
                           className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
-                          Déconnecter
+                          Disconnect
                         </Button>
                       ) : (
                         <Button
@@ -191,7 +191,7 @@ export default function Profile() {
                           size="sm"
                           onClick={() => handleConnect(provider)}
                         >
-                          Connecter
+                          Connect
                         </Button>
                       )}
                     </div>

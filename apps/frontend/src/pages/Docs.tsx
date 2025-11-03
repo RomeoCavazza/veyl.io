@@ -108,7 +108,7 @@ export default function Docs() {
           <div className="text-center space-y-4">
             <h1 className="text-3xl md:text-4xl font-bold">Documentation</h1>
             <p className="text-muted-foreground">
-              Scopes et produits utilisés pour les intégrations Meta et TikTok
+              Scopes and products used for Meta and TikTok integrations
             </p>
           </div>
 
@@ -162,8 +162,8 @@ export default function Docs() {
                     <h3 className="text-xl font-bold">Meilisearch</h3>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    L'indexation et la recherche de millions de posts sont alimentées par <strong>Meilisearch</strong>, 
-                    un moteur de recherche ultra-rapide et typo-tolerant permettant une recherche instantanée avec facettes et filtres avancés.
+                    Indexing and searching millions of posts is powered by <strong>Meilisearch</strong>, 
+                    an ultra-fast and typo-tolerant search engine enabling instant search with advanced facets and filters.
                   </p>
                   <a 
                     href="https://www.meilisearch.com/" 
@@ -197,8 +197,8 @@ export default function Docs() {
                     <h3 className="text-xl font-bold">Meta for Developers</h3>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Intégration avec <strong>Instagram Graph API</strong> et <strong>Facebook Pages API</strong> 
-                    pour accéder aux contenus publics et aux métriques d'engagement.
+                    Integration with <strong>Instagram Graph API</strong> and <strong>Facebook Pages API</strong> 
+                    to access public content and engagement metrics.
                   </p>
                   <a 
                     href="https://developers.facebook.com/" 

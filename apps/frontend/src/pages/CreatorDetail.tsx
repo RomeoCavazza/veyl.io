@@ -43,32 +43,32 @@ export default function CreatorDetail() {
   // Simuler posts du créateur
   const creatorPosts = fakePosts.filter(p => p.username === creator?.handle.replace('@', '') || p.username === username);
 
-  // Fonction pour trier les posts
+  // Function to sort posts
   const sortedPosts = useMemo(() => {
     const sorted = [...creatorPosts];
     sorted.sort((a: any, b: any) => {
       let aVal: any = a[sortColumn];
       let bVal: any = b[sortColumn];
 
-      // Gérer les valeurs nulles/undefined
+      // Handle null/undefined values
       if (aVal === null || aVal === undefined) aVal = '';
       if (bVal === null || bVal === undefined) bVal = '';
 
-      // Tri par date
+      // Sort by date
       if (sortColumn === 'posted_at' || sortColumn === 'fetched_at') {
         const aDate = aVal ? new Date(aVal).getTime() : 0;
         const bDate = bVal ? new Date(bVal).getTime() : 0;
         return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
       }
 
-      // Tri numérique
+      // Numeric sort
       if (sortColumn === 'like_count' || sortColumn === 'comment_count' || sortColumn === 'view_count' || sortColumn === 'score') {
         const aNum = Number(aVal) || 0;
         const bNum = Number(bVal) || 0;
         return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
       }
 
-      // Tri textuel
+      // Text sort
       if (typeof aVal === 'string' && typeof bVal === 'string') {
         const cmp = aVal.localeCompare(bVal);
         return sortDirection === 'asc' ? cmp : -cmp;
@@ -270,7 +270,7 @@ export default function CreatorDetail() {
               <CardHeader>
                 <CardTitle>Posts ({sortedPosts.length})</CardTitle>
                 <CardDescription>
-                  Vue tabulaire de tous les posts avec tri et filtres
+                  Tabular view of all posts with sorting and filters
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -387,7 +387,7 @@ export default function CreatorDetail() {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                            Aucun post trouvé
+                            No posts found
                           </TableCell>
                         </TableRow>
                       )}
@@ -583,21 +583,21 @@ export default function CreatorDetail() {
                       <div className="text-sm whitespace-pre-wrap">
                         <span className="font-semibold mr-2">{creator?.handle}</span>
                         {(() => {
-                          // Formater la caption avec hashtags et mentions en texte normal mais stylisés
+                          // Format caption with hashtags and mentions as normal but styled text
                           const parts: (string | JSX.Element)[] = [];
                           let lastIndex = 0;
                           
-                          // Regex pour trouver hashtags et mentions
+                          // Regex to find hashtags and mentions
                           const regex = /(#\w+|@\w+)/g;
                           let match;
                           
                           while ((match = regex.exec(caption)) !== null) {
-                            // Ajouter le texte avant le match
+                            // Add text before the match
                             if (match.index > lastIndex) {
                               parts.push(caption.substring(lastIndex, match.index));
                             }
                             
-                            // Ajouter le hashtag ou mention stylisé
+                            // Add styled hashtag or mention
                             parts.push(
                               <span
                                 key={match.index}
@@ -610,7 +610,7 @@ export default function CreatorDetail() {
                             lastIndex = regex.lastIndex;
                           }
                           
-                          // Ajouter le reste du texte
+                          // Add remaining text
                           if (lastIndex < caption.length) {
                             parts.push(caption.substring(lastIndex));
                           }

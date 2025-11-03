@@ -10,7 +10,7 @@ import { ArrowLeft, Loader2, Hash, User, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createProject } from '@/lib/api';
 
-// Listes de suggestions pour autocomplétion
+// Suggestion lists for autocomplete
 const SUGGESTED_HASHTAGS = [
   'fashion', 'style', 'ootd', 'fashionblogger', 'streetstyle', 'fashionista',
   'makeup', 'beauty', 'makeuptutorial', 'beautytips', 'makeupartist',
@@ -45,7 +45,7 @@ export default function ProjectsNew() {
   const [showHashtagSuggestions, setShowHashtagSuggestions] = useState(false);
   const [showCreatorSuggestions, setShowCreatorSuggestions] = useState(false);
 
-  // Filtrer les suggestions pour hashtags
+  // Filter suggestions for hashtags
   const filteredHashtags = useMemo(() => {
     if (!hashtagInput.trim()) return [];
     const query = hashtagInput.trim().toLowerCase().replace(/^#/, '');
@@ -55,7 +55,7 @@ export default function ProjectsNew() {
       .slice(0, 5);
   }, [hashtagInput, hashtags]);
 
-  // Filtrer les suggestions pour créateurs
+  // Filter suggestions for creators
   const filteredCreators = useMemo(() => {
     if (!creatorInput.trim()) return [];
     const query = creatorInput.trim().toLowerCase().replace(/^@/, '');
@@ -65,7 +65,7 @@ export default function ProjectsNew() {
       .slice(0, 5);
   }, [creatorInput, creators]);
 
-  // Ajouter un hashtag
+  // Add a hashtag
   const handleAddHashtag = (tagToAdd?: string) => {
     const tag = (tagToAdd || hashtagInput.trim()).replace(/^#/, '');
     if (!tag || hashtags.includes(tag)) return;
@@ -74,7 +74,7 @@ export default function ProjectsNew() {
     setShowHashtagSuggestions(false);
   };
 
-  // Ajouter un créateur
+  // Add a creator
   const handleAddCreator = (creatorToAdd?: string) => {
     const creator = (creatorToAdd || creatorInput.trim()).replace(/^@/, '');
     if (!creator || creators.includes(creator)) return;
@@ -83,17 +83,17 @@ export default function ProjectsNew() {
     setShowCreatorSuggestions(false);
   };
 
-  // Supprimer un hashtag
+  // Remove a hashtag
   const removeHashtag = (tag: string) => {
     setHashtags(hashtags.filter(t => t !== tag));
   };
 
-  // Supprimer un créateur
+  // Remove a creator
   const removeCreator = (creator: string) => {
     setCreators(creators.filter(c => c !== creator));
   };
 
-  // Créer le projet
+  // Create the project
   const handleCreate = async () => {
     if (!name.trim()) {
       toast({
@@ -200,7 +200,7 @@ export default function ProjectsNew() {
             <div className="space-y-2 relative">
               <Label htmlFor="hashtags">Hashtags</Label>
               <div className="relative">
-                {/* Container qui ressemble à un Input avec tags à l'intérieur */}
+                {/* Container that looks like an Input with tags inside */}
                 <div
                   className="flex flex-wrap items-center gap-2 min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
                   onClick={() => {
@@ -208,7 +208,7 @@ export default function ProjectsNew() {
                     input?.focus();
                   }}
                 >
-                  {/* Tags à l'intérieur */}
+                  {/* Tags inside */}
                   {hashtags.map((tag) => (
                     <Badge
                       key={tag}
@@ -279,7 +279,7 @@ export default function ProjectsNew() {
             <div className="space-y-2 relative">
               <Label htmlFor="creators">Creators</Label>
               <div className="relative">
-                {/* Container qui ressemble à un Input avec tags à l'intérieur */}
+                {/* Container that looks like an Input with tags inside */}
                 <div
                   className="flex flex-wrap items-center gap-2 min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
                   onClick={() => {
@@ -287,7 +287,7 @@ export default function ProjectsNew() {
                     input?.focus();
                   }}
                 >
-                  {/* Tags à l'intérieur */}
+                  {/* Tags inside */}
                   {creators.map((creator) => (
                     <Badge
                       key={creator}

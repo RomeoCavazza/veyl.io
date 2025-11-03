@@ -1,25 +1,69 @@
-# Veyl.io - Social Media Intelligence Platform
+<p align="center">
+  <strong style="font-size: 2rem;">veyl.io</strong>
+</p>
 
-![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
-![Meilisearch](https://img.shields.io/badge/Meilisearch-FF5C5C?style=for-the-badge&logo=meilisearch&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
-![Railway](https://img.shields.io/badge/Railway-131415?style=for-the-badge&logo=railway&logoColor=white)
+<h4 align="center">
+  <a href="https://www.veyl.io">Website</a> |
+  <a href="https://www.veyl.io/docs">Documentation</a> |
+  <a href="https://github.com/RomeoCavazza/veyl.io">GitHub</a> |
+  <a href="https://discord.gg/TKbNuuV4sX">Discord</a>
+</h4>
 
-Plateforme de veille culturelle et d'analyse des tendances sur les réseaux sociaux.
+<p align="center">
+  <a href="https://github.com/RomeoCavazza/veyl.io/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Proprietary-red" alt="License"></a>
+  <a href="https://github.com/RomeoCavazza/veyl.io"><img src="https://img.shields.io/badge/status-In_Development-yellow" alt="Status"></a>
+  <a href="https://developers.facebook.com/"><img src="https://img.shields.io/badge/partner-Meta_for_Developers-blue" alt="Meta Partner"></a>
+  <a href="https://developers.tiktok.com/"><img src="https://img.shields.io/badge/partner-TikTok_for_Developers-black" alt="TikTok Partner"></a>
+</p>
 
-**Mission**: Permettre aux créateurs, agences et marques de surveiller, analyser et anticiper les tendances émergentes sur Instagram et TikTok via un workspace dédié.
+<p align="center">⚡ A social media intelligence platform that helps you monitor, analyze, and anticipate trends on Instagram and TikTok 🔍</p>
 
----
+[veyl.io](https://www.veyl.io) helps you shape a comprehensive social media monitoring experience, offering powerful analytics and trend detection features powered by [Meilisearch](https://www.meilisearch.com) and official Meta/TikTok APIs.
 
-## Démarrage Rapide
+## 🖥 Platform Features
 
-### Backend (FastAPI)
+- **Trend Monitoring** — Create custom projects to track hashtags, creators, and emerging trends across Instagram and TikTok
+- **Advanced Analytics** — Real-time engagement metrics, growth tracking, and performance insights
+- **Fast Search** — Ultra-fast, typo-tolerant search powered by Meilisearch across millions of posts
+- **Creator Intelligence** — Analyze influencer performance, partnerships, and content strategies
+- **Project Workspaces** — Organize your monitoring with dedicated project dashboards (Watchlist, Grid, Analytics)
 
+See the [online documentation](https://www.veyl.io/docs) for more details.
+
+## ✨ Features
+
+- **Search-as-you-type:** Find posts and creators in milliseconds with typo-tolerant search via Meilisearch
+- **Multi-platform monitoring:** Track trends simultaneously on Instagram and TikTok
+- **Real-time analytics:** Monitor engagement rates, follower growth, and content performance
+- **Creator insights:** Analyze influencer partnerships, content strategies, and audience demographics
+- **Project-based organization:** Organize your monitoring with custom projects and watchlists
+- **OAuth integration:** Secure authentication via Meta, TikTok, and Google OAuth
+- **API-first architecture:** RESTful API for programmatic access and integrations
+- **Open source:** Fully open-source codebase available on GitHub
+- **Conformité RGPD:** Compliant with GDPR and CCPA data protection regulations
+- **Meta & TikTok partnerships:** Official partner with Meta for Developers and TikTok for Developers
+
+## 📖 Documentation
+
+You can consult veyl.io's documentation at [veyl.io/docs](https://www.veyl.io/docs).
+
+The complete technical documentation is organized in the [`docs/`](docs/) directory:
+
+- **[docs/architecture.md](docs/architecture.md)** — Complete architecture, product vision, and roadmap
+- **[docs/backend.md](docs/backend.md)** — Backend modules, endpoints, services
+- **[docs/frontend.md](docs/frontend.md)** — Frontend implementation status and pages
+- **[docs/database.md](docs/database.md)** — Database schema and structure
+- **[docs/api-reference.md](docs/api-reference.md)** — API reference, endpoints, and schemas
+- **[docs/oauth-scopes.md](docs/oauth-scopes.md)** — OAuth permissions for Meta and TikTok
+- **[docs/post-app-review-roadmap.md](docs/post-app-review-roadmap.md)** — Post-App Review roadmap (Meilisearch advanced, Supabase+pgvector, Make/n8n, Dust)
+
+## 🚀 Getting Started
+
+For basic instructions on how to set up veyl.io, configure OAuth, and create your first monitoring project, take a look at our [documentation](https://www.veyl.io/docs) guide.
+
+### Quick Start
+
+**Backend (FastAPI)**
 ```bash
 cd apps/backend
 python -m venv venv
@@ -28,453 +72,127 @@ pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Frontend (React)
-
+**Frontend (React)**
 ```bash
 cd apps/frontend
 npm install
 npm run dev
 ```
 
-**Accès local**:
+**Access:**
 - Frontend: `http://localhost:8081`
 - Backend API: `http://localhost:8000`
 - API Docs: `http://localhost:8000/docs`
 
-#### Build Frontend
+## 🌍 Tech Stack
 
-```bash
-cd apps/frontend
-npm run build
-```
+**Backend:**
+- **FastAPI** — Python async API framework
+- **PostgreSQL** — Relational database (Railway)
+- **Redis** — Caching and rate limiting
+- **Meilisearch** — Ultra-fast search engine
 
-#### Structure Frontend
+**Frontend:**
+- **React 18** — UI framework
+- **TypeScript** — Static typing
+- **Vite** — Build tool and dev server
+- **Tailwind CSS** — Utility-first CSS framework
+- **Radix UI + shadcn/ui** — Accessible UI components
 
-```
-src/
-├── components/
-│   ├── ui/              Composants Radix UI complets (shadcn/ui)
-│   ├── Navbar.tsx       Navigation principale
-│   ├── ProjectPanel.tsx Panneau projet réutilisable
-│   └── AISearchBar.tsx  Barre de recherche
-├── contexts/
-│   ├── AuthContext.tsx  Gestion authentification
-│   └── WatchlistContext.tsx Watchlist state
-├── pages/
-│   ├── Landing.tsx      Page d'accueil
-│   ├── Auth.tsx         Login/Register
-│   ├── Search.tsx       Recherche posts (Meilisearch)
-│   ├── Projects.tsx     My Projects (liste)
-│   ├── ProjectsNew.tsx  Création projet (tags inline)
-│   ├── ProjectDetail.tsx Détails projet (Watchlist/Grille/Analytics)
-│   ├── CreatorDetail.tsx Détails créateur (Feed/Grid/Analytics)
-│   ├── Analytics.tsx    Analytics dashboard global
-│   ├── Profile.tsx      Profil utilisateur + OAuth
-│   ├── Community.tsx    Community Hub (GitHub + Discord)
-│   ├── Enterprise.tsx   Solutions entreprise
-│   └── Docs.tsx         Documentation
-├── assets/
-│   ├── css/             Styles (github-card, discord-button, browser-mockup, image-stack)
-│   └── img/             Images (logo, captures écran)
-└── lib/
-    ├── api.ts           Client API (auth, search, projects)
-    ├── fakeData.ts      Datasets mock pour développement/App Review
-    └── utils/
-        └── imageStack.ts Utilitaires pour animations cascade
-```
+**Infrastructure:**
+- **Railway** — Backend hosting (auto-deploy)
+- **Vercel** — Frontend hosting with proxy to Railway
 
-#### Pages Frontend Principales
+## 🧰 Official Integrations
 
-**`/projects`** - My Projects
-- Liste projets avec layout amélioré
-- Photos créateurs en cascade (3 premiers)
-- Posts récents en ligne horizontale scrollable
+veyl.io integrates with official developer platforms:
 
-**`/projects/new`** - Onboarding
-- Tags hashtags/créateurs inline dans l'input
-- Autocomplétion avec suggestions en temps réel
-- Photos de profil dans suggestions créateurs
-- Croix de suppression sur chaque tag
+**Meta for Developers**
+- Instagram Graph API — Access to public Instagram Business content
+- Facebook Pages API — Page management and insights
+- [Documentation](https://developers.facebook.com/)
 
-**`/projects/:id`** - Project Detail
-- **3 onglets**: Watchlist, Grille, Analytics
-- **ProjectPanel** réutilisable (métriques, actions)
-- Dialog Instagram-style pour posts
-- Tableau triable dans onglet Grille
+**TikTok for Developers**
+- TikTok Login Kit — OAuth authentication
+- TikTok API — Access to public videos and creator statistics
+- [Documentation](https://developers.tiktok.com/)
 
-**`/projects/:id/creator/:username`** - Creator Detail
-- **3 onglets**: Feed, Grid, Analytics
-- Stats regroupées sous description
-- 4 graphiques en layout 2x2
-- Dialog post au clic
+**Meilisearch**
+- Ultra-fast, typo-tolerant search engine
+- Real-time indexing and faceted search
+- [Documentation](https://www.meilisearch.com/docs)
 
----
+## ⚙️ Advanced Usage
 
-## Stack Technique
+Experienced users will want to keep our [API Reference](docs/api-reference.md) close at hand.
 
-### Backend
-- **FastAPI** - Framework API Python asynchrone
-- **PostgreSQL** - Base de données relationnelle (Railway)
-- **SQLAlchemy + Alembic** - ORM et migrations
-- **Redis** - Cache et rate limiting
-- **Meilisearch** - Moteur de recherche full-text
+We also offer dedicated guides for:
+- [OAuth Configuration](docs/oauth-scopes.md) — Meta and TikTok permissions setup
+- [Database Schema](docs/database.md) — Complete database structure
+- [Backend Architecture](docs/backend.md) — Backend modules and services
+- [Frontend Implementation](docs/frontend.md) — Frontend pages and components
 
-### Frontend
-- **React 18** - Framework UI
-- **TypeScript** - Typage statique
-- **Vite** - Build tool et dev server
-- **Tailwind CSS** - Framework CSS utility-first
-- **Radix UI + shadcn/ui** - Composants UI accessibles (headless)
-- **React Router** - Gestion de navigation
-- **Recharts** - Bibliothèque de graphiques
-- **date-fns** - Manipulation de dates et formatage relatif
+## 🧾 Roadmap
 
-### Infrastructure
-- **Railway** - Hébergement backend (auto-deploy)
-- **Vercel** - Hébergement frontend (auto-deploy) avec proxy vers Railway
-- **Configuration**: FastAPI avec `redirect_slashes=False`, routes avec chaînes vides (`""`) pour éviter redirections 307
+### ✅ Phase 1: Foundations (Completed)
+- Projects CRUD with database models
+- OAuth integration (Meta, TikTok, Google)
+- Search interface powered by Meilisearch
+- Analytics dashboards and insights
+- Project management UI
 
-### Intégrations Social Media
+### 🔄 Phase 2: Post-App Review (In Progress)
+- **Meilisearch Advanced** — Search UX, filters, ranking rules
+- **Supabase + pgvector** — Semantic storage, RAG, similarity search
+- **Make / n8n** — Automated data ingestion
+- **Dust** — Agent internal reasoning (if needed)
 
-#### Meta Developer Platform
-- **Instagram Graph API** - Accès aux contenus publics Instagram Business
-- **Facebook Pages API** - Gestion des pages et insights
-- **OAuth 2.0** - Authentification via Meta/Facebook
-- **Permissions**: `instagram_business_basic`, `pages_read_engagement`, `Page Public Content Access`, `Meta oEmbed Read`
+See [docs/post-app-review-roadmap.md](docs/post-app-review-roadmap.md) for detailed roadmap.
 
-**Ressources**: 
-- [Meta for Developers](https://developers.facebook.com/)
-- [Instagram Graph API Docs](https://developers.facebook.com/docs/instagram-api)
+## 📊 Privacy & Data Protection
 
-#### TikTok Developer Platform
-- **TikTok Login Kit** - Authentification OAuth
-- **TikTok API** - Accès aux vidéos publiques et statistiques créateurs
-- **Permissions**: `user.info.basic`, `user.info.profile`, `user.info.stats`, `video.list`
+veyl.io collects **anonymized** usage data to help us improve our product. We are fully compliant with GDPR and CCPA regulations.
 
-**Ressources**: 
-- [TikTok for Developers](https://developers.tiktok.com/)
-- [TikTok Login Kit Docs](https://developers.tiktok.com/doc/login-kit-web)
+To request deletion of collected data, please visit our [data deletion page](https://www.veyl.io/data-deletion) or write to us at [romeo.cavazza@gmail.com](mailto:romeo.cavazza@gmail.com).
+
+If you want to know more about the kind of data we collect and what we use it for, check our [Privacy Policy](https://www.veyl.io/privacy).
+
+## 📫 Get in Touch!
+
+veyl.io is a social media intelligence platform created as an open-source project, developed in collaboration with **ISCOM Paris** and **EPITECH Paris**.
+
+💌 Want to make a suggestion or give feedback? Here are some of the channels where you can reach us:
+
+- For feature requests, please visit our [GitHub discussions](https://github.com/RomeoCavazza/veyl.io/discussions)
+- Found a bug? Open an [issue](https://github.com/RomeoCavazza/veyl.io/issues)!
+- Want to be part of our Discord community? [Join us!](https://discord.gg/TKbNuuV4sX)
+
+Thank you for your support!
+
+## 👩‍💻 Contributing
+
+veyl.io is, and will always be, open-source! If you want to contribute to the project, here's how:
+
+1. Fork the repository on GitHub
+2. Create a branch from `main`
+3. Develop and test locally
+4. Push and create a Pull Request
+
+Contributions are welcome! Check out the [GitHub issues](https://github.com/RomeoCavazza/veyl.io/issues) to see how you can help.
+
+### Academic Partners
+
+- **ISCOM Paris** — Strategic planning, marketing insights, and trend analysis
+- **EPITECH Paris** — Technical development and backend architecture
+
+## 📦 Versioning
+
+veyl.io releases and their associated binaries are available on the project's [releases page](https://github.com/RomeoCavazza/veyl.io/releases).
+
+The project follows [SemVer conventions](https://semver.org/) for versioning.
 
 ---
 
-## Structure du Projet
-
-```
-veyl.io/
-├── apps/
-│   ├── backend/              # Application FastAPI
-│   │   ├── app.py           # Point d'entrée
-│   │   ├── core/            # Configuration, Redis, rate limiting
-│   │   ├── db/              # Models SQLAlchemy, migrations
-│   │   │   ├── models.py
-│   │   │   └── migrations/
-│   │   ├── auth_unified/    # OAuth (IG, FB, Google, TikTok)
-│   │   ├── posts/           # CRUD posts + recherche
-│   │   ├── projects/        # CRUD Projects
-│   │   ├── analytics/       # Endpoints analytics
-│   │   └── requirements.txt
-│   │
-│   └── frontend/            # Application React
-│       ├── src/
-│       │   ├── pages/      # Pages (Landing, Search, Projects, etc.)
-│       │   ├── components/ # Composants UI réutilisables
-│       │   ├── contexts/   # Context providers (Auth, etc.)
-│       │   ├── lib/        # Utilitaires, client API
-│       │   └── App.tsx     # Router principal
-│       └── package.json
-│
-├── docs/                    # Documentation technique organisée
-│   ├── README.md            # Index de la documentation
-│   ├── architecture.md      # Architecture complète
-│   ├── backend.md           # État backend
-│   ├── frontend.md          # État frontend
-│   ├── database.md          # Schéma base de données
-│   ├── api-reference.md     # Référence API
-│   └── oauth-scopes.md      # Permissions OAuth
-├── DATA.md                  # Schéma DB (référence rapide)
-├── SCOPES.md                # Liste scopes OAuth (référence)
-└── README.md                # Ce fichier
-```
-
----
-
-## Configuration
-
-### Backend (.env)
-
-```bash
-# Database
-DATABASE_URL=postgresql+psycopg2://user:pass@host:port/db
-
-# Authentication
-SECRET_KEY=your-secret-key-here
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-
-# Cache & Rate Limiting
-REDIS_URL=redis://localhost:6379/0
-
-# OAuth Providers
-IG_APP_ID=your-instagram-app-id
-IG_APP_SECRET=your-instagram-app-secret
-IG_REDIRECT_URI=https://veyl.io/auth/callback
-
-FB_APP_ID=your-facebook-app-id
-FB_APP_SECRET=your-facebook-app-secret
-FB_REDIRECT_URI=https://veyl.io/auth/facebook/callback
-
-# Search Engine
-MEILI_HOST=http://localhost:7700
-MEILI_MASTER_KEY=your-master-key
-```
-
-### Frontend (.env.local)
-
-```bash
-VITE_API_URL=http://localhost:8000  # Backend API URL (optionnel, proxy Vercel par défaut)
-```
-
-**Note**: Pour la production, Vercel proxy automatiquement vers Railway backend. La variable `VITE_API_URL` est optionnelle et permet un accès direct au backend en développement.
-
----
-
-## Base de Données
-
-### Migrations
-
-```bash
-cd apps/backend
-alembic upgrade head
-```
-
-### Tables Principales
-
-- `users` - Comptes utilisateurs
-- `projects` - Projets de monitoring
-- `project_hashtags` - Relation projets ↔ hashtags
-- `project_creators` - Créateurs suivis par projet
-- `hashtags` - Hashtags surveillés
-- `posts` - Posts collectés
-- `platforms` - Plateformes supportées
-- `oauth_accounts` - Comptes OAuth liés
-
-Voir [docs/architecture.md](docs/architecture.md) et [docs/database.md](docs/database.md) pour le schéma complet.
-
----
-
-## API Endpoints
-
-### Authentification
-- `POST /api/v1/auth/register` - Inscription
-- `POST /api/v1/auth/login` - Connexion
-- `GET /api/v1/auth/me` - Profil utilisateur
-
-### OAuth
-- `GET /api/v1/auth/{provider}/start` - Init OAuth
-- `GET /api/v1/auth/{provider}/callback` - Callback OAuth
-
-### Projects
-- `GET /api/v1/projects` - Liste projets
-- `POST /api/v1/projects` - Créer projet
-- `GET /api/v1/projects/{id}` - Détails projet (avec relations)
-- `PUT /api/v1/projects/{id}` - Mettre à jour projet
-- `DELETE /api/v1/projects/{id}` - Supprimer projet
-
-### Recherche
-- `GET /api/v1/posts/search` - Recherche posts (Meilisearch - ultra-rapide, typo-tolerant)
-- `GET /api/v1/posts/trending` - Posts trending
-
-### Système
-- `GET /ping` - Health check
-- `GET /docs` - Documentation Swagger (OpenAPI)
-
----
-
-## Tests Locaux
-
-### Backend
-```bash
-cd apps/backend
-python -c "from app import app; print('✅ API OK')"
-```
-
-### Frontend
-```bash
-cd apps/frontend
-npm run build  # Test compilation
-```
-
----
-
-## Déploiement
-
-### Backend (Railway)
-- Déploiement automatique sur push vers `main`
-- Variables d'environnement configurées dans Railway dashboard
-
-### Frontend (Vercel)
-- Déploiement automatique sur push vers `main`
-- Variables d'environnement dans Vercel dashboard
-
----
-
-## Documentation
-
-### Documentation Technique
-
-La documentation technique complète est organisée dans le dossier `docs/` :
-
-- **[docs/README.md](docs/README.md)** - Index et guide de la documentation technique
-- **[docs/architecture.md](docs/architecture.md)** - Architecture complète, vision produit, roadmap
-- **[docs/backend.md](docs/backend.md)** - Modules backend, endpoints, services, roadmap
-- **[docs/database.md](docs/database.md)** - Analyse schéma base de données
-- **[docs/frontend.md](docs/frontend.md)** - État des lieux frontend, pages implémentées
-- **[docs/api-reference.md](docs/api-reference.md)** - Référence API, endpoints, schémas
-- **[docs/oauth-scopes.md](docs/oauth-scopes.md)** - Permissions OAuth Meta/Facebook et TikTok
-- **[docs/post-app-review-roadmap.md](docs/post-app-review-roadmap.md)** - Roadmap post-App Review (Meilisearch advanced, Supabase+pgvector, Make/n8n, Dust)
-
-### Références Rapides
-
-- **[DATA.md](DATA.md)** - Schéma base de données (vue d'ensemble rapide)
-- **[SCOPES.md](SCOPES.md)** - Liste des scopes OAuth (référence)
-
-### Documentation Web
-
-- **[Documentation en ligne](https://www.veyl.io/docs)** - Documentation accessible depuis l'interface web
-
----
-
-## Roadmap
-
-### ✅ Phase 1: Foundations (Terminé)
-- Modèles Projects en base de données
-- Endpoints Projects CRUD (GET, POST, PUT, DELETE)
-- Interface My Projects avec layout amélioré
-- Onboarding avec tags inline et autocomplétion
-- ProjectPanel réutilisable
-- Onglets Watchlist, Grille, Analytics
-- Dialog Instagram-style pour posts
-
-### 🔄 Phase 2: Recherche & IA (À venir)
-- Qdrant (recherche vectorielle)
-- Clustering IA
-- Service embeddings
-- Investigate Mode
-
-### 📅 Phase 3: Workers & Agents (À venir)
-- Celery workers
-- Agents backend (Scout, Scribe, Planner)
-- Génération Weekly Digest
-
-### 📅 Phase 4: Features Avancées (À venir)
-- Multi-tenant (organisations)
-- Vertex AI (analyse vidéo, on-demand)
-- Gamma/Pomelli export
-- Feature flags système
-
----
-
-## Compte de Test
-
-Pour créer un utilisateur de test, utiliser le script backend:
-```bash
-cd apps/backend
-python scripts/create_test_user.py
-```
-
----
-
-## Meilisearch - Moteur de Recherche
-
-**Meilisearch** est le moteur de recherche central de veyl.io. Il permet une recherche ultra-rapide et typo-tolerant sur des millions de posts.
-
-### Avantages
-- **Typo-tolerance** : Trouve les résultats même avec des fautes de frappe
-- **Performance** : Recherche en millisecondes
-- **Facettes** : Filtrage avancé par plateforme, date, hashtags
-- **Configuration simple** : Index automatique, mise à jour en temps réel
-
-**Documentation**: [Meilisearch](https://www.meilisearch.com/docs)
-
----
-
-## Communauté Open Source
-
-**veyl.io** est entièrement **open source** et développé en collaboration avec :
-
-- **ISCOM Paris** - Analyse des tendances marketing et communication
-- **EPITECH Paris** - Développement technique, architecture backend
-
-### Liens Communauté
-- **GitHub Repository**: [https://github.com/RomeoCavazza/veyl.io](https://github.com/RomeoCavazza/veyl.io)
-- **Discord Community**: [https://discord.gg/TKbNuuV4sX](https://discord.gg/TKbNuuV4sX)
-
-### Contribution
-
-1. Fork le repository sur GitHub
-2. Créer une branche depuis `main`
-3. Développer et tester localement
-4. Push et créer une Pull Request
-
-Les contributions sont les bienvenues ! Consultez les issues GitHub pour voir comment vous pouvez aider.
-
----
-
-## License
-
-Proprietary - Tous droits réservés
-
----
-
-## Partenariats Officiels
-
-**veyl.io** est partenaire officiel des programmes **Meta for Developers** et **TikTok for Developers**.
-
-### Meta for Developers
-- **Instagram Graph API** - Accès aux contenus publics Instagram Business
-- **Facebook Pages API** - Gestion des pages et insights
-- **Documentation**: [Meta for Developers](https://developers.facebook.com/)
-
-### TikTok for Developers
-- **TikTok Login Kit** - Authentification OAuth
-- **TikTok API** - Accès aux vidéos publiques et statistiques créateurs
-- **Documentation**: [TikTok for Developers](https://developers.tiktok.com/)
-
----
-
-## App Review Mode
-
-Pour la validation **Meta App Review** et **TikTok App Review**, l'application fonctionne en **mode démonstration** via des datasets mock/fake (posts, creators, insights) afin d'afficher le fonctionnement complet du flux utilisateur (OAuth → création projet → visualisation → analytics).
-
-Les reviewers évaluent la **compréhension du flux** et la conformité aux politiques, pas nécessairement des données réelles. Les données réelles seront activées automatiquement dès l'obtention de l'accès Public Content.
-
-### Permissions Meta/Facebook Demandées
-
-- `instagram_business_basic` - Accès basique Instagram Business
-- `instagram_manage_insights` - Gestion des insights Instagram
-- `pages_read_engagement` - Lecture métriques d'engagement
-- `Page Public Content Access` - Accès contenu public (Advanced Access)
-- `Instagram Public Content Access` - Accès contenu public Instagram (Advanced Access)
-- `Meta oEmbed Read` - Lecture données oEmbed pour embeds
-
-**Documentation**: [Meta for Developers - App Review](https://developers.facebook.com/docs/app-review)
-
-### Permissions TikTok Demandées
-
-- `user.info.basic` - Informations utilisateur basiques
-- `user.info.profile` - Informations profil utilisateur
-- `user.info.stats` - Statistiques utilisateur
-- `video.list` - Liste des vidéos publiques
-
-**Documentation**: [TikTok for Developers - App Review](https://developers.tiktok.com/doc/app-review)
-
-### Pages Légales
-
-- `/privacy` - Politique de confidentialité
-- `/terms` - Conditions d'utilisation
-- `/data-deletion` - Formulaire de suppression de données
-
-**Conformité**: Toutes les pages légales sont complètes et accessibles publiquement pour satisfaire aux exigences des plateformes.
-
----
-
-**Pour plus de détails**: Voir [docs/architecture.md](docs/architecture.md) ou [Documentation en ligne](https://www.veyl.io/docs)
+<p align="center">
+  Made with ❤️ by the veyl.io team
+</p>

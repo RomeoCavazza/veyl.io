@@ -15,7 +15,7 @@ export default function AuthCallback() {
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
 
-    console.log('📥 AuthCallback - Paramètres reçus:', { 
+    console.log('📥 AuthCallback - Received parameters:', { 
       hasToken: !!token, 
       hasUserId: !!userId, 
       hasEmail: !!email,
@@ -24,37 +24,37 @@ export default function AuthCallback() {
       errorDescription
     });
 
-    // Gérer les erreurs OAuth
+    // Handle OAuth errors
     if (error) {
       console.error('❌ OAuth error:', error, errorDescription);
-      // Afficher l'erreur dans l'URL pour debugging, mais rediriger vers /auth/callback avec l'erreur
-      // pour que l'utilisateur puisse voir le message d'erreur sur la page de callback
+      // Display error in URL for debugging, but redirect to /auth/callback with error
+      // so user can see the error message on the callback page
       const errorMsg = errorDescription || error;
-      console.error('Redirection vers /auth avec erreur:', errorMsg);
-      // Rediriger vers /auth au lieu de /auth/callback pour afficher l'erreur sur la page de connexion
+      console.error('Redirecting to /auth with error:', errorMsg);
+      // Redirect to /auth instead of /auth/callback to display error on login page
       navigate('/auth?error=' + encodeURIComponent(errorMsg));
       return;
     }
 
-    // Si on a un token, stocker immédiatement et rediriger vers / (landing page)
-    // Le AuthContext chargera le user depuis le token au chargement
+    // If we have a token, store it immediately and redirect to / (landing page)
+    // AuthContext will load the user from the token on load
     if (token) {
-      // Décoder le token si nécessaire (il est URL-encodé)
+      // Decode token if necessary (it's URL-encoded)
       let decodedToken: string;
       try {
         decodedToken = decodeURIComponent(token);
       } catch (e) {
-        // Si le décodage échoue, utiliser le token tel quel
+        // If decoding fails, use token as-is
         decodedToken = token;
       }
       
-      console.log('🔑 Token décodé, longueur:', decodedToken.length);
+      console.log('🔑 Decoded token, length:', decodedToken.length);
       
-      // Stocker le token immédiatement
+      // Store token immediately
       localStorage.setItem('token', decodedToken);
       setToken(decodedToken);
       
-      // Si on a aussi userId/email dans l'URL, créer un user temporaire pour éviter ProtectedRoute
+      // If we also have userId/email in URL, create temporary user to avoid ProtectedRoute
       if (userId && email) {
         const decodedEmail = email ? decodeURIComponent(email) : '';
         const decodedName = name ? decodeURIComponent(name) : '';
@@ -68,13 +68,13 @@ export default function AuthCallback() {
         });
       }
       
-      // Rediriger vers la landing page (/)
-      console.log('🚀 Redirection vers landing page');
+      // Redirect to landing page (/)
+      console.log('🚀 Redirecting to landing page');
       navigate('/');
       return;
     } else if (userId && email) {
-      // Fallback: utiliser les paramètres URL si le token n'est pas dans l'URL
-      // (cas où on stocke le token différemment)
+      // Fallback: use URL parameters if token is not in URL
+      // (case where token is stored differently)
       const decodedEmail = decodeURIComponent(email);
       const decodedName = name ? decodeURIComponent(name) : '';
       setUser({
@@ -86,11 +86,11 @@ export default function AuthCallback() {
         is_active: true
       });
       setTimeout(() => {
-        console.log('🚀 Redirection vers landing page (fallback userId)');
+        console.log('🚀 Redirecting to landing page (fallback userId)');
         navigate('/');
       }, 300);
     } else {
-      // En cas d'erreur, rediriger vers la page de connexion
+      // On error, redirect to login page
       console.error('Missing required parameters:', { token, userId, email });
       navigate('/auth?error=missing_params');
     }
@@ -100,7 +100,7 @@ export default function AuthCallback() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Connexion en cours...</p>
+        <p className="mt-4 text-gray-600">Connecting...</p>
       </div>
     </div>
   );

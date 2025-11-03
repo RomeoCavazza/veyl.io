@@ -56,8 +56,8 @@ export default function Auth() {
   };
 
   const handleGoogleSignIn = () => {
-    // Pour OAuth, utiliser le proxy Vercel (chemin relatif)
-    // Le proxy Vercel redirige vers Railway
+    // For OAuth, use Vercel proxy (relative path)
+    // Vercel proxy redirects to Railway
     window.location.href = '/api/v1/auth/google/start';
   };
 
@@ -114,7 +114,7 @@ export default function Auth() {
           {/* Login Tab */}
           {activeTab === 'login' && (
             <>
-              {/* Social Login Buttons - Style uniformisé avec footer */}
+              {/* Social Login Buttons - Unified style with footer */}
               <div className="text-center mb-4">
                 <p className="text-sm text-muted-foreground mb-3">Sign in with:</p>
                 <div className="flex justify-center gap-3 mb-2">
@@ -148,7 +148,7 @@ export default function Auth() {
                     size="icon" 
                     className="rounded-xl border-border hover:bg-accent/50 group relative"
                     onClick={handleInstagramSignIn}
-                    title="Se connecter avec Instagram - Accès aux tendances et analytics"
+                    title="Sign in with Instagram - Access to trends and analytics"
                   >
                     <Instagram className="h-5 w-5 text-muted-foreground hover:text-foreground" />
                     <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-popover text-popover-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10 border">
@@ -173,7 +173,7 @@ export default function Auth() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground px-4">
-                  Instagram nécessite une connexion via Facebook pour accéder aux tendances et analytics
+                  Instagram requires a Facebook connection to access trends and analytics
                 </p>
                 <p className="text-sm text-muted-foreground mt-4">or:</p>
               </div>

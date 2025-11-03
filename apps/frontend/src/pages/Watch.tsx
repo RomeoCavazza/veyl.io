@@ -9,7 +9,7 @@ import { Eye, Trash2, FileText, Hash, User, Tag, Search, TrendingUp, Edit, Insta
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/EmptyState';
 import { format, subDays } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { TikTokIcon } from '@/components/icons/TikTokIcon';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from 'recharts';
@@ -29,13 +29,13 @@ export default function Watch() {
   const [activeTab, setActiveTab] = useState('daily');
   const [showDemo, setShowDemo] = useState(false);
 
-  // Données de performance pour les graphiques
+  // Performance data for charts
   const generatePerformanceData = (days: number) => {
     const data = [];
     for (let i = days - 1; i >= 0; i--) {
       const date = subDays(new Date(), i);
       data.push({
-        date: format(date, 'dd MMM', { locale: fr }),
+        date: format(date, 'MMM dd', { locale: enUS }),
         comptes: Math.floor(Math.random() * 500 + 200),
         hashtags: Math.floor(Math.random() * 800 + 400),
         posts: Math.floor(Math.random() * 1200 + 800),
@@ -54,7 +54,7 @@ export default function Watch() {
     return generatePerformanceData(daysMap[activeTab] || 7);
   }, [activeTab]);
   
-  // Données de démonstration pour les comptes scrapés
+  // Demo data for scraped accounts
   const [scrapedAccounts] = useState<ScrapedAccount[]>([
     {
       id: '1',
@@ -120,11 +120,11 @@ export default function Watch() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge variant="default" className="bg-green-500">Actif</Badge>;
+        return <Badge variant="default" className="bg-green-500">Active</Badge>;
       case 'pending':
-        return <Badge variant="secondary">En attente</Badge>;
+        return <Badge variant="secondary">Pending</Badge>;
       case 'error':
-        return <Badge variant="destructive">Erreur</Badge>;
+        return <Badge variant="destructive">Error</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -133,9 +133,9 @@ export default function Watch() {
   return (
     <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Ma veille</h1>
+          <h1 className="text-3xl font-bold mb-2">My Watchlist</h1>
           <p className="text-muted-foreground">
-            Suivez vos hashtags, créateurs et niches favoris.
+            Track your favorite hashtags, creators, and niches.
           </p>
         </div>
 
@@ -143,19 +143,19 @@ export default function Watch() {
           <div className="space-y-6">
             <Card className="p-8 text-center border-dashed">
               <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Aucun élément surveillé</h3>
+              <h3 className="text-lg font-semibold mb-2">No items being watched</h3>
               <p className="text-muted-foreground mb-4">
-                Ajoutez un #hashtag, un @compte ou une niche depuis la recherche.
+                Add a #hashtag, @account, or niche from the search.
               </p>
               <div className="flex gap-2 justify-center">
                 <Button asChild className="gap-2">
                   <Link to="/search">
                     <Search className="h-4 w-4" />
-                    Aller à la recherche
+                    Go to search
                   </Link>
                 </Button>
                 <Button variant="outline" onClick={() => setShowDemo(!showDemo)}>
-                  {showDemo ? 'Masquer la démo' : 'Voir la démo'}
+                  {showDemo ? 'Hide demo' : 'View demo'}
                 </Button>
               </div>
             </Card>
@@ -170,26 +170,26 @@ export default function Watch() {
                   size="sm"
                   onClick={() => setShowDemo(!showDemo)}
                 >
-                  {showDemo ? 'Masquer la démo' : 'Afficher avec démo'}
+                  {showDemo ? 'Hide demo' : 'Show with demo'}
                 </Button>
               </div>
             )}
 
-            {/* Comptes scrapés - Table */}
+            {/* Scraped Accounts - Table */}
             <section>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-xl font-semibold flex items-center gap-2">
                       <User className="h-5 w-5" />
-                      Comptes scrapés
+                      Scraped Accounts
                     </CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {scrapedAccounts.length} compte{scrapedAccounts.length > 1 ? 's' : ''} surveillé{scrapedAccounts.length > 1 ? 's' : ''}
+                      {scrapedAccounts.length} account{scrapedAccounts.length > 1 ? 's' : ''} being watched
                     </p>
                   </div>
-                  <Button onClick={() => toast.info('Ajout de compte en cours de développement')}>
-                    Ajouter un compte
+                  <Button onClick={() => toast.info('Account addition in development')}>
+                    Add account
                   </Button>
                 </CardHeader>
                 <CardContent>
@@ -197,12 +197,12 @@ export default function Watch() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-[200px]">Compte</TableHead>
-                          <TableHead>Plateforme</TableHead>
-                          <TableHead>Statut</TableHead>
-                          <TableHead className="hidden md:table-cell">Dernière mise à jour</TableHead>
-                          <TableHead className="text-right">Publications</TableHead>
-                          <TableHead className="text-right">Abonnés</TableHead>
+                          <TableHead className="w-[200px]">Account</TableHead>
+                          <TableHead>Platform</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="hidden md:table-cell">Last updated</TableHead>
+                          <TableHead className="text-right">Posts</TableHead>
+                          <TableHead className="text-right">Followers</TableHead>
                           <TableHead className="text-right w-[100px]">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -210,7 +210,7 @@ export default function Watch() {
                         {scrapedAccounts.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                              Aucun compte scrapé pour le moment
+                              No scraped accounts yet
                             </TableCell>
                           </TableRow>
                         ) : (
@@ -236,7 +236,7 @@ export default function Watch() {
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
                                 <span className="text-sm text-muted-foreground">
-                                  {format(new Date(account.lastScraped), 'dd MMM yyyy à HH:mm', { locale: fr })}
+                                  {format(new Date(account.lastScraped), 'MMM dd, yyyy HH:mm', { locale: enUS })}
                                 </span>
                               </TableCell>
                               <TableCell className="text-right">
@@ -255,7 +255,7 @@ export default function Watch() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8"
-                                    onClick={() => toast.info('Édition en cours de développement')}
+                                    onClick={() => toast.info('Editing in development')}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -264,8 +264,8 @@ export default function Watch() {
                                     size="icon"
                                     className="h-8 w-8 text-destructive hover:text-destructive"
                                     onClick={() => {
-                                      if (confirm(`Voulez-vous supprimer @${account.username} ?`)) {
-                                        toast.success(`@${account.username} supprimé`);
+                                      if (confirm(`Do you want to remove @${account.username}?`)) {
+                                        toast.success(`@${account.username} removed`);
                                       }
                                     }}
                                   >
@@ -287,7 +287,7 @@ export default function Watch() {
             <section>
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Eye className="h-5 w-5" />
-                Éléments surveillés ({displayItems.length})
+                Watched Items ({displayItems.length})
               </h2>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {displayItems.map((item, i) => {
@@ -297,7 +297,7 @@ export default function Watch() {
                     <Card key={i} className="p-4 relative">
                       {isDemo && (
                         <Badge className="absolute top-2 right-2 text-xs" variant="secondary">
-                          Démo
+                          Demo
                         </Badge>
                       )}
                       <div className="flex items-start justify-between mb-2">
@@ -314,7 +314,7 @@ export default function Watch() {
                             size="icon"
                             variant="ghost"
                             onClick={() => removeItem(i)}
-                            aria-label="Supprimer"
+                            aria-label="Remove"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -324,9 +324,9 @@ export default function Watch() {
                         {item.kind}
                       </Badge>
                       <p className="text-xs text-muted-foreground mt-2">
-                        Ajouté le{' '}
-                        {format(new Date(item.created_at), 'dd MMM yyyy', {
-                          locale: fr,
+                        Added on{' '}
+                        {format(new Date(item.created_at), 'MMM dd, yyyy', {
+                          locale: enUS,
                         })}
                       </p>
                     </Card>
@@ -339,23 +339,23 @@ export default function Watch() {
             <section>
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
-                Performance & Tendances
+                Performance & Trends
               </h2>
               <Card className="p-6">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="daily">7 jours</TabsTrigger>
-                    <TabsTrigger value="weekly">30 jours</TabsTrigger>
-                    <TabsTrigger value="monthly">90 jours</TabsTrigger>
-                    <TabsTrigger value="yearly">1 an</TabsTrigger>
+                    <TabsTrigger value="daily">7 days</TabsTrigger>
+                    <TabsTrigger value="weekly">30 days</TabsTrigger>
+                    <TabsTrigger value="monthly">90 days</TabsTrigger>
+                    <TabsTrigger value="yearly">1 year</TabsTrigger>
                   </TabsList>
                   <TabsContent value={activeTab} className="mt-6">
                     <div className="space-y-6">
-                      {/* Graphique Performance Comptes */}
+                      {/* Account Performance Chart */}
                       <div>
                         <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
                           <User className="h-4 w-4" />
-                          Performance des comptes
+                          Account performance
                         </h3>
                         <div className="h-64">
                           <ResponsiveContainer width="100%" height="100%">
@@ -387,7 +387,7 @@ export default function Watch() {
                               <Area 
                                 type="monotone" 
                                 dataKey="comptes" 
-                                name="Comptes actifs"
+                                name="Active accounts"
                                 stroke="#8884d8" 
                                 fillOpacity={1} 
                                 fill="url(#colorComptes)" 
@@ -397,11 +397,11 @@ export default function Watch() {
                         </div>
                       </div>
 
-                      {/* Graphique Performance Hashtags */}
+                      {/* Hashtag Performance Chart */}
                       <div>
                         <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
                           <Hash className="h-4 w-4" />
-                          Performance des hashtags
+                          Hashtag performance
                         </h3>
                         <div className="h-64">
                           <ResponsiveContainer width="100%" height="100%">
@@ -433,7 +433,7 @@ export default function Watch() {
                               <Area 
                                 type="monotone" 
                                 dataKey="hashtags" 
-                                name="Hashtags suivis"
+                                name="Tracked hashtags"
                                 stroke="#82ca9d" 
                                 fillOpacity={1} 
                                 fill="url(#colorHashtags)" 
@@ -443,11 +443,11 @@ export default function Watch() {
                         </div>
                       </div>
 
-                      {/* Graphique Performance Posts */}
+                      {/* Post Performance Chart */}
                       <div>
                         <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
                           <FileText className="h-4 w-4" />
-                          Performance des posts
+                          Post performance
                         </h3>
                         <div className="h-64">
                           <ResponsiveContainer width="100%" height="100%">
@@ -479,7 +479,7 @@ export default function Watch() {
                               <Area 
                                 type="monotone" 
                                 dataKey="posts" 
-                                name="Posts scrapés"
+                                name="Scraped posts"
                                 stroke="#ffc658" 
                                 fillOpacity={1} 
                                 fill="url(#colorPosts)" 
@@ -503,15 +503,15 @@ export default function Watch() {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold">Génération de slides</h3>
-                      <Badge variant="secondary" className="text-xs">Bientôt</Badge>
+                      <h3 className="font-semibold">Slide Generation</h3>
+                      <Badge variant="secondary" className="text-xs">Coming soon</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Créez automatiquement des présentations professionnelles à partir de vos données de veille. Export PowerPoint, Google Slides ou PDF.
+                      Automatically create professional presentations from your watchlist data. Export to PowerPoint, Google Slides, or PDF.
                     </p>
-                    <Button disabled title="Fonctionnalité en développement">
+                    <Button disabled title="Feature in development">
                       <FileText className="h-4 w-4 mr-2" />
-                      Générer des slides
+                      Generate slides
                     </Button>
                   </div>
                 </div>

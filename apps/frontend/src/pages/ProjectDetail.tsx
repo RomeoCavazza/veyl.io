@@ -52,7 +52,7 @@ import {
   Legend,
 } from 'recharts';
 
-// Importer getApiBase depuis api.ts
+// Import getApiBase from api.ts
 import { getApiBase } from '@/lib/api';
 
 export default function ProjectDetail() {
@@ -92,7 +92,7 @@ export default function ProjectDetail() {
   ];
 
   useEffect(() => {
-    // Charger projet depuis API
+    // Load project from API
     const loadProject = async () => {
       setLoading(true);
       try {
@@ -102,8 +102,8 @@ export default function ProjectDetail() {
           return;
         }
 
-        // Charger projet depuis API
-        // Utiliser le proxy Vercel (chemin relatif)
+        // Load project from API
+        // Use Vercel proxy (relative path)
         const response = await fetch(`/api/v1/projects/${id}`, {
           mode: 'cors',
           credentials: 'same-origin',
@@ -121,7 +121,7 @@ export default function ProjectDetail() {
         
         setProject(projectData);
         
-               // Extraire créateurs depuis creators (nouvelle structure)
+               // Extract creators from creators (new structure)
                const projectCreators = projectData.creators || [];
                const creatorsData = projectCreators.map((c: any) => ({
                  handle: c.creator_username,
@@ -130,7 +130,7 @@ export default function ProjectDetail() {
                }));
                setCreators(creatorsData);
                
-               // Si pas de créateurs mais scope_query contient des users, extraire
+               // If no creators but scope_query contains users, extract
                if (creatorsData.length === 0 && projectData.scope_query) {
                  const queryUsers = projectData.scope_query.split(',').map((q: string) => q.trim().replace('@', ''));
                  setCreators(queryUsers.map((username: string) => ({
@@ -140,7 +140,7 @@ export default function ProjectDetail() {
                  })));
                }
         
-        // Extraire hashtags depuis scope_query ou séparer par virgule
+        // Extract hashtags from scope_query or separate by comma
         const query = projectData.scope_query || '';
         const hashtagsFromQuery = query.split(',').map((q: string) => q.trim()).filter(Boolean);
         setNiches(hashtagsFromQuery.map((name: string, idx: number) => ({
@@ -151,11 +151,11 @@ export default function ProjectDetail() {
           engagement: 0,
         })));
         
-        // Pour l'instant, utiliser fake posts (à remplacer par vraie API)
+        // For now, use fake posts (to be replaced with real API)
         const projectPosts = getFakeProjectPosts(id || '');
         setPosts(projectPosts);
         
-        // Extraire tous les usernames uniques depuis les posts et les ajouter aux creators
+        // Extract all unique usernames from posts and add them to creators
         if (projectPosts.length > 0) {
           const existingUsernames = new Set(creatorsData.map((c: any) => c.handle.toLowerCase()));
           const postUsernames = new Set(
@@ -164,11 +164,11 @@ export default function ProjectDetail() {
               .filter(Boolean)
           );
           
-          // Ajouter les nouveaux creators depuis les posts
+          // Add new creators from posts
           const newCreators = Array.from(postUsernames)
             .filter((username: string) => !existingUsernames.has(username))
             .map((username: string) => {
-              // Trouver le post original pour récupérer le vrai username (avec casse)
+              // Find the original post to retrieve the real username (with case)
               const originalPost = projectPosts.find((p: any) => p.username?.toLowerCase() === username);
               const displayUsername = originalPost?.username || username;
               return {
@@ -178,7 +178,7 @@ export default function ProjectDetail() {
               };
             });
           
-          // Fusionner les creators existants avec les nouveaux
+          // Merge existing creators with new ones
           setCreators([...creatorsData, ...newCreators]);
         }
         
@@ -189,14 +189,14 @@ export default function ProjectDetail() {
           description: error.message || 'Failed to load project',
           variant: 'destructive',
         });
-        // Fallback sur fake data
+        // Fallback to fake data
         const fakeProject = getFakeProject(id || '');
         if (fakeProject) {
           setProject(fakeProject);
           const fakePosts = getFakeProjectPosts(id || '');
           setPosts(fakePosts);
           
-          // Extraire creators depuis fake posts
+          // Extract creators from fake posts
           const fakePostUsernames = new Set(
             fakePosts
               .map((p: any) => p.username?.toLowerCase())
@@ -278,7 +278,7 @@ export default function ProjectDetail() {
       return postDate >= monthAgo;
     }).length;
 
-    // Si pas de dates, utiliser des approximations
+    // If no dates, use approximations
     if (posts.length > 0 && !posts.some(p => p.posted_at)) {
       return {
         perDay: Math.round(posts.length / 7) || 0,
@@ -309,10 +309,10 @@ export default function ProjectDetail() {
       startDate.setMonth(startDate.getMonth() - 1);
     }
     
-    // Compter les posts du creator dans la période
+    // Count creator posts in the period
     const creatorPosts = posts.filter((post: any) => {
       if (post.username?.toLowerCase() !== creatorHandle.toLowerCase()) return false;
-      if (!post.posted_at) return true; // Si pas de date, inclure
+      if (!post.posted_at) return true; // If no date, include
       const postDate = new Date(post.posted_at);
       return postDate >= startDate;
     });
@@ -320,7 +320,7 @@ export default function ProjectDetail() {
     // Trouver le creator pour avoir les followers
     const creator = creators.find((c: any) => c.handle?.toLowerCase() === creatorHandle.toLowerCase());
     
-    // Générer un nombre de followers stable basé sur le hash du username
+    // Generate a stable follower count based on username hash
     const hash = creatorHandle.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const mockFollowers = creator?.followers || (hash % 500000) + 5000; // 5K à 505K followers
     
@@ -330,7 +330,7 @@ export default function ProjectDetail() {
     };
   };
 
-  // Fonction pour trier les posts
+  // Function to sort posts
   const sortedPosts = useMemo(() => {
     const sorted = [...posts];
     sorted.sort((a: any, b: any) => {
@@ -418,7 +418,7 @@ export default function ProjectDetail() {
               Watchlist
             </TabsTrigger>
             <TabsTrigger value="grid">
-              Grille
+              Grid
             </TabsTrigger>
             <TabsTrigger value="analytics">
               Analytics
@@ -427,9 +427,9 @@ export default function ProjectDetail() {
 
           {/* Tab 1: Watchlist - Feed + Creators + Hashtags/Commentaires/Mentions */}
           <TabsContent value="watchlist" className="space-y-6">
-            {/* Layout 50/50 : Panneau Projet + Graphique/Creators */}
+            {/* Layout 50/50 : Project Panel + Chart/Creators */}
             <div className="grid gap-4 md:grid-cols-2">
-              {/* Panneau Projet (Gauche - 50%) */}
+              {/* Project Panel (Left - 50%) */}
               <ProjectPanel
                 project={project}
                 creators={creators}
@@ -441,7 +441,7 @@ export default function ProjectDetail() {
                 onDelete={() => setDeleteDialogOpen(true)}
               />
 
-              {/* Section: Creators (Droite - 50%) */}
+              {/* Section: Creators (Right - 50%) */}
               {creators.length > 0 && (
                 <Card className="bg-card border-border flex flex-col">
                   <CardHeader className="flex-shrink-0">
@@ -452,9 +452,9 @@ export default function ProjectDetail() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="day">Jour</SelectItem>
-                          <SelectItem value="week">Semaine</SelectItem>
-                          <SelectItem value="month">Mois</SelectItem>
+                          <SelectItem value="day">Day</SelectItem>
+                          <SelectItem value="week">Week</SelectItem>
+                          <SelectItem value="month">Month</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -478,10 +478,10 @@ export default function ProjectDetail() {
                               <p className="font-medium text-sm truncate">{creator.handle}</p>
                               <div className="flex items-center gap-3 mt-1">
                                 <p className="text-xs text-muted-foreground">
-                                  {stats.followers.toLocaleString()} abonnés
+                                  {stats.followers.toLocaleString()} followers
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {stats.postsCount} {selectedPeriod === 'day' ? 'post' : selectedPeriod === 'week' ? 'posts/sem' : 'posts/mois'}
+                                  {stats.postsCount} {selectedPeriod === 'day' ? 'post' : selectedPeriod === 'week' ? 'posts/week' : 'posts/month'}
                                 </p>
                               </div>
                             </div>
@@ -568,13 +568,13 @@ export default function ProjectDetail() {
             </div>
           </TabsContent>
 
-          {/* Tab 2: Grille - Tableau des posts */}
+          {/* Tab 2: Grid - Posts table */}
           <TabsContent value="grid" className="space-y-6">
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle>Posts ({sortedPosts.length})</CardTitle>
                 <CardDescription>
-                  Vue tabulaire de tous les posts avec tri et filtres
+                  Tabular view of all posts with sorting and filters
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -717,7 +717,7 @@ export default function ProjectDetail() {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                            Aucun post trouvé
+                            No posts found
                           </TableCell>
                         </TableRow>
                       )}
@@ -742,7 +742,7 @@ export default function ProjectDetail() {
 
                 return (
                   <div className="flex bg-background">
-                    {/* Photo à gauche */}
+                    {/* Photo on the left */}
                     <div className="flex-shrink-0 w-full md:w-[60%] bg-black flex items-center justify-center">
                       <img
                         src={selectedPost.media_url}
@@ -751,7 +751,7 @@ export default function ProjectDetail() {
                       />
                     </div>
 
-                    {/* Panneau infos à droite */}
+                    {/* Info panel on the right */}
                     <div className="flex flex-col w-full md:w-[40%] max-h-[90vh] border-l border-border">
                       {/* Header */}
                       <div className="flex items-center justify-between p-4 border-b border-border">
@@ -845,9 +845,9 @@ export default function ProjectDetail() {
                           <div className="text-xs text-muted-foreground">{relativeTime}</div>
                         </div>
 
-                        {/* Commentaires */}
+                        {/* Comments */}
                         <div className="pt-4 border-t border-border space-y-3">
-                          <h4 className="font-semibold text-sm mb-3">Commentaires</h4>
+                          <h4 className="font-semibold text-sm mb-3">Comments</h4>
                           {[
                             {
                               id: '1',
@@ -892,22 +892,22 @@ export default function ProjectDetail() {
             </DialogContent>
           </Dialog>
 
-          {/* Dialog: Modifier le projet */}
+          {/* Dialog: Edit project */}
           <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Modifier le projet</DialogTitle>
+                <DialogTitle>Edit project</DialogTitle>
                 <DialogDescription>
-                  Modifiez le nom et la description du projet
+                  Edit the project name and description
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Nom</label>
+                  <label className="text-sm font-medium">Name</label>
                   <Input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    placeholder="Nom du projet"
+                    placeholder="Project name"
                   />
                 </div>
                 <div className="space-y-2">
@@ -915,13 +915,13 @@ export default function ProjectDetail() {
                   <Input
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
-                    placeholder="Description du projet"
+                    placeholder="Project description"
                   />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-                  Annuler
+                  Cancel
                 </Button>
                 <Button onClick={async () => {
                   try {
@@ -949,35 +949,35 @@ export default function ProjectDetail() {
                     setProject(updatedProject);
                     setEditDialogOpen(false);
                     toast({
-                      title: 'Succès',
-                      description: 'Projet modifié avec succès',
+                      title: 'Success',
+                      description: 'Project updated successfully',
                     });
                   } catch (error: any) {
                     toast({
-                      title: 'Erreur',
-                      description: error.message || 'Erreur lors de la modification',
+                      title: 'Error',
+                      description: error.message || 'Error during modification',
                       variant: 'destructive',
                     });
                   }
                 }}>
-                  Enregistrer
+                  Save
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
 
-          {/* Dialog: Supprimer le projet */}
+          {/* Dialog: Delete project */}
           <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Supprimer le projet</DialogTitle>
+                <DialogTitle>Delete project</DialogTitle>
                 <DialogDescription>
-                  Êtes-vous sûr de vouloir supprimer le projet "{project.name}" ? Cette action est irréversible.
+                  Are you sure you want to delete the project "{project.name}"? This action is irreversible.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-                  Annuler
+                  Cancel
                 </Button>
                 <Button 
                   variant="destructive"
@@ -999,20 +999,20 @@ export default function ProjectDetail() {
                       }
 
                       toast({
-                        title: 'Succès',
-                        description: 'Projet supprimé avec succès',
+                        title: 'Success',
+                        description: 'Project deleted successfully',
                       });
                       navigate('/projects');
                     } catch (error: any) {
                       toast({
-                        title: 'Erreur',
-                        description: error.message || 'Erreur lors de la suppression',
+                        title: 'Error',
+                        description: error.message || 'Error during deletion',
                         variant: 'destructive',
                       });
                     }
                   }}
                 >
-                  Supprimer
+                  Delete
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1020,9 +1020,9 @@ export default function ProjectDetail() {
 
           {/* Tab 2: Analytics */}
           <TabsContent value="analytics" className="space-y-6">
-            {/* Layout 50/50 : Panneau Projet + Graphique/Creators */}
+            {/* Layout 50/50 : Project Panel + Chart/Creators */}
             <div className="grid gap-4 md:grid-cols-2">
-              {/* Panneau Projet (Gauche - 50%) */}
+              {/* Project Panel (Left - 50%) */}
               <ProjectPanel
                 project={project}
                 creators={creators}
@@ -1034,7 +1034,7 @@ export default function ProjectDetail() {
                 onDelete={() => setDeleteDialogOpen(true)}
               />
 
-              {/* Graphique Content Type Distribution (Droite - 50%) */}
+              {/* Content Type Distribution Chart (Right - 50%) */}
               <Card className="bg-card border-border shadow-lg">
                 <CardHeader>
                   <CardTitle className="text-white">Content Type Distribution</CardTitle>
