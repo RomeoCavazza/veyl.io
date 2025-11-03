@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Database, Search, Zap, Workflow, Brain, FileText } from 'lucide-react';
+import { Database, Search, Zap, Workflow, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -47,12 +47,6 @@ export default function Landing() {
             <Link to="/projects/new">
               <Button size="lg" className="gradient-primary shadow-glow">
                 Créer un projet
-              </Button>
-            </Link>
-            <Link to="/docs">
-              <Button size="lg" variant="outline">
-                <FileText className="mr-2 h-5 w-5" />
-                Documentation
               </Button>
             </Link>
           </div>
@@ -111,7 +105,7 @@ export default function Landing() {
       </section>
 
       {/* Documentation & Links */}
-      <section className="container py-12 md:py-16">
+      <section className="container py-4 md:py-6">
         <div className="max-w-4xl mx-auto text-center space-y-4">
           <Link to="/docs" className="text-lg text-primary hover:underline">
             Documentation
