@@ -2,13 +2,59 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
+    # Only deploy on main branch, and only if source code changes
+    paths:
+      - 'apps/frontend/**'
+      - 'apps/backend/**'
+      - '.github/workflows/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'requirements.txt'
+      - 'Dockerfile'
+      - 'start.sh'
+    # Exclude documentation and non-critical files
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '*.md'
+      - '.gitignore'
+      - '.dockerignore'
+      - '.railwayignore'
+      - '.redeploy'
   pull_request:
     branches: [main]
+    paths:
+      - 'apps/frontend/**'
+      - 'apps/backend/**'
+  # Allow manual deployment via workflow_dispatch
+  workflow_dispatch:
 
 jobs:
+  # Check if deployment is needed
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'apps/frontend/**'
+            backend:
+              - 'apps/backend/**'
+              - 'start.sh'
+              - 'Dockerfile'
+              - 'requirements.txt'
+
   frontend:
     runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
         working-directory: ./apps/frontend
@@ -36,17 +82,20 @@ jobs:
       - name: Build
         run: pnpm build
         
-      - name: Deploy to Vercel (if main branch)
+      - name: Deploy to Vercel (production only)
         if: github.ref == 'refs/heads/main'
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
           working-directory: ./apps/frontend
 
   backend:
     runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
         working-directory: ./apps/backend
@@ -71,7 +120,7 @@ jobs:
             echo "No tests found, skipping..."
           fi
           
-      - name: Deploy to Railway (if main branch)
+      - name: Deploy to Railway (production only)
         if: github.ref == 'refs/heads/main'
         uses: bervProject/railway-deploy@v1.0.6
         with:
