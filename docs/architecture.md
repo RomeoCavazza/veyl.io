@@ -219,3 +219,4 @@ Pour la validation **App Review Meta** et **TikTok**, l'application fonctionne e
 - **[database.md](./database.md)** - Schéma base de données complet
 - **[api-reference.md](./api-reference.md)** - Endpoints API, schémas, exemples
 - **[oauth-scopes.md](./oauth-scopes.md)** - Permissions OAuth Meta/Facebook et TikTok
+- **[post-app-review-roadmap.md](./post-app-review-roadmap.md)** - Roadmap technique post-App Review (Meilisearch advanced, Supabase+pgvector, Make/n8n, Dust)

@@ -24,7 +24,10 @@ export default function Community() {
               <h2 className="text-2xl font-bold">Contribute to the project</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 Whether you're a developer, designer, marketer or simply passionate about social intelligence, 
-                your contribution is welcome!
+                your contribution is welcome! 
+                <span className="block mt-2 text-sm">
+                  <strong>Beta testers and interested companies</strong> are also welcome to join and help shape the future of social intelligence.
+                </span>
               </p>
             </div>
           </Card>

@@ -330,6 +330,7 @@ La documentation technique complète est organisée dans le dossier `docs/` :
 - **[docs/frontend.md](docs/frontend.md)** - État des lieux frontend, pages implémentées
 - **[docs/api-reference.md](docs/api-reference.md)** - Référence API, endpoints, schémas
 - **[docs/oauth-scopes.md](docs/oauth-scopes.md)** - Permissions OAuth Meta/Facebook et TikTok
+- **[docs/post-app-review-roadmap.md](docs/post-app-review-roadmap.md)** - Roadmap post-App Review (Meilisearch advanced, Supabase+pgvector, Make/n8n, Dust)
 
 ### Références Rapides
 

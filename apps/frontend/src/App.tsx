@@ -18,7 +18,6 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import DataDeletion from "./pages/DataDeletion";
 import Docs from "./pages/Docs";
-import Enterprise from "./pages/Enterprise";
 import NotFound from "./pages/NotFound";
 import Projects from "./pages/Projects";
 import ProjectsNew from "./pages/ProjectsNew";
@@ -40,7 +39,6 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/docs" element={<Docs />} />
-              <Route path="/enterprise" element={<Enterprise />} />
               {/* Projects Routes */}
               <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
               <Route path="/projects/new" element={<ProtectedRoute><ProjectsNew /></ProtectedRoute>} />

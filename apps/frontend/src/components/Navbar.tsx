@@ -18,7 +18,6 @@ export function Navbar() {
   // Navigation commune (toujours visible)
   const commonNavItems = [
     { path: '/docs', label: 'Documentation' },
-    { path: '/enterprise', label: 'Entreprise' },
     { path: '/community', label: 'Communauté' },
   ];
 
