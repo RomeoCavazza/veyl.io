@@ -1,11 +1,10 @@
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Heart } from 'lucide-react';
+import { Heart, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import emailjs from '@emailjs/browser';
 import '@/assets/css/github-window.css';
@@ -52,17 +51,15 @@ export default function Community() {
       <div className="container py-12 px-4 max-w-6xl">
         {/* Section Contribution - Top */}
         <section className="mb-20">
-          <Card className="p-8 bg-gradient-to-br from-card to-card/50 border-primary/20">
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <Heart className="h-12 w-12 text-primary" />
-              </div>
-              <h2 className="text-2xl font-bold">Contribute to the project</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Developers, designers, marketers—your contribution is welcome!
-              </p>
+          <div className="text-center space-y-4">
+            <div className="flex justify-center">
+              <Heart className="h-12 w-12 text-primary" />
             </div>
-          </Card>
+            <h2 className="text-2xl font-bold">Contribute to the project</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Developers, designers, marketers—your contribution is welcome!
+            </p>
+          </div>
         </section>
 
         {/* Rang 1 : ISCOM Paris */}
@@ -294,8 +291,19 @@ export default function Community() {
               required
               className="w-full"
             />
-            <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? 'Envoi...' : 'Devenir beta tester'}
+            <Button 
+              type="submit" 
+              disabled={isSubmitting} 
+              className="w-full bg-gray-900 hover:bg-gray-800 border border-primary/50 text-white"
+            >
+              {isSubmitting ? (
+                'Envoi...'
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Devenir beta tester
+                </span>
+              )}
             </Button>
           </form>
         </section>
