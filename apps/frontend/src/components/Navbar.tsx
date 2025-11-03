@@ -1,14 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
-import { Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 export function Navbar() {
   const { user } = useAuth();
@@ -22,7 +15,6 @@ export function Navbar() {
   ];
 
   const isActive = (path: string) => location.pathname === path;
-  const isProductActive = location.pathname === '/' || location.pathname === '/search' || location.pathname === '/projects';
   const isProfileActive = location.pathname === '/profile';
 
   return (
@@ -36,26 +28,30 @@ export function Navbar() {
 
           {/* Desktop Navigation - LEFT ALIGNED with spacing */}
           <nav className="hidden lg:flex items-center gap-6 ml-8">
-            {/* Product - Simple link si non connecté, menu déroulant si connecté */}
+            {/* Product - Simple link si non connecté, liens séparés si connecté */}
             {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger className={`text-sm transition-all flex items-center gap-1 ${
-                  isProductActive
-                    ? 'text-white'
-                    : 'text-gray-400 hover:text-white'
-                }`}>
-                  Product
-                  <ChevronDown className="h-4 w-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem asChild>
-                    <Link to="/search">Search</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/projects">My projects</Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <>
+                <Link
+                  to="/search"
+                  className={`text-sm transition-all ${
+                    isActive('/search')
+                      ? 'text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Search
+                </Link>
+                <Link
+                  to="/projects"
+                  className={`text-sm transition-all ${
+                    isActive('/projects')
+                      ? 'text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  My projects
+                </Link>
+              </>
             ) : (
               <Link
                 to="/"
@@ -123,16 +119,13 @@ export function Navbar() {
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-border bg-background">
             <nav className="flex flex-col py-4 px-4 gap-1">
-              {/* Product */}
+              {/* Search et My projects si connecté, Product si non connecté */}
               {user ? (
                 <>
-                  <div className="py-2 px-4 text-sm font-medium text-white border-b border-border mb-1">
-                    Product
-                  </div>
                   <Link
                     to="/search"
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`py-2 px-4 text-sm transition-colors pl-8 ${
+                    className={`py-2 px-4 text-sm transition-colors ${
                       isActive('/search')
                         ? 'text-white font-medium'
                         : 'text-gray-400 hover:text-white'
@@ -143,7 +136,7 @@ export function Navbar() {
                   <Link
                     to="/projects"
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`py-2 px-4 text-sm transition-colors pl-8 ${
+                    className={`py-2 px-4 text-sm transition-colors ${
                       isActive('/projects')
                         ? 'text-white font-medium'
                         : 'text-gray-400 hover:text-white'
