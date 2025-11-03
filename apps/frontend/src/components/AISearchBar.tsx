@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Paperclip, Globe, ArrowUp, Mic, X, Instagram } from 'lucide-react';
+import { Globe, Mic, X, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -61,35 +61,10 @@ export function AISearchBar({ onSearch }: AISearchBarProps) {
           >
             <Mic className="h-5 w-5" />
           </Button>
-          <Button 
-            size="icon"
-            className="h-10 w-10 rounded-xl bg-gradient-to-r from-[#7C6BEF] to-[#FF66C4] hover:opacity-90"
-            onClick={handleSearch}
-            disabled={!query.trim()}
-          >
-            <ArrowUp className="h-5 w-5" />
-          </Button>
         </div>
 
         {/* Options Row */}
         <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="h-9 rounded-xl hover:bg-accent"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="h-9 rounded-xl hover:bg-accent"
-          >
-            <Paperclip className="h-4 w-4 mr-2" />
-            Attach
-          </Button>
-          
           <Popover>
             <PopoverTrigger asChild>
               <Button 

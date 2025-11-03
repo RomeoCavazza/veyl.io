@@ -84,12 +84,8 @@ export default function Search() {
         <div className="flex flex-col items-center text-center space-y-6 max-w-4xl mx-auto">
           <div className="space-y-6">
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gradient">
-              Search. Discover. Analyze.
+              Search
             </h1>
-            
-            <p className="text-base md:text-lg text-muted-foreground max-w-3xl mx-auto">
-              Search trending hashtags, analyze creator performance, and discover what's trending across social platforms
-            </p>
           </div>
 
           <div className="w-full">
@@ -112,6 +108,37 @@ export default function Search() {
           </div>
         </div>
       </section>
+
+      {/* Subtle Post Silhouettes - Background decoration when no search */}
+      {!hasSearched && (
+        <section className="container py-16 pb-32">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 opacity-[0.03]">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="space-y-3">
+                {/* Image placeholder silhouette */}
+                <div className="aspect-square rounded-lg border border-border/20 bg-muted/10" />
+                {/* Content placeholder silhouettes */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full border border-border/20 bg-muted/10" />
+                    <div className="flex-1 space-y-1">
+                      <div className="h-3 w-20 rounded border border-border/20 bg-muted/10" />
+                      <div className="h-2 w-16 rounded border border-border/20 bg-muted/10" />
+                    </div>
+                  </div>
+                  <div className="h-2 w-full rounded border border-border/20 bg-muted/10" />
+                  <div className="h-2 w-3/4 rounded border border-border/20 bg-muted/10" />
+                  <div className="flex gap-4 mt-2">
+                    <div className="h-2 w-12 rounded border border-border/20 bg-muted/10" />
+                    <div className="h-2 w-12 rounded border border-border/20 bg-muted/10" />
+                    <div className="h-2 w-12 rounded border border-border/20 bg-muted/10" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Search Results Section */}
       {hasSearched && (
