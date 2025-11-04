@@ -129,6 +129,7 @@ export default function Docs() {
                     <img src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white" alt="Python" className="h-5" />
                     <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI" className="h-5" />
                     <img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" className="h-5" />
+                    <img src="https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white" alt="Supabase" className="h-5" />
                     <img src="https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white" alt="Redis" className="h-5" />
                     <img src="https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black" alt="React" className="h-5" />
                     <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" className="h-5" />
@@ -138,6 +139,17 @@ export default function Docs() {
                     </a>
                     <img src="https://img.shields.io/badge/Vercel-000000?logo=vercel&logoColor=white" alt="Vercel" className="h-5" />
                     <img src="https://img.shields.io/badge/Railway-131415?logo=railway&logoColor=white" alt="Railway" className="h-5" />
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-border/50">
+                    <h4 className="text-sm font-semibold mb-2">Infrastructure & Data Storage</h4>
+                    <ul className="text-xs text-muted-foreground space-y-1">
+                      <li><strong>Frontend:</strong> Deployed on Vercel (static hosting, CDN, edge functions)</li>
+                      <li><strong>Backend:</strong> Deployed on Railway (FastAPI application, API endpoints)</li>
+                      <li><strong>Database:</strong> PostgreSQL hosted on Railway (user data, projects, OAuth tokens)</li>
+                      <li><strong>Cache:</strong> Redis on Railway (session management, rate limiting, temporary data)</li>
+                      <li><strong>Search Engine:</strong> Meilisearch (self-hosted or cloud, post indexing and full-text search)</li>
+                      <li><strong>Vector Storage:</strong> Supabase pgvector extension (semantic embeddings, similarity search, RAG)</li>
+                    </ul>
                   </div>
                 </div>
 

@@ -63,6 +63,17 @@ export default function Terms() {
                 The Service is accessible via a web interface and REST API. The application is currently 
                 in active development phase and subject to <strong>Meta</strong> and <strong>TikTok</strong> App Review processes.
               </p>
+              <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                <h4 className="text-xs font-semibold mb-2">Infrastructure & Hosting</h4>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  <li><strong>Frontend:</strong> Deployed on Vercel (static hosting, CDN, edge functions)</li>
+                  <li><strong>Backend:</strong> Deployed on Railway (FastAPI application, API endpoints)</li>
+                  <li><strong>Database:</strong> PostgreSQL hosted on Railway (user data, projects, OAuth tokens)</li>
+                  <li><strong>Cache:</strong> Redis on Railway (session management, rate limiting)</li>
+                  <li><strong>Search Engine:</strong> Meilisearch (post indexing and full-text search)</li>
+                  <li><strong>Vector Storage:</strong> Supabase pgvector extension (semantic embeddings, similarity search)</li>
+                </ul>
+              </div>
               <p className="text-xs text-muted-foreground">
                 The Service is provided "as is" and may be modified, suspended, or interrupted at any time without notice.
               </p>

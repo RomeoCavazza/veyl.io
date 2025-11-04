@@ -217,10 +217,12 @@ export default function Privacy() {
               <p>We implement industry-standard security measures:</p>
               <ul className="space-y-2 list-disc list-inside text-muted-foreground">
                 <li><strong>Transmission encryption:</strong> HTTPS/TLS for all communications</li>
-                <li><strong>Secure cloud infrastructure:</strong> Railway (backend) and Vercel (frontend) with access controls</li>
-                <li><strong>PostgreSQL database:</strong> Encryption at rest with SSL connections</li>
-                <li><strong>Redis:</strong> Secure cache with authentication</li>
-                <li><strong>Meilisearch:</strong> Secure search index with master API key</li>
+                <li><strong>Frontend hosting:</strong> Vercel (static hosting, CDN, edge functions) with SSL/TLS encryption</li>
+                <li><strong>Backend hosting:</strong> Railway (FastAPI application, API endpoints) with secure access controls</li>
+                <li><strong>PostgreSQL database:</strong> Hosted on Railway, encryption at rest with SSL connections. Stores user data, projects, OAuth tokens, and metadata</li>
+                <li><strong>Redis cache:</strong> Hosted on Railway, secure cache with authentication for session management, rate limiting, and temporary data</li>
+                <li><strong>Meilisearch:</strong> Secure search index with master API key for post indexing and full-text search</li>
+                <li><strong>Supabase pgvector:</strong> PostgreSQL extension for semantic embeddings and vector similarity search (RAG capabilities)</li>
                 <li><strong>Regular security audits:</strong> Updates and periodic reviews</li>
               </ul>
             </CardContent>
@@ -241,7 +243,7 @@ export default function Privacy() {
               </p>
               <ul className="space-y-2 list-disc list-inside text-muted-foreground">
                 <li>
-                  <strong>Railway (United States):</strong> Backend hosting (PostgreSQL, Redis) - 
+                  <strong>Railway (United States):</strong> Backend hosting, PostgreSQL database, and Redis cache - 
                   Compliance via <a href="https://www.railway.app/legal/privacy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
                     Railway Privacy Policy
                     <ExternalLink className="h-3 w-3" />
@@ -255,7 +257,10 @@ export default function Privacy() {
                   </a>
                 </li>
                 <li>
-                  <strong>Meilisearch:</strong> Search engine (self-hosted or cloud depending on configuration)
+                  <strong>Meilisearch:</strong> Search engine (self-hosted or cloud depending on configuration) for post indexing and full-text search
+                </li>
+                <li>
+                  <strong>Supabase:</strong> PostgreSQL with pgvector extension for semantic embeddings and vector similarity search (may involve international transfers)
                 </li>
               </ul>
               <Alert className="mt-4">

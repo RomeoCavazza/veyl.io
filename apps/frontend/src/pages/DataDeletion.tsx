@@ -202,7 +202,11 @@ export default function DataDeletion() {
                   },
                   {
                     title: "Data in Meilisearch",
-                    desc: "Search indexes linked to your projects",
+                    desc: "Search indexes linked to your projects (post indexing and full-text search)",
+                  },
+                  {
+                    title: "Data in Supabase pgvector",
+                    desc: "Semantic embeddings and vector similarity search data",
                   },
                 ].map((item, index) => (
                   <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
@@ -363,7 +367,7 @@ export default function DataDeletion() {
               </p>
               <ul className="space-y-2">
                 {[
-                  "Data will be deleted from our systems (PostgreSQL, Redis, Meilisearch)",
+                  "Data will be deleted from our systems: PostgreSQL database (Railway), Redis cache (Railway), Meilisearch indexes, and Supabase pgvector embeddings",
                   "OAuth tokens will be revoked via Meta and TikTok APIs",
                   "You will receive email confirmation once deletion is completed",
                   "You can also delete access from your Meta/TikTok account settings",
