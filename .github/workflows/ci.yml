@@ -78,10 +78,12 @@ jobs:
         
       - name: Build
         run: pnpm build
+        id: build
         
       - name: Deploy to Vercel (production only)
         if: github.ref == 'refs/heads/main'
         id: vercel-deploy
+        continue-on-error: true
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
@@ -90,22 +92,20 @@ jobs:
           vercel-args: '--prod'
           working-directory: ./apps/frontend
       
-      - name: Debug Vercel deployment status
-        if: github.ref == 'refs/heads/main'
-        run: |
-          echo "Vercel deployment step outcome: ${{ steps.vercel-deploy.outcome }}"
-          echo "Vercel deployment step conclusion: ${{ steps.vercel-deploy.conclusion }}"
-      
       - name: Create GitHub Deployment (Vercel)
-        if: github.ref == 'refs/heads/main' && steps.vercel-deploy.outcome != null
+        if: github.ref == 'refs/heads/main'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             try {
-              const deployState = '${{ steps.vercel-deploy.outcome }}' === 'success' ? 'success' : 'failure';
-              console.log(`🔍 État du déploiement Vercel: ${deployState}`);
-              console.log('🔍 Recherche des anciens déploiements Production...');
+              // Vérifier si le déploiement Vercel a réussi
+              const vercelOutcome = '${{ steps.vercel-deploy.outcome }}';
+              const vercelSuccess = vercelOutcome === 'success';
+              const deployState = vercelSuccess ? 'success' : (vercelOutcome === 'failure' ? 'failure' : 'pending');
+              
+              console.log(`🔍 État du déploiement Vercel: ${vercelOutcome || 'not executed'}`);
+              console.log(`📦 Création du GitHub Deployment avec statut: ${deployState}`);
               
               // Supprimer les anciens déploiements Production pour garder seulement le dernier
               const deployments = await github.rest.repos.listDeployments({
@@ -151,7 +151,7 @@ jobs:
                 deployment_id: newDeployment.data.id,
                 state: deployState,
                 environment_url: 'https://www.veyl.io',
-                description: deployState === 'success' ? 'Deployment successful' : 'Deployment failed'
+                description: vercelSuccess ? 'Deployment successful' : (vercelOutcome === 'failure' ? 'Deployment failed' : 'Deployment in progress')
               });
               
               console.log(`🎉 Statut de déploiement mis à jour: ${deployState}`);
@@ -192,27 +192,26 @@ jobs:
       - name: Deploy to Railway (production only)
         if: github.ref == 'refs/heads/main'
         id: railway-deploy
+        continue-on-error: true
         uses: bervProject/railway-deploy@v1.0.6
         with:
           railway_token: ${{ secrets.RAILWAY_TOKEN }}
           service: insidr-production
       
-      - name: Debug Railway deployment status
-        if: github.ref == 'refs/heads/main'
-        run: |
-          echo "Railway deployment step outcome: ${{ steps.railway-deploy.outcome }}"
-          echo "Railway deployment step conclusion: ${{ steps.railway-deploy.conclusion }}"
-      
       - name: Create GitHub Deployment (Railway)
-        if: github.ref == 'refs/heads/main' && steps.railway-deploy.outcome != null
+        if: github.ref == 'refs/heads/main'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             try {
               const envName = 'insidr (satisfied-mindfulness / production)';
-              const deployState = '${{ steps.railway-deploy.outcome }}' === 'success' ? 'success' : 'failure';
-              console.log(`🔍 État du déploiement Railway: ${deployState}`);
+              const railwayOutcome = '${{ steps.railway-deploy.outcome }}';
+              const railwaySuccess = railwayOutcome === 'success';
+              const deployState = railwaySuccess ? 'success' : (railwayOutcome === 'failure' ? 'failure' : 'pending');
+              
+              console.log(`🔍 État du déploiement Railway: ${railwayOutcome || 'not executed'}`);
+              console.log(`📦 Création du GitHub Deployment avec statut: ${deployState}`);
               console.log(`🔍 Recherche des anciens déploiements Railway (${envName})...`);
               
               // Supprimer les anciens déploiements Railway pour garder seulement le dernier
@@ -259,7 +258,7 @@ jobs:
                 deployment_id: newDeployment.data.id,
                 state: deployState,
                 environment_url: 'https://insidr-production.up.railway.app',
-                description: deployState === 'success' ? 'Deployment successful' : 'Deployment failed'
+                description: railwaySuccess ? 'Deployment successful' : (railwayOutcome === 'failure' ? 'Deployment failed' : 'Deployment in progress')
               });
               
               console.log(`🎉 Statut de déploiement mis à jour: ${deployState}`);
