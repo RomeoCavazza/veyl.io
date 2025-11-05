@@ -270,6 +270,7 @@ jobs:
 
   # Job qui s'exécute toujours pour créer les GitHub Deployments
   # Même si les jobs frontend/backend ne s'exécutent pas (pour faire apparaître la section)
+  # Test: vérifier que les anciens déploiements sont bien supprimés (devrait rester à 2 max)
   ensure-deployments-visible:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
