@@ -5,7 +5,7 @@
 # NODE.JS / FRONTEND
 # =====================================================
 node_modules/
-pnpm-lock.yaml
+# pnpm-lock.yaml - Needed for CI/CD with --frozen-lockfile
 dist/
 build/
 .vite/
