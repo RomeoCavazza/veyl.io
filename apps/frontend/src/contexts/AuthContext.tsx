@@ -1,4 +1,4 @@
-// CI/CD: Production deployment verification
+// Production deployment test - GitHub Deployments section
 import { createContext, useContext, useEffect, useState } from 'react';
 import { login, register, getMe } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
