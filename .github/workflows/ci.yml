@@ -51,44 +51,43 @@ jobs:
     if: needs.check-changes.steps.filter.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     outputs:
       vercel-deploy-outcome: ${{ steps.vercel-deploy.outcome }}
-    defaults:
-      run:
-        working-directory: ./apps/frontend
     
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          
+      
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
-          
+      
       - name: Install dependencies
+        working-directory: ./apps/frontend
         run: pnpm install --frozen-lockfile
         
       - name: Type check
+        working-directory: ./apps/frontend
         run: pnpm type-check
         
       - name: Build
+        working-directory: ./apps/frontend
         run: pnpm build
         id: build
         
       - name: Deploy to Vercel (production only)
         if: github.ref == 'refs/heads/main'
         id: vercel-deploy
-        continue-on-error: true
-        run: |
-          cd ../..
-          npx -y vercel@latest --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
       
       - name: Create GitHub Deployment (Vercel)
         if: github.ref == 'refs/heads/main'
