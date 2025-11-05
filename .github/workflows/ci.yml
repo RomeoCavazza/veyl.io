@@ -383,15 +383,7 @@ jobs:
               echo "✅ Déploiement réussi avec service 'insidr' (chemin explicite)"
               exit 0
             } || {
-            echo "⚠️ Échec avec 'insidr', tentative avec juste le chemin et --service auto..."
-            # Essayer de lister les services et prendre le premier
-            SERVICE_NAME=$(npx -y @railway/cli service list --json 2>/dev/null | head -1 || echo "insidr")
-            echo "📦 Tentative avec service détecté: $SERVICE_NAME"
-            npx -y @railway/cli up apps/backend --service "$SERVICE_NAME" --detach && {
-              echo "✅ Déploiement réussi avec service '$SERVICE_NAME'"
-              exit 0
-            } || {
-              echo "⚠️ Échec avec service détecté, tentative depuis apps/backend avec --path-as-root..."
+              echo "⚠️ Échec avec 'insidr', tentative depuis apps/backend avec --path-as-root..."
               cd apps/backend
               # Avec --path-as-root, Railway CLI traite apps/backend comme la racine
               # Le railway.toml doit donc avoir buildPath = "." et dockerfilePath = "Dockerfile"
