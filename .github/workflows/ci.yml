@@ -82,12 +82,17 @@ jobs:
       - name: Deploy to Vercel (production only)
         if: github.ref == 'refs/heads/main'
         id: vercel-deploy
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
+        run: |
+          echo "📦 Current directory: $(pwd)"
+          echo "📦 Listing apps/frontend:"
+          ls -la apps/frontend/ | head -20
+          echo "📦 Checking if dist folder exists:"
+          ls -la apps/frontend/dist/ 2>/dev/null || echo "⚠️ dist folder not found!"
+          echo "📦 Deploying to Vercel..."
+          npx -y vercel@latest --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       
       - name: Create GitHub Deployment (Vercel)
         if: github.ref == 'refs/heads/main'
