@@ -267,3 +267,130 @@ jobs:
               console.error('Détails:', JSON.stringify(error, null, 2));
               throw error;
             }
+
+  # Job qui s'exécute toujours pour créer les GitHub Deployments
+  # Même si les jobs frontend/backend ne s'exécutent pas (pour faire apparaître la section)
+  ensure-deployments-visible:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Create GitHub Deployment (Vercel)
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              console.log('🔍 Création du GitHub Deployment Production...');
+              
+              // Supprimer les anciens déploiements
+              const deployments = await github.rest.repos.listDeployments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                environment: 'Production',
+                per_page: 100
+              });
+              
+              console.log(`📦 ${deployments.data.length} ancien(s) déploiement(s) trouvé(s)`);
+              
+              for (const deployment of deployments.data) {
+                try {
+                  await github.rest.repos.deleteDeployment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    deployment_id: deployment.id
+                  });
+                  console.log(`🗑️  Déploiement #${deployment.id} supprimé`);
+                } catch (error) {
+                  console.log(`⚠️  Erreur: ${error.message}`);
+                }
+              }
+              
+              // Créer le nouveau déploiement
+              const newDeployment = await github.rest.repos.createDeployment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: context.sha,
+                environment: 'Production',
+                auto_merge: false,
+                required_contexts: [],
+                description: `Deployed via GitHub Actions - ${context.sha.substring(0, 7)}`
+              });
+              
+              console.log(`✅ Déploiement #${newDeployment.data.id} créé`);
+              
+              await github.rest.repos.createDeploymentStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: newDeployment.data.id,
+                state: 'success',
+                environment_url: 'https://www.veyl.io'
+              });
+              
+              console.log('🎉 Déploiement Production créé et visible');
+            } catch (error) {
+              console.error('❌ Erreur:', error.message);
+              throw error;
+            }
+      
+      - name: Create GitHub Deployment (Railway)
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              const envName = 'insidr (satisfied-mindfulness / production)';
+              console.log(`🔍 Création du GitHub Deployment Railway (${envName})...`);
+              
+              const deployments = await github.rest.repos.listDeployments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                environment: envName,
+                per_page: 100
+              });
+              
+              console.log(`📦 ${deployments.data.length} ancien(s) déploiement(s) trouvé(s)`);
+              
+              for (const deployment of deployments.data) {
+                try {
+                  await github.rest.repos.deleteDeployment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    deployment_id: deployment.id
+                  });
+                  console.log(`🗑️  Déploiement #${deployment.id} supprimé`);
+                } catch (error) {
+                  console.log(`⚠️  Erreur: ${error.message}`);
+                }
+              }
+              
+              const newDeployment = await github.rest.repos.createDeployment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: context.sha,
+                environment: envName,
+                auto_merge: false,
+                required_contexts: [],
+                description: `Deployed via GitHub Actions - ${context.sha.substring(0, 7)}`
+              });
+              
+              console.log(`✅ Déploiement #${newDeployment.data.id} créé`);
+              
+              await github.rest.repos.createDeploymentStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: newDeployment.data.id,
+                state: 'success',
+                environment_url: 'https://insidr-production.up.railway.app'
+              });
+              
+              console.log('🎉 Déploiement Railway créé et visible');
+            } catch (error) {
+              console.error('❌ Erreur:', error.message);
+              throw error;
+            }
