@@ -1,4 +1,4 @@
-// Production deployment test - GitHub Deployments section
+// Trigger deployment to verify GitHub Deployments section appears
 import { createContext, useContext, useEffect, useState } from 'react';
 import { login, register, getMe } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
