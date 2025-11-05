@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     # Only deploy on main branch, and only if source code changes
+    # Using paths (not paths-ignore) to explicitly include only relevant files
     paths:
       - 'apps/frontend/**'
       - 'apps/backend/**'
@@ -13,15 +14,6 @@ on:
       - 'requirements.txt'
       - 'Dockerfile'
       - 'start.sh'
-    # Exclude documentation and non-critical files
-    paths-ignore:
-      - 'README.md'
-      - 'docs/**'
-      - '*.md'
-      - '.gitignore'
-      - '.dockerignore'
-      - '.railwayignore'
-      - '.redeploy'
   pull_request:
     branches: [main]
     paths:
