@@ -90,12 +90,21 @@ jobs:
           vercel-args: '--prod'
           working-directory: ./apps/frontend
       
+      - name: Debug Vercel deployment status
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Vercel deployment step outcome: ${{ steps.vercel-deploy.outcome }}"
+          echo "Vercel deployment step conclusion: ${{ steps.vercel-deploy.conclusion }}"
+      
       - name: Create GitHub Deployment (Vercel)
-        if: github.ref == 'refs/heads/main' && steps.vercel-deploy.outcome == 'success'
+        if: github.ref == 'refs/heads/main' && steps.vercel-deploy.outcome != null
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             try {
+              const deployState = '${{ steps.vercel-deploy.outcome }}' === 'success' ? 'success' : 'failure';
+              console.log(`🔍 État du déploiement Vercel: ${deployState}`);
               console.log('🔍 Recherche des anciens déploiements Production...');
               
               // Supprimer les anciens déploiements Production pour garder seulement le dernier
@@ -130,7 +139,8 @@ jobs:
                 ref: context.sha,
                 environment: 'Production',
                 auto_merge: false,
-                required_contexts: []
+                required_contexts: [],
+                description: `Deployed via GitHub Actions - ${context.sha.substring(0, 7)}`
               });
               
               console.log(`✅ Déploiement #${newDeployment.data.id} créé avec succès`);
@@ -139,13 +149,15 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 deployment_id: newDeployment.data.id,
-                state: 'success',
-                environment_url: 'https://www.veyl.io'
+                state: deployState,
+                environment_url: 'https://www.veyl.io',
+                description: deployState === 'success' ? 'Deployment successful' : 'Deployment failed'
               });
               
-              console.log('🎉 Statut de déploiement mis à jour avec succès');
+              console.log(`🎉 Statut de déploiement mis à jour: ${deployState}`);
             } catch (error) {
               console.error('❌ Erreur lors de la création du GitHub Deployment:', error);
+              console.error('Détails:', JSON.stringify(error, null, 2));
               throw error;
             }
 
@@ -185,13 +197,22 @@ jobs:
           railway_token: ${{ secrets.RAILWAY_TOKEN }}
           service: insidr-production
       
+      - name: Debug Railway deployment status
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Railway deployment step outcome: ${{ steps.railway-deploy.outcome }}"
+          echo "Railway deployment step conclusion: ${{ steps.railway-deploy.conclusion }}"
+      
       - name: Create GitHub Deployment (Railway)
-        if: github.ref == 'refs/heads/main' && steps.railway-deploy.outcome == 'success'
+        if: github.ref == 'refs/heads/main' && steps.railway-deploy.outcome != null
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             try {
               const envName = 'insidr (satisfied-mindfulness / production)';
+              const deployState = '${{ steps.railway-deploy.outcome }}' === 'success' ? 'success' : 'failure';
+              console.log(`🔍 État du déploiement Railway: ${deployState}`);
               console.log(`🔍 Recherche des anciens déploiements Railway (${envName})...`);
               
               // Supprimer les anciens déploiements Railway pour garder seulement le dernier
@@ -226,7 +247,8 @@ jobs:
                 ref: context.sha,
                 environment: envName,
                 auto_merge: false,
-                required_contexts: []
+                required_contexts: [],
+                description: `Deployed via GitHub Actions - ${context.sha.substring(0, 7)}`
               });
               
               console.log(`✅ Déploiement #${newDeployment.data.id} créé avec succès`);
@@ -235,12 +257,14 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 deployment_id: newDeployment.data.id,
-                state: 'success',
-                environment_url: 'https://insidr-production.up.railway.app'
+                state: deployState,
+                environment_url: 'https://insidr-production.up.railway.app',
+                description: deployState === 'success' ? 'Deployment successful' : 'Deployment failed'
               });
               
-              console.log('🎉 Statut de déploiement mis à jour avec succès');
+              console.log(`🎉 Statut de déploiement mis à jour: ${deployState}`);
             } catch (error) {
               console.error('❌ Erreur lors de la création du GitHub Deployment:', error);
+              console.error('Détails:', JSON.stringify(error, null, 2));
               throw error;
             }
