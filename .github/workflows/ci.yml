@@ -369,22 +369,28 @@ jobs:
           
           echo "📦 Déploiement vers Railway..."
           # Railway CLI up avec --path-as-root pour que apps/backend soit la racine
-          # Essayer avec différents noms de service possibles
-          echo "📦 Tentative 1: service 'insidr' avec --path-as-root..."
+          # Essayer d'abord sans spécifier de service (Railway devrait le détecter automatiquement)
+          echo "📦 Tentative 1: sans spécifier de service (auto-détection)..."
           cd apps/backend
-          npx -y @railway/cli up --service insidr --detach --path-as-root && {
-            echo "✅ Déploiement réussi avec service 'insidr'"
+          npx -y @railway/cli up --detach --path-as-root && {
+            echo "✅ Déploiement réussi (service auto-détecté)"
             exit 0
           } || {
-            echo "⚠️ Échec avec 'insidr', tentative avec 'insidr-production'..."
-            npx -y @railway/cli up --service insidr-production --detach --path-as-root && {
-              echo "✅ Déploiement réussi avec service 'insidr-production'"
+            echo "⚠️ Échec sans service, tentative avec 'insidr'..."
+            npx -y @railway/cli up --service insidr --detach --path-as-root && {
+              echo "✅ Déploiement réussi avec service 'insidr'"
               exit 0
             } || {
-              echo "❌ Échec des deux tentatives. Vérifie:"
-              echo "   1. RAILWAY_TOKEN est un Project Token valide"
-              echo "   2. Le nom du service dans Railway (peut être 'insidr' ou autre)"
-              exit 1
+              echo "⚠️ Échec avec 'insidr', tentative sans --path-as-root..."
+              npx -y @railway/cli up --service insidr --detach && {
+                echo "✅ Déploiement réussi avec service 'insidr' (sans --path-as-root)"
+                exit 0
+              } || {
+                echo "❌ Échec de toutes les tentatives. Vérifie:"
+                echo "   1. RAILWAY_TOKEN est un Project Token valide"
+                echo "   2. Le nom du service dans Railway"
+                exit 1
+              }
             }
           }
         env:
