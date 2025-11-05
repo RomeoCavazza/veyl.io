@@ -1,0 +1,8 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "apps/backend/Dockerfile"
+buildPath = "apps/backend"
+
+[deploy]
+# Ne PAS définir startCommand - utiliser le CMD du Dockerfile
+

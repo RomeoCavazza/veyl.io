@@ -371,13 +371,18 @@ jobs:
           
           echo "📦 Déploiement vers Railway..."
           # Railway CLI doit être exécuté depuis la racine du repo
-          # Le chemin apps/backend doit être spécifié comme argument
+          # Il y a un railway.toml à la racine qui pointe vers apps/backend
           # Il y a plusieurs services, donc il faut spécifier lequel
-          echo "📦 Tentative 1: avec 'insidr' depuis la racine..."
-          npx -y @railway/cli up apps/backend --service insidr --detach && {
-            echo "✅ Déploiement réussi avec service 'insidr'"
+          echo "📦 Tentative 1: depuis la racine avec railway.toml..."
+          npx -y @railway/cli up --service insidr --detach && {
+            echo "✅ Déploiement réussi avec service 'insidr' (depuis racine)"
             exit 0
           } || {
+            echo "⚠️ Échec depuis racine, tentative avec chemin explicite apps/backend..."
+            npx -y @railway/cli up apps/backend --service insidr --detach && {
+              echo "✅ Déploiement réussi avec service 'insidr' (chemin explicite)"
+              exit 0
+            } || {
             echo "⚠️ Échec avec 'insidr', tentative avec juste le chemin et --service auto..."
             # Essayer de lister les services et prendre le premier
             SERVICE_NAME=$(npx -y @railway/cli service list --json 2>/dev/null | head -1 || echo "insidr")
