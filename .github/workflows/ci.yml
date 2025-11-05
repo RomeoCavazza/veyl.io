@@ -313,6 +313,25 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
+  # Job qui déploie toujours Railway sur main, même si backend job est skippé
+  deploy-railway:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Deploy to Railway (production only)
+        id: railway-deploy
+        run: |
+          echo "📦 Current directory: $(pwd)"
+          echo "📦 Listing apps/backend:"
+          ls -la apps/backend/ | head -20
+          echo "📦 Deploying to Railway..."
+          npx -y @railway/cli up --service insidr-production --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
   # Job qui s'exécute toujours pour créer les GitHub Deployments
   # Même si les jobs frontend/backend ne s'exécutent pas (pour faire apparaître la section)
   # Test: vérifier que les anciens déploiements sont bien supprimés (devrait rester à 2 max)
