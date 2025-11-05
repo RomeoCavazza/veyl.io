@@ -83,13 +83,12 @@ jobs:
         if: github.ref == 'refs/heads/main'
         id: vercel-deploy
         continue-on-error: true
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-          working-directory: ./apps/frontend
+        run: |
+          cd ../..
+          npx -y vercel@latest --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       
       - name: Create GitHub Deployment (Vercel)
         if: github.ref == 'refs/heads/main'
