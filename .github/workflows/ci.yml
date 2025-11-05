@@ -365,31 +365,37 @@ jobs:
           
           echo "🔍 Liste des services disponibles..."
           # Essayer de lister les services pour trouver le bon nom
-          npx -y @railway/cli status || echo "⚠️ Impossible de lister les services"
+          echo "🔍 Récupération de la liste des services..."
+          npx -y @railway/cli service list 2>&1 || echo "⚠️ Impossible de lister les services"
+          npx -y @railway/cli status || echo "⚠️ Impossible d'afficher le statut"
           
           echo "📦 Déploiement vers Railway..."
           # Railway CLI doit être exécuté depuis la racine du repo
           # Le chemin apps/backend doit être spécifié comme argument
-          # Essayer d'abord sans spécifier de service (Railway devrait le détecter automatiquement)
-          echo "📦 Tentative 1: depuis la racine avec chemin relatif apps/backend..."
-          npx -y @railway/cli up apps/backend --detach && {
-            echo "✅ Déploiement réussi (service auto-détecté)"
+          # Il y a plusieurs services, donc il faut spécifier lequel
+          echo "📦 Tentative 1: avec 'insidr' depuis la racine..."
+          npx -y @railway/cli up apps/backend --service insidr --detach && {
+            echo "✅ Déploiement réussi avec service 'insidr'"
             exit 0
           } || {
-            echo "⚠️ Échec sans service, tentative avec 'insidr'..."
-            npx -y @railway/cli up apps/backend --service insidr --detach && {
-              echo "✅ Déploiement réussi avec service 'insidr'"
+            echo "⚠️ Échec avec 'insidr', tentative avec juste le chemin et --service auto..."
+            # Essayer de lister les services et prendre le premier
+            SERVICE_NAME=$(npx -y @railway/cli service list --json 2>/dev/null | head -1 || echo "insidr")
+            echo "📦 Tentative avec service détecté: $SERVICE_NAME"
+            npx -y @railway/cli up apps/backend --service "$SERVICE_NAME" --detach && {
+              echo "✅ Déploiement réussi avec service '$SERVICE_NAME'"
               exit 0
             } || {
-              echo "⚠️ Échec avec 'insidr', tentative avec cd apps/backend et --path-as-root..."
+              echo "⚠️ Échec avec service détecté, tentative depuis apps/backend avec --path-as-root..."
               cd apps/backend
-              npx -y @railway/cli up --service insidr --detach --path-as-root && {
+              npx -y @railway/cli up . --service insidr --detach --path-as-root && {
                 echo "✅ Déploiement réussi avec service 'insidr' (depuis apps/backend)"
                 exit 0
               } || {
                 echo "❌ Échec de toutes les tentatives. Vérifie:"
                 echo "   1. RAILWAY_TOKEN est un Project Token valide"
-                echo "   2. Le nom du service dans Railway"
+                echo "   2. Le nom du service dans Railway (peut être différent de 'insidr')"
+                echo "   3. Utilise 'railway service list' pour voir les services disponibles"
                 exit 1
               }
             }
