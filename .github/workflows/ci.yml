@@ -202,14 +202,17 @@ jobs:
         run: |
           # Railway CLI utilise RAILWAY_TOKEN depuis la variable d'environnement (pas --token)
           # Le working-directory est déjà apps/backend grâce à defaults.run
+          # Mais Railway CLI doit être exécuté depuis la racine avec le chemin relatif
+          echo "📦 Current directory: $(pwd)"
           echo "📦 Deploying to Railway..."
+          # Railway CLI up avec le chemin relatif depuis la racine du repo
           # Essayer avec "insidr" d'abord (nom probable du service)
-          npx -y @railway/cli up --service insidr --detach && {
+          npx -y @railway/cli up apps/backend --service insidr --detach && {
             echo "✅ Déploiement réussi avec service 'insidr'"
             exit 0
           } || {
             echo "⚠️ Échec avec 'insidr', tentative avec 'insidr-production'..."
-            npx -y @railway/cli up --service insidr-production --detach && {
+            npx -y @railway/cli up apps/backend --service insidr-production --detach && {
               echo "✅ Déploiement réussi avec service 'insidr-production'"
               exit 0
             } || {
@@ -347,9 +350,9 @@ jobs:
           echo "📦 Listing apps/backend:"
           ls -la apps/backend/ | head -20
           echo "📦 Deploying to Railway via CLI..."
-          cd apps/backend
           
           # Railway CLI utilise RAILWAY_TOKEN depuis la variable d'environnement (pas --token)
+          # Railway CLI doit être exécuté depuis la racine du repo et on spécifie le chemin relatif
           echo "🔍 Vérification de la configuration Railway..."
           echo "🔍 Token check..."
           npx -y @railway/cli whoami || echo "⚠️ Token check failed (continuing anyway)"
@@ -359,15 +362,15 @@ jobs:
           npx -y @railway/cli status || echo "⚠️ Impossible de lister les services"
           
           echo "📦 Déploiement vers Railway..."
+          # Railway CLI up avec le chemin relatif depuis la racine du repo
           # Essayer avec différents noms de service possibles
-          # Le service s'appelle probablement "insidr" et non "insidr-production"
           echo "📦 Tentative 1: service 'insidr'..."
-          npx -y @railway/cli up --service insidr --detach && {
+          npx -y @railway/cli up apps/backend --service insidr --detach && {
             echo "✅ Déploiement réussi avec service 'insidr'"
             exit 0
           } || {
             echo "⚠️ Échec avec 'insidr', tentative avec 'insidr-production'..."
-            npx -y @railway/cli up --service insidr-production --detach && {
+            npx -y @railway/cli up apps/backend --service insidr-production --detach && {
               echo "✅ Déploiement réussi avec service 'insidr-production'"
               exit 0
             } || {
