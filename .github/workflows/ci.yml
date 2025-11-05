@@ -368,22 +368,23 @@ jobs:
           npx -y @railway/cli status || echo "⚠️ Impossible de lister les services"
           
           echo "📦 Déploiement vers Railway..."
-          # Railway CLI up avec --path-as-root pour que apps/backend soit la racine
+          # Railway CLI doit être exécuté depuis la racine du repo
+          # Le chemin apps/backend doit être spécifié comme argument
           # Essayer d'abord sans spécifier de service (Railway devrait le détecter automatiquement)
-          echo "📦 Tentative 1: sans spécifier de service (auto-détection)..."
-          cd apps/backend
-          npx -y @railway/cli up --detach --path-as-root && {
+          echo "📦 Tentative 1: depuis la racine avec chemin relatif apps/backend..."
+          npx -y @railway/cli up apps/backend --detach && {
             echo "✅ Déploiement réussi (service auto-détecté)"
             exit 0
           } || {
             echo "⚠️ Échec sans service, tentative avec 'insidr'..."
-            npx -y @railway/cli up --service insidr --detach --path-as-root && {
+            npx -y @railway/cli up apps/backend --service insidr --detach && {
               echo "✅ Déploiement réussi avec service 'insidr'"
               exit 0
             } || {
-              echo "⚠️ Échec avec 'insidr', tentative sans --path-as-root..."
-              npx -y @railway/cli up --service insidr --detach && {
-                echo "✅ Déploiement réussi avec service 'insidr' (sans --path-as-root)"
+              echo "⚠️ Échec avec 'insidr', tentative avec cd apps/backend et --path-as-root..."
+              cd apps/backend
+              npx -y @railway/cli up --service insidr --detach --path-as-root && {
+                echo "✅ Déploiement réussi avec service 'insidr' (depuis apps/backend)"
                 exit 0
               } || {
                 echo "❌ Échec de toutes les tentatives. Vérifie:"
