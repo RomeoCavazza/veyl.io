@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch('http://localhost:8000/api/v1/auth/google/start');
       const { auth_url } = await response.json();
       
-      // Rediriger vers Google OAuth
+      // Rediriger vers Google OAuth 
       window.location.href = auth_url;
       
       return { error: null };
