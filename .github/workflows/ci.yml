@@ -76,7 +76,6 @@ jobs:
         
       - name: Deploy to Vercel (production only)
         if: github.ref == 'refs/heads/main'
-        working-directory: ./apps/frontend
         id: vercel-deploy
         run: |
           npx vercel@latest --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
