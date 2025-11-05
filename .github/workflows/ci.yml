@@ -78,6 +78,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         id: vercel-deploy
         run: |
+          cd apps/frontend
           npx vercel@latest --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
