@@ -31,9 +31,6 @@ jobs:
   # Check if deployment is needed
   check-changes:
     runs-on: ubuntu-latest
-    outputs:
-      frontend: ${{ steps.filter.outputs.frontend }}
-      backend: ${{ steps.filter.outputs.backend }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v2
@@ -51,7 +48,9 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     needs: check-changes
-    if: needs.check-changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.check-changes.steps.filter.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    outputs:
+      vercel-deploy-outcome: ${{ steps.vercel-deploy.outcome }}
     defaults:
       run:
         working-directory: ./apps/frontend
@@ -164,7 +163,9 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     needs: check-changes
-    if: needs.check-changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.check-changes.steps.filter.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    outputs:
+      railway-deploy-outcome: ${{ steps.railway-deploy.outcome }}
     defaults:
       run:
         working-directory: ./apps/backend
@@ -193,10 +194,10 @@ jobs:
         if: github.ref == 'refs/heads/main'
         id: railway-deploy
         continue-on-error: true
-        uses: bervProject/railway-deploy@v1.0.6
-        with:
-          railway_token: ${{ secrets.RAILWAY_TOKEN }}
-          service: insidr-production
+        run: |
+          npx -y @railway/cli up --service insidr-production --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       
       - name: Create GitHub Deployment (Railway)
         if: github.ref == 'refs/heads/main'
