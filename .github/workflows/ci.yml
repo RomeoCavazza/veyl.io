@@ -374,6 +374,8 @@ jobs:
           # Il y a un railway.toml à la racine qui pointe vers apps/backend
           # Il y a plusieurs services, donc il faut spécifier lequel
           echo "📦 Tentative 1: depuis la racine avec railway.toml..."
+          # Le railway.toml à la racine spécifie buildPath = "apps/backend"
+          # Cela devrait faire que Railway utilise apps/backend comme contexte de build
           npx -y @railway/cli up --service insidr --detach && {
             echo "✅ Déploiement réussi avec service 'insidr' (depuis racine)"
             exit 0
