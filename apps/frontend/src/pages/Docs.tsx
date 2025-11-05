@@ -107,11 +107,11 @@ export default function Docs() {
           {/* Header */}
           <div className="text-center space-y-4">
             <h1 className="text-3xl md:text-4xl font-bold">Documentation</h1>
-            <p className="text-muted-foreground">
+              <p className="text-muted-foreground">
               Scopes and products used for Meta and TikTok integrations
-            </p>
-          </div>
-
+              </p>
+            </div>
+            
           {/* Stack Technique */}
           <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
             <CardContent className="p-6">
@@ -121,7 +121,7 @@ export default function Docs() {
                   <div className="flex items-center gap-2">
                     <Binoculars className="h-6 w-6 text-primary" />
                     <h3 className="text-xl font-bold">Strategic Intelligence Platform</h3>
-                  </div>
+                      </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Born from strategic planning in influence agencies. Real-time social media intelligence and trend analysis.
                   </p>
@@ -139,7 +139,7 @@ export default function Docs() {
                     </a>
                     <img src="https://img.shields.io/badge/Vercel-000000?logo=vercel&logoColor=white" alt="Vercel" className="h-5" />
                     <img src="https://img.shields.io/badge/Railway-131415?logo=railway&logoColor=white" alt="Railway" className="h-5" />
-                  </div>
+                    </div>
                   <div className="mt-4 pt-4 border-t border-border/50">
                     <h4 className="text-sm font-semibold mb-2">Infrastructure & Data Storage</h4>
                     <ul className="text-xs text-muted-foreground space-y-1">
@@ -149,19 +149,19 @@ export default function Docs() {
                       <li><strong>Cache:</strong> Redis on Railway (session management, rate limiting, temporary data)</li>
                       <li><strong>Search Engine:</strong> Meilisearch (self-hosted or cloud, post indexing and full-text search)</li>
                       <li><strong>Vector Storage:</strong> Supabase pgvector extension (semantic embeddings, similarity search, RAG)</li>
-                    </ul>
-                  </div>
-                </div>
+                      </ul>
+                    </div>
+                          </div>
 
                 {/* Logo on the right */}
                 <div className="flex-shrink-0">
                   <a href="/" className="block transition-transform hover:scale-105">
                     <img src="/logo.svg" alt="veyl.io" className="h-16 w-auto max-w-none" />
                   </a>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
           {/* Powered by Meilisearch */}
           <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
@@ -172,7 +172,7 @@ export default function Docs() {
                   <div className="flex items-center gap-2">
                     <Cpu className="h-6 w-6 text-primary" />
                     <h3 className="text-xl font-bold">Meilisearch</h3>
-                  </div>
+            </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Indexing and searching millions of posts is powered by <strong>Meilisearch</strong>, 
                     an ultra-fast and typo-tolerant search engine enabling instant search with advanced facets and filters.
@@ -186,17 +186,17 @@ export default function Docs() {
                     meilisearch.com
                     <ExternalLink className="h-3 w-3" />
                   </a>
-                </div>
-
+            </div>
+            
                 {/* Logo on the right */}
                 <div className="flex-shrink-0">
                   <a href="https://www.meilisearch.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
                     <img src={meilisearchLogo} alt="Meilisearch" className="h-[300px] w-auto max-w-none" />
                   </a>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                    </div>
+                  </CardContent>
+                </Card>
 
           {/* Meta for Developers */}
           <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
@@ -241,8 +241,8 @@ export default function Docs() {
                     </div>
                     <p className="text-xs text-muted-foreground">{product.description}</p>
                   </div>
-                ))}
-              </div>
+              ))}
+            </div>
 
               {/* Scopes */}
               <div className="space-y-3 border-t border-border pt-6">
@@ -256,10 +256,10 @@ export default function Docs() {
                     <p className="text-xs text-muted-foreground">{scope.description}</p>
                   </div>
                 ))}
-              </div>
+                </div>
             </CardContent>
-          </Card>
-
+              </Card>
+              
           {/* TikTok for Developers */}
           <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
             <CardContent className="p-6">
@@ -290,7 +290,7 @@ export default function Docs() {
                     <img src={tiktokLogo} alt="TikTok for Developers" className="h-[260px] w-auto max-w-none" />
                   </a>
                 </div>
-              </div>
+                </div>
 
               {/* Product */}
               <div className="space-y-3 border-t border-border pt-6 mb-6">
@@ -301,7 +301,7 @@ export default function Docs() {
                   </div>
                   <p className="text-xs text-muted-foreground">{tiktokProduct.description}</p>
                 </div>
-              </div>
+            </div>
 
               {/* Scopes */}
               <div className="space-y-3 border-t border-border pt-6">
