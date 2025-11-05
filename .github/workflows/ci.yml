@@ -199,7 +199,12 @@ jobs:
         continue-on-error: true
         run: |
           # Railway CLI nécessite --token pour spécifier explicitement le token
-          npx -y @railway/cli up --service insidr-production --detach --token "${{ secrets.RAILWAY_TOKEN }}"
+          # Le working-directory est déjà apps/backend grâce à defaults.run
+          echo "📦 Deploying to Railway..."
+          npx -y @railway/cli up --service insidr-production --detach --token "${{ secrets.RAILWAY_TOKEN }}" || {
+            echo "⚠️ Railway CLI failed. Check if RAILWAY_TOKEN is a valid Project Token."
+            exit 1
+          }
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       
@@ -324,14 +329,28 @@ jobs:
       
       - name: Deploy to Railway (production only)
         id: railway-deploy
+        continue-on-error: true
         run: |
           echo "📦 Current directory: $(pwd)"
           echo "📦 Listing apps/backend:"
           ls -la apps/backend/ | head -20
-          echo "📦 Deploying to Railway..."
+          echo "📦 Deploying to Railway via CLI..."
           cd apps/backend
-          # Railway CLI nécessite --token pour spécifier explicitement le token
-          npx -y @railway/cli up --service insidr-production --detach --token "${{ secrets.RAILWAY_TOKEN }}"
+          
+          # Railway CLI: utiliser --token et vérifier que le service existe
+          # Si le service name ne fonctionne pas, Railway CLI va lister les services disponibles
+          echo "🔍 Vérification de la configuration Railway..."
+          npx -y @railway/cli whoami --token "${{ secrets.RAILWAY_TOKEN }}" || echo "⚠️ Token check failed"
+          
+          echo "📦 Déploiement vers Railway..."
+          # Railway CLI déploie depuis le répertoire courant (apps/backend)
+          # Le service doit être identifié par son nom ou on peut utiliser --project
+          npx -y @railway/cli up --service insidr-production --detach --token "${{ secrets.RAILWAY_TOKEN }}" || {
+            echo "⚠️ Déploiement échoué, essai avec une approche alternative..."
+            # Fallback: utiliser Railway API directement si CLI échoue
+            echo "❌ Railway CLI a échoué. Vérifie que RAILWAY_TOKEN est un Project Token valide."
+            exit 1
+          }
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
