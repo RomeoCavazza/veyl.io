@@ -1,4 +1,4 @@
-// CI/CD Test: Deployment verification after repo recreation
+// CI/CD: Production deployment verification
 import { createContext, useContext, useEffect, useState } from 'react';
 import { login, register, getMe } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
