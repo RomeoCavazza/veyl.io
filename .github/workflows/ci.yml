@@ -388,7 +388,9 @@ jobs:
             } || {
               echo "⚠️ Échec avec service détecté, tentative depuis apps/backend avec --path-as-root..."
               cd apps/backend
-              npx -y @railway/cli up . --service insidr --detach --path-as-root && {
+              # Avec --path-as-root, Railway CLI traite apps/backend comme la racine
+              # Le railway.toml doit donc avoir buildPath = "." et dockerfilePath = "Dockerfile"
+              npx -y @railway/cli up --service insidr --detach --path-as-root && {
                 echo "✅ Déploiement réussi avec service 'insidr' (depuis apps/backend)"
                 exit 0
               } || {
