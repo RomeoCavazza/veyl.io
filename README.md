@@ -1,5 +1,5 @@
 <p align="center">
-  <strong style="font-size: 2rem;">veyl.io</strong>
+  <img src="apps/frontend/public/logo.svg" alt="veyl.io" width="284" height="68">
 </p>
 
 <h4 align="center">
