@@ -77,11 +77,52 @@ jobs:
       - name: Deploy to Vercel (production only)
         if: github.ref == 'refs/heads/main'
         working-directory: ./apps/frontend
+        id: vercel-deploy
         run: |
           npx vercel@latest --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      
+      - name: Create GitHub Deployment (Vercel)
+        if: github.ref == 'refs/heads/main' && steps.vercel-deploy.outcome == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Supprimer les anciens déploiements Production pour garder seulement le dernier
+            const deployments = await github.rest.repos.listDeployments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              environment: 'Production',
+              per_page: 100
+            });
+            
+            // Supprimer tous les anciens déploiements (on garde seulement le nouveau)
+            for (const deployment of deployments.data) {
+              await github.rest.repos.deleteDeployment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: deployment.id
+              });
+            }
+            
+            // Créer le nouveau déploiement (le seul visible)
+            const newDeployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: 'Production',
+              auto_merge: false,
+              required_contexts: []
+            });
+            
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: newDeployment.data.id,
+              state: 'success',
+              environment_url: 'https://www.veyl.io'
+            });
 
   backend:
     runs-on: ubuntu-latest
@@ -113,7 +154,50 @@ jobs:
           
       - name: Deploy to Railway (production only)
         if: github.ref == 'refs/heads/main'
+        id: railway-deploy
         uses: bervProject/railway-deploy@v1.0.6
         with:
           railway_token: ${{ secrets.RAILWAY_TOKEN }}
           service: insidr-production
+      
+      - name: Create GitHub Deployment (Railway)
+        if: github.ref == 'refs/heads/main' && steps.railway-deploy.outcome == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const envName = 'insidr (satisfied-mindfulness / production)';
+            
+            // Supprimer les anciens déploiements Railway pour garder seulement le dernier
+            const deployments = await github.rest.repos.listDeployments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              environment: envName,
+              per_page: 100
+            });
+            
+            // Supprimer tous les anciens déploiements (on garde seulement le nouveau)
+            for (const deployment of deployments.data) {
+              await github.rest.repos.deleteDeployment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: deployment.id
+              });
+            }
+            
+            // Créer le nouveau déploiement (le seul visible)
+            const newDeployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: envName,
+              auto_merge: false,
+              required_contexts: []
+            });
+            
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: newDeployment.data.id,
+              state: 'success',
+              environment_url: 'https://insidr-production.up.railway.app'
+            });
