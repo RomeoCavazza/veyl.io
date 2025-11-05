@@ -272,6 +272,47 @@ jobs:
               throw error;
             }
 
+  # Job qui déploie toujours Vercel sur main, même si frontend job est skippé
+  deploy-vercel:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        working-directory: ./apps/frontend
+        run: pnpm install --frozen-lockfile
+        
+      - name: Build
+        working-directory: ./apps/frontend
+        run: pnpm build
+        id: build
+      
+      - name: Deploy to Vercel (production only)
+        id: vercel-deploy
+        run: |
+          echo "📦 Current directory: $(pwd)"
+          echo "📦 Listing apps/frontend:"
+          ls -la apps/frontend/ | head -20
+          echo "📦 Checking if dist folder exists:"
+          ls -la apps/frontend/dist/ 2>/dev/null || echo "⚠️ dist folder not found!"
+          echo "📦 Deploying to Vercel..."
+          npx -y vercel@latest --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
   # Job qui s'exécute toujours pour créer les GitHub Deployments
   # Même si les jobs frontend/backend ne s'exécutent pas (pour faire apparaître la section)
   # Test: vérifier que les anciens déploiements sont bien supprimés (devrait rester à 2 max)
