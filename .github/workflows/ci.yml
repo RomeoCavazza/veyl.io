@@ -373,25 +373,25 @@ jobs:
           # Railway CLI doit être exécuté depuis la racine du repo
           # Il y a un railway.toml à la racine qui pointe vers apps/backend
           # Il y a plusieurs services, donc il faut spécifier lequel
-          echo "📦 Tentative 1: depuis la racine avec railway.toml..."
-          # Le railway.toml à la racine spécifie buildPath = "apps/backend"
-          # Cela devrait faire que Railway utilise apps/backend comme contexte de build
-          npx -y @railway/cli up --service insidr --detach && {
-            echo "✅ Déploiement réussi avec service 'insidr' (depuis racine)"
+          # PRIORITÉ: Utiliser --path-as-root depuis apps/backend pour que Railway traite apps/backend comme racine
+          echo "📦 Tentative 1: depuis apps/backend avec --path-as-root (meilleure solution)..."
+          cd apps/backend
+          # Avec --path-as-root, Railway CLI traite apps/backend comme la racine
+          # Le railway.toml dans apps/backend a buildPath = "." et dockerfilePath = "Dockerfile"
+          # Cela garantit que Railway trouve requirements.txt dans le bon contexte
+          npx -y @railway/cli up . --service insidr --detach --path-as-root && {
+            echo "✅ Déploiement réussi avec service 'insidr' (depuis apps/backend)"
             exit 0
           } || {
-            echo "⚠️ Échec depuis racine, tentative avec chemin explicite apps/backend..."
-            npx -y @railway/cli up apps/backend --service insidr --detach && {
-              echo "✅ Déploiement réussi avec service 'insidr' (chemin explicite)"
+            echo "⚠️ Échec avec --path-as-root, tentative depuis la racine avec railway.toml..."
+            cd ../..
+            npx -y @railway/cli up --service insidr --detach && {
+              echo "✅ Déploiement réussi avec service 'insidr' (depuis racine)"
               exit 0
             } || {
-              echo "⚠️ Échec avec 'insidr', tentative depuis apps/backend avec --path-as-root..."
-              cd apps/backend
-              # Avec --path-as-root, Railway CLI traite apps/backend comme la racine
-              # Le railway.toml doit donc avoir buildPath = "." et dockerfilePath = "Dockerfile"
-              # --path-as-root nécessite un chemin explicite (ici "." pour le répertoire courant)
-              npx -y @railway/cli up . --service insidr --detach --path-as-root && {
-                echo "✅ Déploiement réussi avec service 'insidr' (depuis apps/backend)"
+              echo "⚠️ Échec depuis racine, tentative avec chemin explicite apps/backend..."
+              npx -y @railway/cli up apps/backend --service insidr --detach && {
+                echo "✅ Déploiement réussi avec service 'insidr' (chemin explicite)"
                 exit 0
               } || {
                 echo "❌ Échec de toutes les tentatives. Vérifie:"
