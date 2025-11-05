@@ -1,5 +1,7 @@
 name: CI/CD Pipeline
 
+# Testing Railway deployment with new Project Token
+
 permissions:
   contents: read
   deployments: write
