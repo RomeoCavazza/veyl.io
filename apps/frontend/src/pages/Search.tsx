@@ -1,13 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search as SearchIcon, TrendingUp, Heart, MessageCircle, ExternalLink, Code2, Copy, CheckCircle2 } from 'lucide-react';
-import { generateMockPosts, type InstagramPost } from '@/lib/mockData';
-import { searchPosts, type PostHit, type SearchParams } from '@/lib/api';
+import { Search as SearchIcon, TrendingUp, Heart, MessageCircle, ExternalLink, Code2, Copy, CheckCircle2, RefreshCcw } from 'lucide-react';
+import { searchPosts, fetchMetaOEmbed, fetchPagePublicPosts, type PostHit } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { AISearchBar } from '@/components/AISearchBar';
+import { AISearchBar, type SearchMode } from '@/components/AISearchBar';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,38 +15,129 @@ export default function Search() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [selectedModes, setSelectedModes] = useState<SearchMode[]>(['hashtag']);
   const [posts, setPosts] = useState<PostHit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<PostHit | null>(null);
   const [embedCopied, setEmbedCopied] = useState(false);
+  const [embedHtml, setEmbedHtml] = useState<string | null>(null);
+  const [isFetchingEmbed, setIsFetchingEmbed] = useState(false);
+  const [fetchingPostId, setFetchingPostId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const { toast } = useToast();
 
-  const handleSearch = async (query: string, platforms: string[] = []) => {
+  const handleSearch = async (
+    query: string,
+    platforms: string[] = [],
+    modes: SearchMode[] = ['hashtag']
+  ) => {
     if (!query.trim()) return;
     
     setIsLoading(true);
     setHasSearched(true);
     setSearchQuery(query);
     setSelectedPlatforms(platforms);
+    const normalizedModes = modes.length > 0 ? modes : ['hashtag'];
+    setSelectedModes(normalizedModes);
+    const normalizedPlatforms = platforms;
+    const shouldFetchHashtag =
+      normalizedModes.includes('hashtag') &&
+      (normalizedPlatforms.length === 0 || normalizedPlatforms.includes('instagram'));
+    const shouldFetchPage =
+      normalizedModes.includes('page') &&
+      (normalizedPlatforms.length === 0 || normalizedPlatforms.includes('facebook'));
+
+    if (!shouldFetchHashtag && !shouldFetchPage) {
+      setIsLoading(false);
+      setPosts([]);
+      toast({
+        title: 'No Meta platform selected',
+        description: 'Select Instagram for hashtag search or Facebook for public page fetch.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     try {
-      const params: SearchParams = {
-        q: query,
-        platform: platforms.includes('instagram') ? 'instagram' : 'instagram', // Default to Instagram
-        limit: 12,
-        sort: 'score_trend:desc'
-      };
-      
-      const response = await searchPosts(params);
-      setPosts(response.hits);
+      const aggregatedPosts: PostHit[] = [];
+
+      if (shouldFetchHashtag) {
+        const response = await searchPosts({
+          q: query,
+          limit: 12,
+        });
+        const data = response.data || [];
+        data.forEach((item: any) => {
+          aggregatedPosts.push({
+            id: item.id,
+            platform: 'instagram',
+            username: item.owner?.username,
+            caption: item.caption,
+            media_type: item.media_type,
+            media_url: item.media_url,
+            permalink: item.permalink,
+            posted_at: item.timestamp,
+            like_count: item.like_count,
+            comment_count: item.comments_count,
+            score_trend: item.like_count ?? 0,
+          });
+        });
+      }
+
+      if (shouldFetchPage) {
+        const pageResponse = await fetchPagePublicPosts(query, 12);
+        const data = pageResponse.data || [];
+        data.forEach((item: any) => {
+          aggregatedPosts.push({
+            id: item.id,
+            platform: 'facebook',
+            username: item.from?.name ?? 'Facebook Page',
+            caption: item.message,
+            media_type: item.full_picture ? 'IMAGE' : 'LINK',
+            media_url: item.full_picture,
+            permalink: item.permalink_url ?? '',
+            posted_at: item.created_time ?? '',
+            like_count: 0,
+            comment_count: 0,
+            score_trend: 0,
+          });
+        });
+      }
+
+      setPosts(aggregatedPosts);
     } catch (error) {
       console.error('Search error:', error);
-      // Fallback to mock data if API fails
-      setPosts(generateMockPosts(query, 12) as any);
+      setPosts([]);
+      toast({
+        title: 'Search failed',
+        description: 'Unable to fetch posts. Please verify the search query and try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchLivePost = async (post: PostHit) => {
+    if (post.platform !== 'instagram' || !post.permalink) return;
+
+    try {
+      setFetchingPostId(post.id);
+      await fetchMetaOEmbed(post.permalink);
+      toast({
+        title: 'Live fetch successful',
+        description: 'Meta oEmbed response stored.',
+      });
+    } catch (error) {
+      console.error('Fetch live error:', error);
+      toast({
+        title: 'Live fetch failed',
+        description: 'Check console/logs for details.',
+        variant: 'destructive',
+      });
+    } finally {
+      setFetchingPostId(null);
     }
   };
 
@@ -66,7 +156,8 @@ export default function Search() {
 
   const handleCopyEmbed = () => {
     if (!selectedPost) return;
-    navigator.clipboard.writeText(getEmbedCode(selectedPost));
+    const code = embedHtml || getEmbedCode(selectedPost);
+    navigator.clipboard.writeText(code);
     setEmbedCopied(true);
     toast({
       title: "Embed code copied!",
@@ -74,6 +165,37 @@ export default function Search() {
     });
     setTimeout(() => setEmbedCopied(false), 2000);
   };
+
+  useEffect(() => {
+    const loadEmbed = async () => {
+      if (
+        !embedDialogOpen ||
+        !selectedPost?.permalink ||
+        selectedPost.platform !== 'instagram'
+      ) {
+        setEmbedHtml(null);
+        return;
+      }
+      setIsFetchingEmbed(true);
+      try {
+        const data = await fetchMetaOEmbed(selectedPost.permalink);
+        const html = typeof data === 'string' ? data : data.html ?? '';
+        setEmbedHtml(html);
+      } catch (error) {
+        console.error('Embed fetch error:', error);
+        toast({
+          title: 'Embed fetch failed',
+          description: 'Unable to load oEmbed HTML from Meta.',
+          variant: 'destructive',
+        });
+        setEmbedHtml(null);
+      } finally {
+        setIsFetchingEmbed(false);
+      }
+    };
+
+    loadEmbed();
+  }, [embedDialogOpen, selectedPost]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -100,12 +222,19 @@ export default function Search() {
                 key={tag}
                 variant="secondary"
                 className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                onClick={() => handleSearch(tag, ['instagram'])}
+                onClick={() => handleSearch(tag, ['instagram'], selectedModes)}
               >
                 #{tag}
               </Badge>
             ))}
           </div>
+
+          <p className="text-xs text-muted-foreground">
+            Mode tips: select <span className="font-semibold">Instagram</span> + <span className="font-semibold">Hashtag</span> to fetch public IG media,
+            <span className="font-semibold"> Facebook</span> + <span className="font-semibold">Public Page</span> to fetch posts from a Facebook Page you do not manage,
+            or select both to demonstrate both permissions in one search.
+          </p>
+
         </div>
       </section>
 
@@ -161,6 +290,11 @@ export default function Search() {
                   {posts.length} posts found
                 </Badge>
               </div>
+              {selectedModes.includes('page') && (
+                <p className="text-xs text-muted-foreground">
+                  Showing public posts fetched via Facebook Page Public Content Access. Use a Page ID you do not manage (e.g. 106182309397812).
+                </p>
+              )}
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {posts.map((post) => (
@@ -199,22 +333,28 @@ export default function Search() {
 
                     <p className="text-sm line-clamp-2">{post.caption}</p>
 
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Heart className="h-4 w-4" />
-                        <span>{(post.like_count / 1000).toFixed(1)}K</span>
+                    {post.platform === 'instagram' ? (
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Heart className="h-4 w-4" />
+                          <span>{(post.like_count / 1000).toFixed(1)}K</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MessageCircle className="h-4 w-4" />
+                          <span>{((post.comment_count || 0) / 1000).toFixed(1)}K</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-success">
+                          <TrendingUp className="h-4 w-4" />
+                          <span>{post.score_trend || 0}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <MessageCircle className="h-4 w-4" />
-                        <span>{((post.comment_count || 0) / 1000).toFixed(1)}K</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-success">
-                        <TrendingUp className="h-4 w-4" />
-                        <span>{post.score_trend || 0}</span>
-                      </div>
-                    </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Facebook public post (Page Public Content Access)
+                      </p>
+                    )}
 
-                    <div className="pt-2 border-t flex gap-2">
+                    <div className="pt-2 border-t flex flex-wrap gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -223,20 +363,33 @@ export default function Search() {
                       >
                         <a href={post.permalink} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="h-3 w-3 mr-1" />
-                          View on Instagram
+                          {post.platform === 'facebook' ? 'View on Facebook' : 'View on Instagram'}
                         </a>
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPost(post);
-                          setEmbedDialogOpen(true);
-                        }}
-                      >
-                        <Code2 className="h-3 w-3 mr-1" />
-                        Embed
-                      </Button>
+                      {post.platform === 'instagram' && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchLivePost(post)}
+                            disabled={fetchingPostId === post.id}
+                          >
+                            <RefreshCcw className="h-3 w-3 mr-1" />
+                            {fetchingPostId === post.id ? 'Fetching…' : 'Fetch Live'}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPost(post);
+                              setEmbedDialogOpen(true);
+                            }}
+                          >
+                            <Code2 className="h-3 w-3 mr-1" />
+                            Embed
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -293,13 +446,18 @@ export default function Search() {
                 <label className="text-sm font-medium mb-2 block">Embed Code:</label>
                 <div className="relative">
                   <pre className="p-4 rounded-lg bg-muted text-xs overflow-x-auto">
-                    <code>{getEmbedCode(selectedPost)}</code>
+                    <code>
+                      {isFetchingEmbed
+                        ? 'Loading oEmbed response...'
+                        : embedHtml || getEmbedCode(selectedPost)}
+                    </code>
                   </pre>
                   <Button
                     size="sm"
                     variant="ghost"
                     className="absolute top-2 right-2"
                     onClick={handleCopyEmbed}
+                    disabled={isFetchingEmbed}
                   >
                     {embedCopied ? (
                       <>
@@ -309,19 +467,33 @@ export default function Search() {
                     ) : (
                       <>
                         <Copy className="h-4 w-4 mr-1" />
-                        Copy
+                        {isFetchingEmbed ? 'Wait' : 'Copy'}
                       </>
                     )}
                   </Button>
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-accent/50 text-sm">
-                <p className="font-medium mb-1">Meta oEmbed Read Permission</p>
-                <p className="text-muted-foreground">
-                  This feature allows you to get embed HTML and metadata for public Instagram posts
-                  to provide front-end views in your application.
-                </p>
+              <div className="p-3 rounded-lg bg-accent/50 text-sm space-y-3">
+                <div>
+                  <p className="font-medium mb-1">Meta oEmbed Read Permission</p>
+                  <p className="text-muted-foreground">
+                    This feature allows you to get embed HTML and metadata for public Instagram posts
+                    to provide front-end views in your application.
+                  </p>
+                </div>
+                {embedHtml && (
+                  <div>
+                    <p className="text-xs font-semibold mb-2">Live Preview (rendered from Meta response):</p>
+                    <div
+                      className="border rounded-lg overflow-hidden bg-background"
+                      dangerouslySetInnerHTML={{ __html: embedHtml }}
+                    />
+                  </div>
+                )}
+                {!embedHtml && isFetchingEmbed && (
+                  <p className="text-xs text-muted-foreground">Fetching live oEmbed data from Meta...</p>
+                )}
               </div>
             </div>
           )}

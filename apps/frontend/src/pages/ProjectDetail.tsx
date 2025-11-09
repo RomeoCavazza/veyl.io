@@ -33,8 +33,6 @@ import {
 import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Bell, AtSign, Trash2, ExternalLink, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { getFakeProject, getFakeProjectPosts, fakeCreators, fakePosts } from '@/lib/fakeData';
-import { engagementTrendData, topPerformingCreators } from '@/lib/mockData';
 import { useToast } from '@/hooks/use-toast';
 import {
   AreaChart,
@@ -74,22 +72,10 @@ export default function ProjectDetail() {
   const [sortColumn, setSortColumn] = useState<string>('posted_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  // Mock data for charts
-  const pieData = [
-    { name: 'Images', value: 45, color: 'hsl(var(--primary))' },
-    { name: 'Videos', value: 35, color: 'hsl(var(--accent))' },
-    { name: 'Carousels', value: 20, color: 'hsl(var(--success))' },
-  ];
-
-  const reachData = [
-    { date: '2025-01-15', organic: 45000, paid: 15000 },
-    { date: '2025-01-16', organic: 52000, paid: 18000 },
-    { date: '2025-01-17', organic: 48000, paid: 22000 },
-    { date: '2025-01-18', organic: 61000, paid: 25000 },
-    { date: '2025-01-19', organic: 58000, paid: 28000 },
-    { date: '2025-01-20', organic: 72000, paid: 32000 },
-    { date: '2025-01-21', organic: 68000, paid: 30000 },
-  ];
+  const pieData: Array<{ name: string; value: number; color: string }> = [];
+  const reachData: Array<{ date: string; organic: number; paid: number }> = [];
+  const engagementTrendData: Array<{ date: string; engagement: number; reach: number; impressions: number }> = [];
+  const topPerformingCreators: Array<{ username: string; posts: number; avg_engagement: number; total_reach: number }> = [];
 
   useEffect(() => {
     // Load project from API
@@ -151,37 +137,6 @@ export default function ProjectDetail() {
           engagement: 0,
         })));
         
-        // For now, use fake posts (to be replaced with real API)
-        const projectPosts = getFakeProjectPosts(id || '');
-        setPosts(projectPosts);
-        
-        // Extract all unique usernames from posts and add them to creators
-        if (projectPosts.length > 0) {
-          const existingUsernames = new Set(creatorsData.map((c: any) => c.handle.toLowerCase()));
-          const postUsernames = new Set(
-            projectPosts
-              .map((p: any) => p.username?.toLowerCase())
-              .filter(Boolean)
-          );
-          
-          // Add new creators from posts
-          const newCreators = Array.from(postUsernames)
-            .filter((username: string) => !existingUsernames.has(username))
-            .map((username: string) => {
-              // Find the original post to retrieve the real username (with case)
-              const originalPost = projectPosts.find((p: any) => p.username?.toLowerCase() === username);
-              const displayUsername = originalPost?.username || username;
-              return {
-                handle: displayUsername,
-                platform: projectData.platforms[0] || 'instagram',
-                profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayUsername}`,
-              };
-            });
-          
-          // Merge existing creators with new ones
-          setCreators([...creatorsData, ...newCreators]);
-        }
-        
       } catch (error: any) {
         console.error('Error loading project:', error);
         toast({
@@ -189,44 +144,6 @@ export default function ProjectDetail() {
           description: error.message || 'Failed to load project',
           variant: 'destructive',
         });
-        // Fallback to fake data
-        const fakeProject = getFakeProject(id || '');
-        if (fakeProject) {
-          setProject(fakeProject);
-          const fakePosts = getFakeProjectPosts(id || '');
-          setPosts(fakePosts);
-          
-          // Extract creators from fake posts
-          const fakePostUsernames = new Set(
-            fakePosts
-              .map((p: any) => p.username?.toLowerCase())
-              .filter(Boolean)
-          );
-          
-          const allFakeCreators = [
-            ...fakeCreators,
-            ...Array.from(fakePostUsernames)
-              .filter((username: string) => 
-                !fakeCreators.some((c: any) => c.handle?.toLowerCase() === username)
-              )
-              .map((username: string) => {
-                const originalPost = fakePosts.find((p: any) => p.username?.toLowerCase() === username);
-                const displayUsername = originalPost?.username || username;
-                return {
-                  handle: displayUsername,
-                  platform: fakeProject.platforms?.[0] || 'instagram',
-                  profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayUsername}`,
-                };
-              })
-          ];
-          
-          setCreators(allFakeCreators);
-          setNiches([
-            { id: 1, name: 'fashion', posts: 1247, growth: '+34%', engagement: 8.2 },
-            { id: 2, name: 'makeup', posts: 892, growth: '+28%', engagement: 7.5 },
-            { id: 3, name: 'fitness', posts: 1456, growth: '+22%', engagement: 9.1 },
-          ]);
-        }
       } finally {
         setLoading(false);
       }
@@ -320,13 +237,9 @@ export default function ProjectDetail() {
     // Trouver le creator pour avoir les followers
     const creator = creators.find((c: any) => c.handle?.toLowerCase() === creatorHandle.toLowerCase());
     
-    // Generate a stable follower count based on username hash
-    const hash = creatorHandle.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const mockFollowers = creator?.followers || (hash % 500000) + 5000; // 5K à 505K followers
-    
     return {
       postsCount: creatorPosts.length,
-      followers: mockFollowers,
+      followers: creator?.followers || 0,
     };
   };
 

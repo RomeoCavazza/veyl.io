@@ -21,8 +21,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ArrowLeft, Heart, MessageCircle, Eye, Grid3x3, BarChart3, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { fakeCreators, fakePosts } from '@/lib/fakeData';
-import { engagementTrendData, topPerformingCreators } from '@/lib/mockData';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
@@ -30,18 +28,16 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 export default function CreatorDetail() {
+  const engagementTrendData: Array<{ date: string; engagement: number }> = [];
+  const topPerformingCreators: Array<{ username: string; avg_engagement: number }> = [];
   const { id, username } = useParams<{ id: string; username: string }>();
   const navigate = useNavigate();
   const [sortColumn, setSortColumn] = useState<string>('posted_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [postDialogOpen, setPostDialogOpen] = useState(false);
-
-  // Simuler chargement créateur
-  const creator = fakeCreators.find(c => c.handle.replace('@', '') === username);
-
-  // Simuler posts du créateur
-  const creatorPosts = fakePosts.filter(p => p.username === creator?.handle.replace('@', '') || p.username === username);
+  const [creator, setCreator] = useState<any>(null);
+  const [creatorPosts, setCreatorPosts] = useState<any[]>([]);
 
   // Function to sort posts
   const sortedPosts = useMemo(() => {

@@ -23,6 +23,7 @@ from platforms.platforms_endpoints import platforms_router
 from analytics.analytics_endpoints import analytics_router
 from jobs.jobs_endpoints import jobs_router
 from projects.projects_endpoints import projects_router
+from meta.meta_routes import router as meta_router
 
 # Import Redis et rate limiting
 from core.redis_client import redis
@@ -115,6 +116,7 @@ app.include_router(platforms_router)
 app.include_router(analytics_router)
 app.include_router(jobs_router)
 app.include_router(projects_router)
+app.include_router(meta_router)
 from auth_unified.oauth_accounts_endpoints import oauth_accounts_router
 app.include_router(oauth_accounts_router)
 from webhooks.webhooks_endpoints import webhooks_router

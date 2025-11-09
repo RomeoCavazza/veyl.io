@@ -4,18 +4,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-interface AISearchBarProps {
-  onSearch?: (query: string, platforms: string[]) => void;
-}
-
 const platforms = [
   { id: 'instagram', name: 'Instagram', icon: Instagram },
+  { id: 'facebook', name: 'Facebook', icon: Globe },
   { id: 'tiktok', name: 'TikTok', icon: Globe },
   { id: 'x', name: 'X', icon: Globe },
 ];
 
+export type SearchMode = 'hashtag' | 'page';
+const modes: Array<{ id: SearchMode; name: string }> = [
+  { id: 'hashtag', name: 'Hashtag' },
+  { id: 'page', name: 'Facebook Page' },
+];
+
+interface AISearchBarProps {
+  onSearch?: (query: string, platforms: string[], modes: SearchMode[]) => void;
+}
+
 export function AISearchBar({ onSearch }: AISearchBarProps) {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [selectedModes, setSelectedModes] = useState<SearchMode[]>(['hashtag']);
   const [query, setQuery] = useState('');
 
   const togglePlatform = (platformId: string) => {
@@ -26,13 +34,27 @@ export function AISearchBar({ onSearch }: AISearchBarProps) {
     );
   };
 
+  const toggleMode = (modeId: SearchMode) => {
+    setSelectedModes((prev) => {
+      if (prev.includes(modeId)) {
+        const next = prev.filter((id) => id !== modeId);
+        return next.length > 0 ? next : prev;
+      }
+      return [...prev, modeId];
+    });
+  };
+
+  const clearModes = () => {
+    setSelectedModes(['hashtag']);
+  };
+
   const clearFilters = () => {
     setSelectedPlatforms([]);
   };
 
   const handleSearch = () => {
     if (query.trim() && onSearch) {
-      onSearch(query.trim(), selectedPlatforms);
+      onSearch(query.trim(), selectedPlatforms, selectedModes);
     }
   };
 
@@ -65,6 +87,51 @@ export function AISearchBar({ onSearch }: AISearchBarProps) {
 
         {/* Options Row */}
         <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 rounded-xl hover:bg-accent"
+              >
+                {selectedModes.length > 0 ? (
+                  <>
+                    <X
+                      className="h-4 w-4 mr-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        clearModes();
+                      }}
+                    />
+                    {selectedModes
+                      .map((id) => modes.find((mode) => mode.id === id)?.name)
+                      .join(', ')}
+                  </>
+                ) : (
+                  <>
+                    <Globe className="h-4 w-4 mr-2" />
+                    Mode
+                  </>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-2" align="start">
+              <div className="space-y-1">
+                {modes.map((mode) => (
+                  <button
+                    key={mode.id}
+                    onClick={() => toggleMode(mode.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent transition-colors ${
+                      selectedModes.includes(mode.id) ? 'bg-accent' : ''
+                    }`}
+                  >
+                    <span className="text-sm font-medium">{mode.name}</span>
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <Popover>
             <PopoverTrigger asChild>
               <Button 

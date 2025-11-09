@@ -33,7 +33,6 @@ export function ProjectPanel({ project, creators, onEdit, onDelete }: ProjectPan
     return Video; // Par défaut
   };
 
-  // Fonction pour calculer la tendance (pour l'instant avec valeurs mockées)
   // TODO: Remplacer par vraies données historiques depuis la DB
   const getTrend = (current: number, metric: string, projectId: number) => {
     // Hash simple pour générer une variation stable basée sur metric + projectId

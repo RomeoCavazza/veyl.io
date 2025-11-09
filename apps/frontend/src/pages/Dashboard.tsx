@@ -1,10 +1,14 @@
 import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { dashboardMetrics, engagementTrendData, topPerformingCreators, trendingHashtags } from '@/lib/mockData';
 import { TrendingUp, TrendingDown, ArrowUp, Hash, Users, BarChart3 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function Dashboard() {
+  const dashboardMetrics: Array<{ label: string; value: number; change: number; trend: 'up' | 'down' }> = [];
+  const engagementTrendData: Array<{ date: string; engagement: number }> = [];
+  const topPerformingCreators: Array<{ username: string; avg_engagement: number }> = [];
+  const trendingHashtags: Array<{ name: string; post_count: number; recent_growth: number; avg_engagement: number }> = [];
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />

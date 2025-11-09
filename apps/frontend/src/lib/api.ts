@@ -60,40 +60,91 @@ export interface PostHit {
 }
 
 export interface SearchResponse {
-  hits: PostHit[];
-  limit: number;
-  cursor?: string | null;
-  processing_time_ms?: number;
-  estimatedTotalHits?: number;
-  query?: string;
+  data: PostHit[];
 }
 
 export async function searchPosts(params: SearchParams): Promise<SearchResponse> {
   const searchParams = new URLSearchParams();
-  
-  // Filter out empty/null values
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== '' && value != null) {
-      searchParams.set(key, String(value));
-    }
-  });
+  if (params.q) {
+    searchParams.set('tag', params.q.replace('#', ''));
+  }
+  searchParams.set('limit', String(params.limit || 12));
 
   const apiBase = getApiBase();
-  const url = apiBase ? `${apiBase}/api/v1/posts/search?${searchParams.toString()}` : `/api/v1/posts/search?${searchParams.toString()}`;
-  
+  const url = apiBase ? `${apiBase}/api/v1/meta/ig-hashtag?${searchParams.toString()}` : `/api/v1/meta/ig-hashtag?${searchParams.toString()}`;
+
   const response = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
     }
   });
-  
+
   if (!response.ok) {
-    if (response.status === 429) {
-      throw new Error('RATE_LIMIT');
-    }
     throw new Error(`HTTP_${response.status}`);
   }
-  
+
+  return response.json();
+}
+
+export async function fetchMetaOEmbed(permalink: string): Promise<any> {
+  const apiBase = getApiBase();
+  const url = apiBase ? `${apiBase}/api/v1/meta/oembed?url=${encodeURIComponent(permalink)}` : `/api/v1/meta/oembed?url=${encodeURIComponent(permalink)}`;
+
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP_${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchPagePublicPosts(pageId: string, limit = 10): Promise<any> {
+  const apiBase = getApiBase();
+  const params = new URLSearchParams({
+    page_id: pageId,
+    limit: String(limit),
+  });
+
+  const url = apiBase ? `${apiBase}/api/v1/meta/page-public?${params.toString()}` : `/api/v1/meta/page-public?${params.toString()}`;
+
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP_${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchMetaInsights(resourceId: string, platform: 'instagram' | 'facebook', metrics: string): Promise<any> {
+  const apiBase = getApiBase();
+  const params = new URLSearchParams({
+    resource_id: resourceId,
+    platform,
+    metrics,
+  });
+
+  const url = apiBase ? `${apiBase}/api/v1/meta/insights?${params.toString()}` : `/api/v1/meta/insights?${params.toString()}`;
+
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP_${response.status}`);
+  }
+
   return response.json();
 }
 

@@ -1,0 +1,795 @@
+ok là il y a 2 confusions que tu mélanges :
+
+1. pourquoi ils ont écrit ces phrases d’alertes
+2. “public_profile” → ne veut rien dire dans le contexte Instagram Graph API et Page Public Access
+
+### 1) Pourquoi ils te disent ça
+
+Pour **toutes** les permissions → la raison est la même :
+
+> ils n’ont pas réussi à vérifier que TU UTILISES réellement **cette permission** dans ton UI
+
+Même si tu crois avoir montré le flow, toi tu l’as montré au niveau global (tu navigues dans l’app) mais EUX veulent voir l’expérience **FEATURE PAR FEATURE**.
+Donc pour **chaque permission**, tu dois montrer l’écran exact où :
+
+* tu appelles cette permission
+* et tu utilises les données obtenues
+* et tu expliques en 1 phrase simple ce que c’est.
+
+---
+
+### 2) ton cas particulier **Page Public Content Access**
+
+La note dit :
+
+> “we noticed that how you are accessing the public content is not shown in the screencast”
+
+Ça veut dire que tu as certainement montré un écran “page analytics” mais **pas un écran prouvant que la page n’est PAS la tienne**.
+
+EUX doivent voir :
+
+* tu tapes le nom d’une Page que tu ne possèdes pas
+* tu affiches les posts publics de cette page
+* tu dis :
+  *“This is Page Public Content Access. We are viewing public posts from Pages we do not own.”*
+
+### 3) ton cas particulier **Meta oEmbed Read**
+
+La note dit :
+
+> “the test URL you shared is not leading to any of Meta’s content”
+
+→ ça c’est très concret.
+
+Tu as donné un URL à oEmbed qui n’était pas un post IG public ou un post fb public valide.
+
+Pour la review → tu dois donner un URL Meta valide que EUX peuvent ouvrir.
+Sinon ils ne peuvent pas vérifier.
+
+Donc dans ta vidéo, tu dois :
+
+* coller une URL publique d’un post IG (public)
+* coller une URL publique d’un post Page FB public
+* montrer le preview embed dans ton UI
+
+---
+
+### 4) “public_profile”
+
+Ce n’est **pas** une permission Instagram Graph API.
+
+Ça c’est une permission FB Login de base.
+
+C’est normal que meta ne parle PAS de “public_profile” parce que tu n’as **pas demandé** d’app review pour public_profile.
+Ils parlent des **11 permissions** que tu AS demandé dans ta demande review (instagram_basic, instagram_manage_insights, Page Public Content Access, Meta oEmbed Read etc).
+
+Donc la phrase “public_profile est ma seule permission” est fausse dans ce contexte.
+
+Tu as demandé 11 permissions **non-standard** → donc tu dois démontrer les 11, pas juste “être connecté Facebook”.
+
+---
+
+### Conclusion simple
+
+Ce que Meta te dit :
+
+* tu as bien montré connexion → navigation
+* MAIS tu n’as pas montré suffisamment CLAIREMENT **la démonstration individuelle par permission**
+* et tu n’as pas montré la page de consent première connexion
+* et pour oEmbed l’URL donné n’était pas utilisable
+
+Donc pour ta prochaine vidéo → tout va se jouer ici :
+
+**1 screencast unique organisé par permissions**
+
+1. login fresh + consent (permissions listées visibles + Accept)
+2. Page Public Content : chercher une page que tu ne possèdes pas → posts publics
+3. IG Public Content Access : hashtag search → résultats posts
+4. oEmbed : coller URL IG public + coller URL FB public → embed preview
+5. Insights IG + Insights Page : dashboard analytics
+
+et tu prononces une phrase par bloc.
+
+Tu fais ça :
+→ **tu passes**.
+
+
+
+
+
+
+
+au pire ce que je fais c'est je remplis la database supabase avec de vrais comptes et vrais posts tous vérifier par le debeugueurs et puis c'est tout non ? vrais url vrais descriptions ?... vrai data dans fausse seed, genre je le fais pour fashion je prends 9 publicaitons de 9 créateurs différents et je fas en sorte que le dashboard creator suive vraiment les vrais analytics c'est ça ?
+
+
++ le fait de me décoonnecter de l'app pour faire le login complets et montrer l'écran des permissions???c'est ça ?
+
+Oui — tu peux résoudre ça proprement sans tricher : **utilise de vraies URLs/public posts mais montre clairement que les données affichées viennent d’un appel Meta en direct**. Ne présente jamais des métriques « fabriquées » comme si elles venaient de l’API si ce n’est pas le cas — ça peut conduire à un rejet et à un problème de conformité. Voici exactement **quoi faire**, **comment le montrer** dans la vidéo, et les phrases + notes à coller dans la soumission.
+
+# Règle d’or
+
+Tu peux **pré-remplir** ta DB (Supabase / MeiliSearch) avec des **véritables URLs Meta publiques** (posts Instagram / posts Page Facebook).
+Mais **pour la review** tu dois ensuite **exécuter la requête live** qui récupère les données depuis Meta, montrer la requête / réponse (Network tab ou server logs) et montrer l’UI mise à jour à partir de cette réponse.
+Si tu fais ça — reviewers peuvent reproduire, vérifier via Debugger, et tout est propre.
+
+---
+
+# Étapes concrètes (ordre à suivre avant d’enregistrer)
+
+1. **Choisis 3–9 vraies URLs Meta publiques** (Instagram public posts + 1 Facebook Page post).
+   → Préférer posts publics (comptes non privés), de créateurs/brands.
+   → Valide chaque URL avec **Facebook Debugger** (developers.facebook.com/tools/debug/) et screenshot “scrape OK”.
+
+2. **Insère temporairement ces URLs dans Supabase** (table demo_urls) *ou* prépare un bouton “Fetch live” dans ton UI qui effectue la requête live et écrit la réponse en DB.
+
+   * Option propre : garde une colonne `source` = `seed_demo` et `live_fetched_at` = null. Quand tu fetches live, `live_fetched_at` = now.
+
+3. **Avant d’enregistrer : révoque la permission existante**
+
+   * Soit via ton compte: Settings → Business Integrations → Remove Veyl.io
+   * Soit, mieux, utilise un **Test User** (App Dashboard → Roles → Test Users) et connect via ce test user.
+     → L’objectif : forcer l’apparition du **consent screen** listant les scopes (c’est ce qu’ils réclament).
+
+4. **Prépare ton enregistrement** : Network tab ouvert + console logs (ou prépare un “server logs window” qui montre la requête/response). Masque/ floute tokens secrets si tu affiches le back-end.
+
+5. **Sequence d’enregistrement (follow exactly)**:
+
+   * Intro titre (5s): “This video demonstrates Meta login, consent, oEmbed, Public Content and Insights (English UI).”
+   * Show: Navigate to /auth (login page), click “Sign in with Facebook/Instagram”.
+   * **Consent screen**: show full list of permissions (scopes) — **speak**: “This consent screen lists the permissions we request: instagram_basic, instagram_manage_insights, pages_read_user_content, pages_show_list, pages_read_engagement, oembed_read, Page Public Content Access, Instagram Public Content Access.”
+   * Click **Allow / Reconnect**.
+   * /profile: show “Instagram Connected / Facebook Connected”.
+   * **oEmbed demo**: go to /embed, paste a **real** IG post URL (one of the ones you validated), click Preview → show:
+
+     * Network request to oEmbed (or your server call to Graph API),
+     * HTTP 200 response JSON or embed HTML,
+     * Rendered preview in UI.
+     * Speak: “This demonstrates Meta oEmbed Read — URL used: <paste URL> — verified with Facebook Debugger (screenshot).”
+   * **Public content — Page**: go to /search or /projects → search a **public Page name** (not owned by you), show returned public posts:
+
+     * Show server call `GET /{page-id}/posts` or Page Search call + response,
+     * UI displays posts and comments (public). Speak: “This demonstrates Page Public Content Access — we are viewing public posts from a Page we do NOT own.”
+   * **Instagram Public Content — Hashtag search**: perform `#hashtag` search, show Graph Hashtag call + response, UI listing returned media. Speak: “This demonstrates Instagram Public Content Access — hashtag search returned public media.”
+   * **Insights** (for a connected Business account you own or connected test user): click “Fetch insights”, show server call `GET /{ig-business-id}/insights` + response + charts populated. Speak: “This demonstrates instagram_manage_insights / read_insights: the data is fetched live and used to populate these charts.”
+   * Show Supabase table before/after if you seeded: demonstrate that seed rows were replaced/updated by live fetch (or that live entries were written).
+   * Outro: list exact URLs used and timecodes.
+
+---
+
+# Phrases précises à dire (EN) — use them verbatim
+
+Say each before demo block:
+
+* Consent screen:
+  “This consent screen lists the permissions we request for Veyl.io. We need these scopes for business account metadata, insights and public content access.”
+* oEmbed:
+  “Now I paste a **real** Instagram public post URL. This demonstrates **Meta oEmbed Read**: the app fetches embed HTML/metadata from Meta and renders the preview.”
+* Page public:
+  “This shows **Page Public Content Access**: we are viewing public posts from a Page we do not manage. The request/response is shown in Network/server logs.”
+* Hashtag:
+  “This shows **Instagram Public Content Access** via hashtag search: Graph API returned these public media items.”
+* Insights:
+  “This shows **instagram_manage_insights / read_insights**: fetching live Insights for a connected IG Business / Facebook Page.”
+
+---
+
+# What to include in the App Review notes (copy/paste template)
+
+Paste this in the “Notes for Reviewer” box — replace placeholders and timecodes with your recording’s actual timestamps:
+
+```
+Use-case summary (short):
+Veyl.io provides social listening and analytics for marketers. The demo video shows login, consent, oEmbed preview, hashtag search, public page fetch, and insights retrieval - all performed live using Meta Graph API calls.
+
+Test URLs used (all public):
+1) IG post: https://www.instagram.com/p/EXAMPLE_1
+2) IG post: https://www.instagram.com/p/EXAMPLE_2
+3) FB Page post: https://www.facebook.com/EXAMPLE_PAGE/posts/POST_ID
+
+Video timecodes (English UI):
+00:00 Intro
+00:08 Meta login + consent screen (permissions visible)
+00:45 /profile shows connected accounts
+01:05 oEmbed demo — paste IG URL + Network response (URL #1)
+01:50 Hashtag search demo (#example) — Graph API request/response
+02:30 Page Public Content demo — fetch public posts from a Page (URL #3)
+03:10 Insights demo — fetch IG/Page insights for connected Business account (show server logs + response)
+03:50 Supabase table update showing live fetched data
+04:10 Outro
+
+Debugging evidence:
+- Facebook Debugger screenshots for URLs above (attached).
+- Network/server logs shown in-video proving live Graph API requests and HTTP 200 responses (tokens redacted).
+
+Notes:
+- We used a Test User / removed prior integration to force the consent screen during recording.
+- If you need any further test credentials or a specific test Page/IG to validate, tell us and we will provide.
+```
+
+---
+
+# Important compliance notes (don’t skip)
+
+* **Do not** show real access tokens or secrets in clear text in the recording. Blur or hide them. Show only request/response headers (status code, JSON body) and relevant fields (id, media_url, caption) — hide `access_token` values.
+* **Do not** fabricate analytics numbers. If you display analytics in charts, those charts must be populated from the live `/insights` response or clearly labeled as “demo”.
+* If you must show seeded demo content, **label it** on-screen and then immediately run the live fetch so the reviewer sees the live source.
+
+---
+
+# Quick answers to your two final short questions
+
+> “je remplis la database supabase avec de vrais comptes et vrais posts tous vérifier par le debuggeurs et puis c'est tout non ?”
+> Oui **mais** il ne suffit pas *seulement* de stocker des URLs dans la DB. **Tu dois montrer la requête live** (Graph API / oEmbed call) qui récupère/valide ces URLs et remplir l’UI à partir de cette réponse — et montrer Network/server logs + Debugger screenshot. Stocker URLs c’est OK, mais la preuve offerte au reviewer est le **live fetch**.
+
+> “+ le fait de me décoonnecter de l'app pour faire le login complets et montrer l'écran des permissions?? c'est ça ?”
+> Exact. Révoque l’intégration (ou utilise un Test User) pour forcer le **consent screen** et capture-le dans la vidéo.
+
+---
+
+Si tu veux maintenant je te donne **immédiatement** (1) la checklist finale prête à coller, (2) le texte exact “Notes for Reviewer” avec tes URLs remplies si tu me donnes 3 URLs publiques que tu veux utiliser, et (3) un script minute-par-minute prêt à lire pendant l’enregistrement. Dis moi si tu veux que je génère ces 3 éléments — colle ici 3 URLs publiques (ou dis “I’ll use these placeholder URLs” et je mets des placeholders à remplacer).
+
+
+Tu mélanges trois trucs différents. Je te les démêle net :
+
+## 1) Ce que **Meta** veut voir (preuves “live”)
+
+Ils veulent une **preuve d’appel Meta** (Graph API / oEmbed) et l’**usage** de la réponse dans ton UI. Deux façons d’y arriver pendant la vidéo :
+
+* **Network tab (front)** : l’onglet *Network* des DevTools du navigateur qui montre la requête HTTP sortante vers ton **backend** (ou directement vers l’API Meta si tu appelles en front), et la **réponse** (status 200, JSON/HTML d’oEmbed).
+* **Server logs (back)** : une fenêtre (tail -f, console, log viewer) où l’on voit la requête que **ton serveur** envoie à la **Graph API Meta** (endpoint, paramètres) et la **réponse** (200 + JSON tronqué). Les secrets sont floutés.
+
+> Montrer un SELECT sur ta DB (vecteur, MeiliSearch, etc.) **ne prouve pas** que les données viennent de Meta. Ça prouve juste ton moteur interne. C’est super pour ton produit, **inutile** pour l’App Review.
+
+---
+
+## 2) Ton SELECT SQL ≠ la preuve attendue
+
+La requête :
+
+```sql
+WITH q AS (
+  SELECT embedding FROM posts_vector ORDER BY created_at LIMIT 1
+)
+SELECT id, title, url,
+       embedding <=> (SELECT embedding FROM q) AS distance
+FROM posts_vector
+ORDER BY distance
+LIMIT 3;
+```
+
+* Ça montre un **classement** local (vector search) dans **ta DB** (Supabase/Postgres).
+* Meta s’en fiche pour la **validation des permissions**.
+* Garde-le pour ta démo produit si tu veux, mais **ajoute** impérativement un bouton/flow qui déclenche un **appel Graph API réel**, puis **montre** la requête/réponse.
+
+---
+
+## 3) Concrètement, quoi montrer pour chaque feature
+
+### A. oEmbed Read (preuve simple)
+
+Dans ton UI “Preview oEmbed” :
+
+1. Colle une **vraie URL** d’un post public IG/FB.
+2. Clique “Preview”.
+3. **Network tab** : montre la requête vers **ton backend** `/api/oembed?url=...` (ou directement vers l’endpoint oEmbed).
+4. **Server log** : ton back fait l’appel vers Meta, par ex :
+
+   * IG: `GET https://graph.facebook.com/vXX.X/instagram_oembed?url={PUBLIC_IG_URL}`
+   * FB: `GET https://graph.facebook.com/vXX.X/oembed_page?url={PUBLIC_FB_URL}` (ou endpoint oEmbed adapté)
+5. Montre la **réponse 200** (HTML d’embed + metadata) → ton UI rend l’aperçu.
+
+### B. Page Public Content Access
+
+1. Dans “Search Pages”, tape une page **que tu ne gères pas**.
+2. Clique “View public posts”.
+3. **Server log** : montre l’appel Graph API (ex. `GET /{page-id}/posts` ou la séquence “search page → get posts publics”, selon ton implémentation).
+4. UI affiche les posts publics (titres, liens, extraits).
+
+### C. Instagram Public Content (Hashtag)
+
+1. Dans “Hashtag Explorer”, tape `#fashion` (ex.).
+2. **Server log** : montre la requête vers l’endpoint Hashtag (résolution du hashtag + médias).
+3. UI affiche la liste des médias publics.
+
+### D. Insights (pages_read_engagement / read_insights / instagram_*_insights)
+
+1. Sélectionne **ton** compte (Page/IG Business connecté).
+2. Clique “Fetch Insights”.
+3. **Server log** : montre `GET /{ig-business-id}/insights?metric=...` (et/ou endpoints Pages Insights).
+4. UI met à jour les graphes avec la réponse.
+
+> À chaque bloc, dis une phrase : “This demonstrates [permission] and shows the live Graph API request and response.”
+
+---
+
+## 4) “Debugger” Meta vs ta DB/MeiliSearch : ne pas confondre
+
+* **Facebook/Meta Debugger** = un **outil web** (Meta) pour **vérifier** qu’une **URL publique** (post IG / post FB / page) est accessible/embeddable par Meta (pas d’erreur, bons metadatas). Tu y colles **l’URL du post** (pas l’URL de ta DB).
+  → Tu fournis ces URLs dans tes notes de review pour que le reviewer puisse les tester lui-même.
+
+* **Ta DB/MeiliSearch** = ton **moteur interne** (stockage, index, embeddings).
+  → C’est utile produit, mais **pas** la preuve d’accès aux **données sources Meta**.
+
+---
+
+## 5) “Je fais un fetch dans la barre de recherche ?”
+
+Oui. Ajoute un **vrai** bouton/flow qui déclenche un **appel live** :
+
+* Par ex. “Fetch from Meta” ou “Validate with Meta” dans l’écran où tu montres la donnée.
+* Ce bouton déclenche ton endpoint backend (`/api/ig/hashtag-search`, `/api/fb/page-public-posts`, `/api/oembed`…), qui lui appelle la **Graph API Meta**.
+* Tu **montres** la requête et la réponse (Network tab côté front **et**/ou logs côté back).
+
+---
+
+## 6) Exemple d’implémentation ultra-simple (à but de démo)
+
+### Route backend (pseudo)
+
+```
+GET /api/oembed?url=...
+  -> appelle https://graph.facebook.com/vXX.X/instagram_oembed?url=...
+  -> log: method, url, status, duration
+  -> renvoie le JSON/HTML d’oEmbed au front
+```
+
+### Vidéo : ce que tu montres
+
+* Front: Network → `/api/oembed?url=...` → 200 → body (HTML).
+* Back: log console → “GET instagram_oembed url=..., 200, 120ms”.
+* UI: tu affiches le preview généré.
+
+Même logique pour hashtag et pages publics.
+
+---
+
+## 7) Consent screen (la partie manquante chez toi)
+
+* **Révoque** l’app dans Facebook > Settings > Business Integrations (ou utilise un **Test User**).
+* Relance le login : **montre l’écran où les permissions sont listées** → “Continue / Allow”.
+* Puis enchaîne direct sur les 3–4 démos ci-dessus.
+
+---
+
+## 8) TL;DR “quoi enregistrer”
+
+1. Login → **consent screen visible** → Allow.
+2. /profile : “Connected”.
+3. **oEmbed** : colle **URL publique réelle** → Network/Logs → preview rendu.
+4. **Page Public** : cherche une page non gérée → fetch publics → Network/Logs → rendu.
+5. **Hashtag** : `#fashion` → Network/Logs → liste médias.
+6. **Insights** : fetch → Logs → graphes.
+7. (Optionnel) Montre la DB qui s’update après **live fetch** (mais c’est bonus).
+
+---
+
+Si tu veux, dis-moi précisément :
+
+* les endpoints back que tu as (ou que tu peux ajouter vite),
+* 2–3 URLs publiques réelles que tu comptes utiliser,
+  et je te fais un mini-script **mot-à-mot** + la **note “For Reviewer”** prête à coller.
+
+Bonne question — tu es sur la bonne piste mais il y a quelques confusions de base à lever. Je te pose la réponse claire et actionnable en plusieurs points (quelle DB, pourquoi, comment prouver un 200 réel, et les snippets / actions concrètes à faire avant d’enregistrer la vidéo).
+
+---
+
+## 1) Quelle DB remplir ?
+
+**La DB que ton app utilise pendant la démo.**
+Autrement dit : remplis **la même** base que ton UI lit en production/demo (Supabase/Postgres dans ton cas).
+Pourquoi ? Parce que le reviewer regarde ton app → si l’UI lit depuis Supabase, il faut que Supabase contienne les URLs/références réelles que tu vas valider en live.
+
+Exemples valides :
+
+* Supabase (Postgres) — recommandé si c’est ce que ton front utilise.
+* Railway Postgres ou tout autre Postgres si ton app les lit.
+* DBeaver est juste un client SQL, pas une DB ; il sert à éditer la Postgres que tu héberges.
+
+**Règle** : le reviewer doit voir dans ton UI les mêmes URLs/entrées que tu valideras via Meta. Donc insère les vraies URLs publiques dans la table que ton front/l’API lit (p.ex. `posts_vector`).
+
+---
+
+## 2) Tu ne dois pas « forcer » un 200 faux — il faut **montrer un appel Meta réel**
+
+Tu ne peux pas tromper le reviewer en affichant un `200` fabriqué sans qu’un appel réel ait eu lieu. Les reviewers vérifieront :
+
+* le Network tab ou/et les logs serveur montrant la requête vers Graph API / oEmbed endpoint,
+* le corps de la réponse (JSON / HTML embed) et le rendu dans ton UI,
+* que les URLs sont accessibles via Facebook Debugger.
+
+Donc **procédé correct** : seed la DB avec de vraies URLs, puis **exécute un "live fetch"** (ton backend appelle Meta) et mets à jour la DB avec la réponse. Montre le request/response (200) dans la vidéo.
+
+---
+
+## 3) Workflow simple, étape-par-étape (pratique)
+
+1. **Choisis 3 vraies URLs publiques** (IG posts / FB Page posts). Vérifie-les dans Facebook Debugger (developers.facebook.com/tools/debug/) — prends screenshot “scrape OK”.
+2. **Insère ces URLs dans Supabase** (table que ton app lit, par ex. `posts_vector.url`).
+
+   * Tu peux ajouter un champ `live_fetched_at` et `source` (`seed_demo`) pour tracer.
+3. **Ajoute dans ton UI un bouton** `Fetch live` (ou `Validate with Meta`) qui appelle un endpoint backend, ex `/api/fetch_from_meta?post_id=...`.
+4. **Backend** : quand `/api/fetch_from_meta` est appelé, il :
+
+   * appelle l’endpoint Meta (oEmbed or Graph API) avec ton token,
+   * logge la requête et la réponse (status, body),
+   * met à jour la ligne Supabase avec le JSON reçu (caption, media_url, metrics si disponible) et `live_fetched_at = now()`,
+   * renvoie 200 à ton front.
+5. **Front** : après le fetch, l’UI se rafraîchit (ou la response est affichée) et montre les données « live » (embed, caption, media, metrics).
+6. **Enregistrement vidéo** : affiche Network tab (request `/api/fetch_from_meta`) **et** la console serveur (logs) montrant la requête vers `graph.facebook.com` et la réponse HTTP 200. Floute tokens si visibles.
+
+---
+
+## 4) Exemple minimal de code (safe — sans token)
+
+### Backend Node/Express (pseudo)
+
+```js
+// /api/fetch_from_meta?url=ENCODED_URL
+app.get('/api/fetch_from_meta', async (req, res) => {
+  const url = req.query.url;
+  // log: incoming request
+  console.log('Fetch live for', url);
+
+  // call Meta oEmbed (example)
+  const graphUrl = `https://graph.facebook.com/v16.0/instagram_oembed?url=${encodeURIComponent(url)}&access_token=YOUR_TOKEN`;
+  const metaResp = await fetch(graphUrl);
+  const body = await metaResp.text(); // oEmbed can be html
+  console.log('Meta response status', metaResp.status);
+  console.log('Meta response body snippet', body.slice(0, 400)); // log safe snippet
+
+  // update Supabase row (pseudo)
+  await supabase
+    .from('posts_vector')
+    .update({ embed_html: body, live_fetched_at: new Date().toISOString() })
+    .eq('url', url);
+
+  res.status(200).json({ ok: true, meta_status: metaResp.status });
+});
+```
+
+> **Important** : ne publie jamais `YOUR_TOKEN` dans la vidéo. Si tu dois montrer un token, floute-le.
+
+### cURL (pour test manual)
+
+```bash
+curl "https://graph.facebook.com/v16.0/instagram_oembed?url=https://www.instagram.com/p/SHORTCODE&access_token=EAA..."
+```
+
+Montre la réponse JSON/HTML dans ton terminal (ou logs) — puis montre que ton UI reprend ces données.
+
+---
+
+## 5) Comment prouver le 200 aux reviewers (exact)
+
+Dans la vidéo montre **au même moment** :
+
+* Le **Network tab** (filtre XHR) avec la requête front vers `/api/fetch_from_meta?url=...` → status 200.
+* La **console serveur** (ou un panneau log) montrant la requête sortante vers `graph.facebook.com/...` et la réponse `200` + partie du body.
+* Le **Debug** : montre la page/URL dans Facebook Debugger (copie d’écran) qui confirme que Meta peut scrapper/embeder l’URL.
+
+---
+
+## 6) Cas où tu utilises un system user (server-to-server)
+
+Si ton app utilise un **system user token** (business-level token) pour faire les appels, indique-le clairement dans ta soumission et montre :
+
+* un extrait de log où la requête part du serveur (endpoint `graph.facebook.com/...`) et retourne `200`.
+* mentionne *explicitly* dans la note de review : “We use a Business System User token to fetch data server-side; frontend login only used to connect accounts. See server logs at 01:10–01:30.”
+
+---
+
+## 7) Rappel : ne fais pas d'inventions
+
+* N’affiche pas des analytics faux comme si elles venaient de Meta.
+* Si tu dois montrer un dashboard avec valeurs factices, **label** clairement “demo” **ET** ensuite montre la live fetch qui remplace/complète ces valeurs.
+* Les reviewers peuvent vérifier les URLs dans le Debugger ; si elles ne mènent pas à du contenu Meta, ils rejettent.
+
+---
+
+## 8) Checklist pratique pour ton enregistrement (copie/colle)
+
+1. Seed Supabase `posts_vector` with 3–9 real IG/FB public URLs.
+2. Validate each URL in Facebook Debugger — save screenshots.
+3. Implement (or use) `/api/fetch_from_meta` that calls oEmbed/Graph and updates the DB.
+4. Open DevTools Network and your server log tail window.
+5. Revoke Veyl.io permissions (or use test user) to force consent screen.
+6. Start recording:
+
+   * Show consent screen + accept.
+   * Go to the seeded post in UI → click “Fetch live” → show Network `/api/fetch_from_meta` (200).
+   * Show server log: request to `graph.facebook.com` → 200 response snippet.
+   * Show UI updated with embed/metadata.
+   * Show Debugger screenshot optionally.
+7. In the App Review notes: paste the URLs used + timecodes.
+
+---
+
+## 9) Exemple de phrase à dire dans la vidéo (EN — verbatim)
+
+* “Now I will fetch live oEmbed data from Meta for this Instagram URL — you will see the API request and the 200 response in the server logs.”
+* “This shows the Graph API request to graph.facebook.com and the returned HTML/JSON used to create the preview.”
+* “I seeded the UI table with public URLs, and now I trigger the live fetch so the data is validated by Meta in real time.”
+
+---
+
+Si tu veux je te fournis tout de suite **(A)** un petit endpoint Node/Express complet prêt à copier (sans token), **(B)** le SQL précis pour mettre à jour ta table `posts_vector` avec 3 URLs que tu me fournis, et **(C)** la note “For Reviewer” prête à coller avec timecodes.
+
+Donne-moi :
+
+1. Les 3 URLs publiques IG/FB que tu veux utiliser (ou dis “I’ll use placeholders” et j’écris le template),
+2. Si tu veux le snippet Node/Express + Supabase update SQL.
+
+
+Presque. Le “200 OK” qui compte pour la review ne doit pas venir de **Supabase** : il doit venir d’un **appel réel à l’API Meta (Graph / oEmbed)** fait par **ton backend**.
+Tu peux t’appuyer sur Supabase pour afficher/organiser les données dans l’UI, mais la preuve demandée est :
+
+1. Front → ton backend (`/api/...`) : 200
+2. Ton backend → **graph.facebook.com** (oEmbed / Graph endpoints) : 200
+3. L’UI montre le résultat issu de cette réponse
+
+Supabase (ou Railway Postgres) sert d’**état**/cache, pas de “preuve”.
+
+---
+
+# Ce qu’il te faut (minimal mais correct)
+
+## A) Un petit schéma Supabase (simple)
+
+* `public_posts(id, platform, url, source, live_fetched_at, embed_html, meta_json)`
+
+  * `platform`: `'instagram' | 'facebook'`
+  * `source`: `'seed_demo' | 'live'`
+  * `url`: vraie URL publique (validée au Debugger)
+  * `embed_html`, `meta_json`: champs remplis après fetch live
+* `hashtags(id, tag)`
+* `post_hashtags(post_id, hashtag_id)`
+
+> Tu peux copier ton schéma Railway si tu veux, mais ce **minimal** suffit pour la démo review.
+
+## B) 3–9 **vraies** URLs publiques Meta
+
+* 2–3 posts IG publics (créateurs/brands)
+* 1 post FB Page public
+* (Optionnel) 1–2 Pages publiques (pour Page Public Content)
+* Valide chaque URL dans **Facebook Debugger** avant la vidéo.
+
+## C) 3 endpoints backend (exemples)
+
+* `GET /api/oembed?url=...`
+  → appelle `https://graph.facebook.com/vXX.X/instagram_oembed?url=...` (ou oEmbed FB)
+  → log request/response (200), sauvegarde `embed_html` dans `public_posts`, renvoie 200
+* `GET /api/ig/hashtag-search?tag=...`
+  → appelle les endpoints Hashtag de l’IG Graph API
+  → log request/response (200), insère/maj `public_posts` (source=`live`)
+* `GET /api/fb/page-public?page_id=...`
+  → `/{page-id}/posts` (contenu **public**)
+  → log request/response (200), insère/maj `public_posts`
+
+> Ces endpoints peuvent être ultra-minimaux pour la review. Floute le token dans les logs visibles.
+
+---
+
+# Ce que tu montres au reviewer (la preuve “200”)
+
+Pour **chaque** permission/feature :
+
+1. **UI** : un bouton clair (CTA) qui déclenche l’appel live (ex. “Preview oEmbed”, “Fetch hashtag”, “Fetch page public posts”, “Fetch insights”).
+2. **Network tab (F12)** : on voit la requête front → **/api/...** → **200**.
+3. **Logs serveur** (ou un panneau “Server logs” intégré) : on voit l’appel sortant vers **graph.facebook.com/...** → **200** + un snippet du body (sans secrets).
+4. **UI mise à jour** : rendu de l’embed / liste de posts / graphes d’insights.
+
+> Le 200 de Supabase (sélect/insert) ne suffit pas. Il est OK comme **conséquence** (DB mise à jour), mais la **preuve** c’est bien les 200 de l’appel **Meta**.
+
+---
+
+# Mapping clair (permission → CTA → Endpoint → Preuve)
+
+| Permission / Feature                                             | CTA dans l’UI                            | Endpoint backend                                     | Appel Meta attendu                          | Preuve à montrer                                |
+| ---------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------- | ------------------------------------------- | ----------------------------------------------- |
+| **Meta oEmbed Read**                                             | “Preview” sur une vraie URL IG/FB        | `/api/oembed?url=`                                   | `.../instagram_oembed?url=...` ou oEmbed FB | Network 200 + log serveur 200 + embed rendu     |
+| **Instagram Public Content Access**                              | “Search #fashion”                        | `/api/ig/hashtag-search?tag=`                        | endpoints Hashtag (resolve + media)         | Network 200 + log serveur 200 + liste médias    |
+| **Page Public Content Access**                                   | “View public posts” d’une Page non gérée | `/api/fb/page-public?page_id=`                       | `/{page-id}/posts` (public)                 | Network 200 + log serveur 200 + posts affichés  |
+| **instagram_*_insights / read_insights / pages_read_engagement** | “Fetch insights” sur un compte connecté  | `/api/ig/insights?id=` / `/api/fb/page-insights?id=` | endpoints Insights                          | Network 200 + log serveur 200 + graphes remplis |
+
+---
+
+# Faut-il “remplir plusieurs tables” ?
+
+* **Oui pour le confort d’UI**, mais **non** pour la preuve :
+
+  * Tu peux te contenter d’1 table `public_posts` + des colonnes `source` / `live_fetched_at`.
+  * Si tu veux aligner à ton modèle Railway, OK ; l’important c’est que l’UI lise **la même DB** que tu remplis, et que tu puisses **déclencher un fetch live**.
+
+# Faut-il “beaucoup de posts” ?
+
+* **Non**, 1–3 suffisent par feature pour prouver le fonctionnement.
+* Mieux vaut 3 bien choisis (URLs valides, Debugger OK) que 50 vagues.
+
+---
+
+# Ordre de tournage (ultra-court)
+
+1. **Login frais** (consent screen visible) → Allow.
+2. **oEmbed** : colle URL publique → clique **Preview** → Network 200 → logs 200 → embed rendu.
+3. **Hashtag** : `#fashion` → **Fetch** → Network 200 → logs 200 → posts.
+4. **Page Public** : choisis une Page que tu **ne** gères **pas** → **Fetch** → Network 200 → logs 200 → posts.
+5. **Insights** : compte connecté → **Fetch** → Network 200 → logs 200 → chart rempli.
+
+Ajoute en overlay (ou dis à voix haute) une phrase courte par bloc :
+“This demonstrates [permission] with a live Graph API call.”
+
+---
+
+## TL;DR réponses à tes questions
+
+* **“Le 200 vient d’où ?”**
+  → De l’appel **Meta Graph/oEmbed** effectué par **ton backend** (et tu le montres **dans les logs** + **Network** front).
+
+* **“Faut remplir quelle DB ?”**
+  → Celle que **ton UI lit** pendant la démo (Supabase chez toi). Tu peux la préremplir avec **de vraies URLs**. Le fetch live viendra **mettre à jour** ces lignes.
+
+* **“Faut reproduire toutes mes tables Railway ?”**
+  → Pas obligatoire. Un schéma minimal propre suffit pour la review. L’important c’est le **flow live** qui prouve l’accès Meta.
+
+* **“Un CTA par permission qui renvoie 200 dans Network ?”**
+  → Oui : chaque permission doit avoir une **action visible** qui déclenche un **appel /api** (200) puis un **appel Meta** (200) côté serveur, et un **rendu** à l’écran.
+
+Si tu veux, je te file maintenant :
+
+* un mini code d’endpoint `/api/oembed` et `/api/ig/hashtag-search` prêt à coller,
+* le SQL d’insertion de 3 URLs réelles dans `public_posts`,
+* un texte “Notes for Reviewer” prêt à coller (avec timecodes placeholders).
+
+Parfait, ta table est suffisante pour l’App Review. Tu n’as pas besoin d’ajouter 10 tables : il suffit de **pré-remplir minimalement** puis de **compléter via un fetch live Meta** qui met à jour les champs. Voici le mapping concret champ-par-champ + des exemples d’INSERT/UPDATE.
+
+# 1) Ce que signifient tes colonnes (et quoi y mettre)
+
+* **id (uuid)** : généré par Supabase (clé interne).
+* **provider (text)** : `'instagram'` ou `'facebook'`.
+* **url (text)** : **URL publique réelle** du contenu Meta (post IG, post FB page).
+* **external_id (text)** : l’ID retourné par l’API Meta (ex. `IG_MEDIA_ID` ou `FB_POST_ID`).
+* **title (text)** : un titre court dérivé (ex. début du `caption` IG ou du `message` FB).
+* **content (text)** : texte complet (caption IG ou message FB).
+* **api_payload (jsonb)** : **payload brut** renvoyé par Meta (oEmbed / Graph / media…).
+* **last_fetch_at (timestamptz)** : horodatage du **dernier fetch live** réussi.
+* **embedding (vector)** : ta recherche sémantique (optionnel pour la review).
+* **created_at** : auto.
+
+# 2) Remplissage minimal (seed “propre”)
+
+Commence par insérer seulement `provider` + `url` (vraies URLs) ; le reste sera rempli par ton endpoint **fetch live**.
+
+```sql
+insert into public.posts_vector (id, provider, url)
+values
+  (gen_random_uuid(), 'instagram', 'https://www.instagram.com/p/XXXXXXXXX/'),
+  (gen_random_uuid(), 'instagram', 'https://www.instagram.com/p/YYYYYYYYY/'),
+  (gen_random_uuid(), 'facebook',  'https://www.facebook.com/SOME_PAGE/posts/1234567890');
+```
+
+# 3) Ton endpoint “fetch live” complète la ligne
+
+Tu fais un **bouton** dans l’UI (“Preview” / “Fetch live”) qui appelle ton backend (ex. `/api/oembed?url=...` ou `/api/graph/fetch?url=...`).
+Le backend détecte `provider` et **appelle Meta** puis **met à jour** la ligne.
+
+## A) oEmbed — Instagram
+
+* Appel Meta : `GET https://graph.facebook.com/vXX.X/instagram_oembed?url={PUBLIC_IG_URL}&access_token=...`
+* Réponse (extraits typiques) :
+  `{ "author_name": "...", "provider_name":"Instagram", "title":"…", "html":"…", "thumbnail_url":"…", "version":"1.0", ... }`
+
+### Mapping → tes champs
+
+* `external_id` : si fourni (sinon tu peux la récupérer ensuite via Graph à partir du shortcode)
+* `title` : `title` (ou tronquer `author_name + …`)
+* `content` : pas toujours fourni → mettre vide ou dériver plus tard
+* `api_payload` : **toute** la réponse oEmbed
+* `last_fetch_at` : `now()`
+
+```sql
+update public.posts_vector
+set external_id = coalesce(api_payload->>'media_id', external_id),
+    title       = coalesce(api_payload->>'title', title),
+    content     = content,                 -- si rien dans oEmbed, laisse comme avant
+    api_payload = :oembed_json::jsonb,
+    last_fetch_at = now()
+where url = :url;
+```
+
+## B) Page Public Content — Facebook
+
+* Appels typiques :
+
+  1. Résoudre la Page (si tu n’as que l’URL) → obtenir `{page-id}`
+  2. `GET /{page-id}/posts?fields=permalink_url,message,created_time,full_picture`
+
+### Mapping (pour chaque post retourné)
+
+* `provider` = `'facebook'`
+* `url` = `permalink_url`
+* `external_id` = `id`
+* `title` = 80 premiers caractères de `message`
+* `content` = `message` complet
+* `api_payload` = l’objet complet du post
+* `last_fetch_at` = `now()`
+
+```sql
+-- upsert d’un post public FB
+insert into public.posts_vector (id, provider, url, external_id, title, content, api_payload, last_fetch_at)
+values (
+  gen_random_uuid(),
+  'facebook',
+  :permalink_url,
+  :post_id,
+  left(:message, 80),
+  :message,
+  :post_json::jsonb,
+  now()
+)
+on conflict (url) do update
+set external_id  = excluded.external_id,
+    title        = excluded.title,
+    content      = excluded.content,
+    api_payload  = excluded.api_payload,
+    last_fetch_at= excluded.last_fetch_at;
+```
+
+## C) Instagram Public Content — Hashtag
+
+* Séquence IG Graph :
+
+  1. `GET /ig_hashtag_search?user_id={IG_BUSINESS_ID}&q={tag}` → renvoie `hashtag_id`
+  2. `GET /{hashtag_id}/recent_media?user_id={IG_BUSINESS_ID}&fields=id,caption,media_type,media_url,permalink,timestamp,owner`
+
+### Mapping (par media)
+
+* `provider` = `'instagram'`
+* `url` = `permalink`
+* `external_id` = `id`
+* `title` = 80 premiers caractères de `caption`
+* `content` = `caption`
+* `api_payload` = l’objet `media`
+* `last_fetch_at` = `now()`
+
+```sql
+insert into public.posts_vector (id, provider, url, external_id, title, content, api_payload, last_fetch_at)
+values (
+  gen_random_uuid(),
+  'instagram',
+  :permalink,
+  :ig_media_id,
+  left(:caption, 80),
+  :caption,
+  :media_json::jsonb,
+  now()
+)
+on conflict (url) do update
+set external_id   = excluded.external_id,
+    title         = excluded.title,
+    content       = excluded.content,
+    api_payload   = excluded.api_payload,
+    last_fetch_at = excluded.last_fetch_at;
+```
+
+> Remarque : pour les **Insights** (pages/ig), le payload est souvent une **liste** de métriques. Stocke-les telles quelles dans `api_payload` (ou dans une table “insights” si tu veux, mais pas nécessaire pour la review). L’important est d’afficher un graphe alimenté **depuis la réponse live**.
+
+# 4) Ce que tu montres pendant la vidéo (preuve)
+
+Pour **chaque** bouton/permission :
+
+1. **Network tab** : la requête front → `200` sur `/api/...`
+2. **Logs serveur** : appel sortant vers `https://graph.facebook.com/...` → `200` (token flouté) + court extrait de réponse
+3. **UI** : la ligne est mise à jour (tu peux afficher un badge “Live ✓ {last_fetch_at}”) et rendre l’embed / la liste / le graphe.
+
+# 5) Si tu veux aussi un *title/content* AVANT le fetch
+
+Tu peux pré-remplir `title/content` à partir de ta seed (texte marketing). **Mais** dès que tu fais le **fetch live**, remplace par les vraies valeurs issues de Meta (caption/message). C’est ça que le reviewer veut voir.
+
+---
+
+## TL;DR
+
+* Seed minimal = `provider` + **vraies `url` publiques**.
+* Bouton *Fetch live* appelle **Meta** → **200** → met à jour : `external_id`, `title`, `content`, `api_payload`, `last_fetch_at`.
+* Montre **Network 200**, **logs 200 vers graph.facebook.com**, et **l’UI** mise à jour.
+* C’est exactement ce dont tu as besoin pour **prouver** chaque permission/feature.

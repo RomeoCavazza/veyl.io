@@ -8,7 +8,6 @@ import { FileText, Calendar, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import { getFakeProjectPosts } from '@/lib/fakeData';
 
 // Importer getApiBase depuis api.ts pour éviter la duplication
 import { getApiBase } from '@/lib/api';
@@ -131,34 +130,9 @@ export default function Projects() {
                         platform_id: 0,
                       })).filter((c: any) => c.creator_username);
                   
-                  // Extraire aussi les créateurs depuis les posts (comme dans ProjectDetail)
-                  const recentPosts = getFakeProjectPosts(project.id).slice(0, 10);
-                  const postUsernames = new Set(
-                    recentPosts
-                      .map((p: any) => p.username?.toLowerCase())
-                      .filter(Boolean)
-                  );
-                  
-                  // Ajouter les créateurs depuis les posts
-                  const existingUsernames = new Set(allCreators.map((c: any) => c.creator_username.toLowerCase()));
-                  const newCreatorsFromPosts = Array.from(postUsernames)
-                    .filter((username: string) => !existingUsernames.has(username))
-                    .map((username: string) => {
-                      const originalPost = recentPosts.find((p: any) => p.username?.toLowerCase() === username);
-                      return {
-                        id: 2000 + allCreators.length,
-                        creator_username: originalPost?.username || username,
-                        platform_id: 0,
-                      };
-                    });
-                  
-                  allCreators = [...allCreators, ...newCreatorsFromPosts];
-                  
-                  // Nombre total de créateurs
                   const totalCreatorsCount = allCreators.length;
-                  
-                  // Afficher seulement les 3 premiers visuellement
                   const displayedCreators = allCreators.slice(0, 3);
+                  const recentPosts: Array<{ id: string; media_url?: string; caption?: string }> = [];
                   
                   return (
                     <Card 

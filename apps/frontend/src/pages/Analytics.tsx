@@ -1,8 +1,18 @@
+import { useState } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { engagementTrendData, topPerformingCreators } from '@/lib/mockData';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { BarChart3, TrendingUp, Users, Eye } from 'lucide-react';
 import {
   LineChart,
@@ -21,23 +31,51 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import { fetchMetaInsights } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Analytics() {
-  const pieData = [
-    { name: 'Images', value: 45, color: 'hsl(var(--primary))' },
-    { name: 'Videos', value: 35, color: 'hsl(var(--accent))' },
-    { name: 'Carousels', value: 20, color: 'hsl(var(--success))' },
-  ];
+  const { toast } = useToast();
+  const [platform, setPlatform] = useState<'instagram' | 'facebook'>('instagram');
+  const [resourceId, setResourceId] = useState('');
+  const [metrics, setMetrics] = useState('impressions,reach,profile_views');
+  const [insightsResponse, setInsightsResponse] = useState<any>(null);
+  const [isFetchingInsights, setIsFetchingInsights] = useState(false);
 
-  const reachData = [
-    { date: '2025-01-15', organic: 45000, paid: 15000 },
-    { date: '2025-01-16', organic: 52000, paid: 18000 },
-    { date: '2025-01-17', organic: 48000, paid: 22000 },
-    { date: '2025-01-18', organic: 61000, paid: 25000 },
-    { date: '2025-01-19', organic: 58000, paid: 28000 },
-    { date: '2025-01-20', organic: 72000, paid: 32000 },
-    { date: '2025-01-21', organic: 68000, paid: 30000 },
-  ];
+  const pieData: Array<{ name: string; value: number; color: string }> = [];
+  const reachData: Array<{ date: string; organic: number; paid: number }> = [];
+  const engagementTrendData: Array<{ date: string; engagement: number; reach: number; impressions: number }> = [];
+  const topPerformingCreators: Array<{ username: string; posts: number; avg_engagement: number; total_reach: number }> = [];
+
+  const handleFetchInsights = async () => {
+    if (!resourceId.trim()) {
+      toast({
+        title: 'Resource ID required',
+        description: 'Provide an Instagram Business ID or Facebook Page ID before fetching insights.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsFetchingInsights(true);
+    try {
+      const data = await fetchMetaInsights(resourceId.trim(), platform, metrics.trim());
+      setInsightsResponse(data);
+      toast({
+        title: 'Insights fetched',
+        description: 'Live insights retrieved from Meta Graph API.',
+      });
+    } catch (error) {
+      console.error('Fetch insights error:', error);
+      toast({
+        title: 'Fetch failed',
+        description: 'Unable to fetch insights from Meta. Check logs and credentials.',
+        variant: 'destructive',
+      });
+      setInsightsResponse(null);
+    } finally {
+      setIsFetchingInsights(false);
+    }
+  };
 
   return (
     <Layout>
@@ -54,6 +92,66 @@ export default function Analytics() {
             Last 7 Days
           </Badge>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Live Insights Fetch (Meta Graph API)</CardTitle>
+            <CardDescription>
+              Provide a connected Instagram Business ID or Facebook Page ID, choose metrics, then fetch live insights.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="resourceId">Resource ID</Label>
+                <Input
+                  id="resourceId"
+                  placeholder="e.g. 1784140xxxxxx (IG Business ID)"
+                  value={resourceId}
+                  onChange={(event) => setResourceId(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="platform">Platform</Label>
+                <Select value={platform} onValueChange={(value: 'instagram' | 'facebook') => setPlatform(value)}>
+                  <SelectTrigger id="platform">
+                    <SelectValue placeholder="Select platform" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="instagram">Instagram Business</SelectItem>
+                    <SelectItem value="facebook">Facebook Page</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="metrics">Metrics (comma-separated)</Label>
+                <Input
+                  id="metrics"
+                  placeholder="impressions,reach,profile_views"
+                  value={metrics}
+                  onChange={(event) => setMetrics(event.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleFetchInsights} disabled={isFetchingInsights}>
+                {isFetchingInsights ? 'Fetching…' : 'Fetch Insights'}
+              </Button>
+            </div>
+            <div className="rounded-lg border bg-muted/40 p-4 text-sm">
+              <p className="font-medium mb-2">Meta API Response</p>
+              {insightsResponse ? (
+                <pre className="max-h-64 overflow-auto text-xs bg-background p-3 rounded-md border">
+                  {JSON.stringify(insightsResponse, null, 2)}
+                </pre>
+              ) : (
+                <p className="text-muted-foreground">
+                  No insights fetched yet. Use the form above and click “Fetch Insights” to trigger a live Meta Graph API call.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Quick Stats */}
         <div className="grid gap-4 md:grid-cols-4">

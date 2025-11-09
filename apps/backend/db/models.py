@@ -106,6 +106,7 @@ class Post(Base):
     __tablename__ = "posts"
     
     id = Column(Text, primary_key=True)
+    external_id = Column(Text, unique=True, index=True)
     platform_id = Column(Integer, ForeignKey("platforms.id"), nullable=False)
     author = Column(String(255))
     caption = Column(Text)
@@ -118,6 +119,9 @@ class Post(Base):
     sentiment = Column(Float)
     score = Column(Float, default=0)
     score_trend = Column(Float, default=0)  # Score de tendance calculé
+    api_payload = Column(JSONType)
+    last_fetch_at = Column(DateTime)
+    source = Column(String(50), default='seed_demo')
     
     # Relations
     platform = relationship("Platform")
@@ -125,6 +129,7 @@ class Post(Base):
     # Contraintes
     __table_args__ = (
         UniqueConstraint('platform_id', 'id', name='posts_platform_id_unique'),
+        UniqueConstraint('external_id', name='uq_posts_external_id'),
     )
 
 class Subscription(Base):
