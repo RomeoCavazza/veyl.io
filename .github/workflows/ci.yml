@@ -122,7 +122,8 @@ jobs:
               console.log(`📦 ${deployments.data.length} ancien(s) déploiement(s) trouvé(s)`);
               
               // Supprimer tous les anciens déploiements (on garde seulement le nouveau)
-              for (const deployment of deployments.data) {
+              const toDelete = deployments.data.slice(2);
+              for (const deployment of toDelete) {
                 try {
                   await github.rest.repos.deleteDeployment({
                     owner: context.repo.owner,
@@ -204,21 +205,12 @@ jobs:
           # Le working-directory est déjà apps/backend grâce à defaults.run
           echo "📦 Current directory: $(pwd)"
           echo "📦 Deploying to Railway..."
-          # Railway CLI up avec --path-as-root pour que le répertoire courant soit la racine
-          # Essayer avec "insidr" d'abord (nom probable du service)
-          npx -y @railway/cli up --service insidr --detach --path-as-root && {
-            echo "✅ Déploiement réussi avec service 'insidr'"
+          npx -y @railway/cli up --service veyl.io --detach --path-as-root && {
+            echo "✅ Déploiement réussi avec service 'veyl.io'"
             exit 0
-          } || {
-            echo "⚠️ Échec avec 'insidr', tentative avec 'insidr-production'..."
-            npx -y @railway/cli up --service insidr-production --detach --path-as-root && {
-              echo "✅ Déploiement réussi avec service 'insidr-production'"
-              exit 0
-            } || {
-              echo "❌ Railway CLI failed. Check if RAILWAY_TOKEN is a valid Project Token."
-              exit 1
-            }
           }
+          echo "❌ Railway CLI failed. Check if RAILWAY_TOKEN is un Project Token valide."
+          exit 1
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       
@@ -229,7 +221,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             try {
-              const envName = 'insidr (satisfied-mindfulness / production)';
+              const envName = 'veyl.io (veyl-production / production)';
               const railwayOutcome = '${{ steps.railway-deploy.outcome }}';
               const railwaySuccess = railwayOutcome === 'success';
               const deployState = railwaySuccess ? 'success' : (railwayOutcome === 'failure' ? 'failure' : 'pending');
@@ -249,7 +241,8 @@ jobs:
               console.log(`📦 ${deployments.data.length} ancien(s) déploiement(s) trouvé(s)`);
               
               // Supprimer tous les anciens déploiements (on garde seulement le nouveau)
-              for (const deployment of deployments.data) {
+              const toDeleteRailway = deployments.data.slice(2);
+              for (const deployment of toDeleteRailway) {
                 try {
                   await github.rest.repos.deleteDeployment({
                     owner: context.repo.owner,
@@ -281,7 +274,7 @@ jobs:
                 repo: context.repo.repo,
                 deployment_id: newDeployment.data.id,
                 state: deployState,
-                environment_url: 'https://insidr-production.up.railway.app',
+                environment_url: 'https://api.veyl.io',
                 description: railwaySuccess ? 'Deployment successful' : (railwayOutcome === 'failure' ? 'Deployment failed' : 'Deployment in progress')
               });
               
@@ -374,34 +367,13 @@ jobs:
           # Il y a un railway.toml à la racine qui pointe vers apps/backend
           # Il y a plusieurs services, donc il faut spécifier lequel
           # PRIORITÉ: Utiliser --path-as-root depuis apps/backend pour que Railway traite apps/backend comme racine
-          echo "📦 Tentative 1: depuis apps/backend avec --path-as-root (meilleure solution)..."
-          cd apps/backend
-          # Avec --path-as-root, Railway CLI traite apps/backend comme la racine
-          # Le railway.toml dans apps/backend a buildPath = "." et dockerfilePath = "Dockerfile"
-          # Cela garantit que Railway trouve requirements.txt dans le bon contexte
-          npx -y @railway/cli up . --service insidr --detach --path-as-root && {
-            echo "✅ Déploiement réussi avec service 'insidr' (depuis apps/backend)"
+          echo "📦 Déploiement unique avec service 'veyl.io'..."
+          npx -y @railway/cli up apps/backend --service veyl.io --detach && {
+            echo "✅ Déploiement réussi sur 'veyl.io'"
             exit 0
-          } || {
-            echo "⚠️ Échec avec --path-as-root, tentative depuis la racine avec railway.toml..."
-            cd ../..
-            npx -y @railway/cli up --service insidr --detach && {
-              echo "✅ Déploiement réussi avec service 'insidr' (depuis racine)"
-              exit 0
-            } || {
-              echo "⚠️ Échec depuis racine, tentative avec chemin explicite apps/backend..."
-              npx -y @railway/cli up apps/backend --service insidr --detach && {
-                echo "✅ Déploiement réussi avec service 'insidr' (chemin explicite)"
-                exit 0
-              } || {
-                echo "❌ Échec de toutes les tentatives. Vérifie:"
-                echo "   1. RAILWAY_TOKEN est un Project Token valide"
-                echo "   2. Le nom du service dans Railway (peut être différent de 'insidr')"
-                echo "   3. Utilise 'railway service list' pour voir les services disponibles"
-                exit 1
-              }
-            }
           }
+          echo "❌ Échec du déploiement Railway."
+          exit 1
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
@@ -482,7 +454,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             try {
-              const envName = 'insidr (satisfied-mindfulness / production)';
+              const envName = 'veyl.io (veyl-production / production)';
               console.log(`🔍 Création du GitHub Deployment Railway (${envName})...`);
               
               const deployments = await github.rest.repos.listDeployments({
@@ -524,7 +496,7 @@ jobs:
                 repo: context.repo.repo,
                 deployment_id: newDeployment.data.id,
                 state: 'success',
-                environment_url: 'https://insidr-production.up.railway.app'
+                environment_url: 'https://api.veyl.io'
               });
               
               console.log('🎉 Déploiement Railway créé et visible');
