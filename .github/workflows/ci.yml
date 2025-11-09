@@ -337,45 +337,16 @@ jobs:
       - name: Deploy to Railway (production only)
         id: railway-deploy
         continue-on-error: true
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           echo "📦 Current directory: $(pwd)"
-          echo "📦 Listing apps/backend:"
-          ls -la apps/backend/ | head -20
-          echo "📦 Deploying to Railway via CLI..."
-          
-          # Railway CLI utilise RAILWAY_TOKEN depuis la variable d'environnement
-          # Vérifier que le token est bien défini
-          if [ -z "$RAILWAY_TOKEN" ]; then
-            echo "❌ RAILWAY_TOKEN n'est pas défini!"
-            exit 1
-          else
-            echo "✅ RAILWAY_TOKEN est défini (length: ${#RAILWAY_TOKEN})"
-          fi
-          
-          echo "🔍 Vérification de la configuration Railway..."
-          echo "🔍 Token check..."
-          npx -y @railway/cli whoami || echo "⚠️ Token check failed (continuing anyway)"
-          
-          echo "🔍 Liste des services disponibles..."
-          # Essayer de lister les services pour trouver le bon nom
-          echo "🔍 Récupération de la liste des services..."
-          npx -y @railway/cli service list 2>&1 || echo "⚠️ Impossible de lister les services"
-          npx -y @railway/cli status || echo "⚠️ Impossible d'afficher le statut"
-          
-          echo "📦 Déploiement vers Railway..."
-          # Railway CLI doit être exécuté depuis la racine du repo
-          # Il y a un railway.toml à la racine qui pointe vers apps/backend
-          # Il y a plusieurs services, donc il faut spécifier lequel
-          # PRIORITÉ: Utiliser --path-as-root depuis apps/backend pour que Railway traite apps/backend comme racine
-          echo "📦 Déploiement unique avec service 'veyl.io'..."
-          npx -y @railway/cli up apps/backend --service veyl.io --detach && {
+          npx -y @railway/cli up . --service "veyl.io" --detach --path-as-root && {
             echo "✅ Déploiement réussi sur 'veyl.io'"
             exit 0
           }
           echo "❌ Échec du déploiement Railway."
           exit 1
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
   # Job qui s'exécute toujours pour créer les GitHub Deployments
   # Même si les jobs frontend/backend ne s'exécutent pas (pour faire apparaître la section)
