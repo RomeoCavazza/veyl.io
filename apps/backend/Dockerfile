@@ -13,14 +13,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # dépendances Python
-COPY requirements.txt ./requirements.txt
-RUN pip install -r requirements.txt
+COPY apps/backend/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # code backend
-COPY . ./
+COPY apps/backend/ ./
 
 # Copier start.sh
-COPY start.sh ./start.sh
+COPY apps/backend/start.sh ./start.sh
 RUN chmod +x start.sh
 
 # ----- runtime -----
