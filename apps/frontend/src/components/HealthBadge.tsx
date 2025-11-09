@@ -18,7 +18,7 @@ export function HealthBadge() {
           : envUrl;
         return url.startsWith('https://') ? url : `https://${url}`;
       }
-      return 'https://insidr-production.up.railway.app';
+      return 'https://api.veyl.io';
     };
     
     const apiBase = getApiBase();

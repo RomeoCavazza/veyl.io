@@ -85,9 +85,7 @@ app.add_middleware(
     allow_origins=[
         "https://veyl.io",
         "https://www.veyl.io",
-        "https://insidr.dev",
-        "https://www.insidr.dev",
-        "https://next-insider.vercel.app",
+        "https://api.veyl.io",
         "http://localhost:3000",  # Dev uniquement
         "http://localhost:5173",  # Dev uniquement
         "http://localhost:8081",  # Dev uniquement - Frontend Insider
@@ -233,7 +231,7 @@ def debug_tiktok_oauth():
                 "has_client_secret": bool(client_secret),
                 "client_secret_length": len(client_secret) if client_secret else 0,
                 "redirect_uri": redirect_uri,
-                "redirect_uri_matches": redirect_uri == "https://veyl.io/api/v1/auth/tiktok/callback" or redirect_uri == "https://insidr-production.up.railway.app/api/v1/auth/tiktok/callback"
+                "redirect_uri_matches": redirect_uri == "https://veyl.io/api/v1/auth/tiktok/callback" or redirect_uri == "https://api.veyl.io/api/v1/auth/tiktok/callback"
             },
             "recommendations": {
                 "check_tiktok_portal": "Vérifier que le redirect_uri dans TikTok Developer Portal correspond EXACTEMENT à: " + redirect_uri,

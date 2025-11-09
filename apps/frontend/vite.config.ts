@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => ({
     port: 8081,
     proxy: {
       '/api': {
-        target: 'https://insidr-production.up.railway.app',
+        target: 'https://api.veyl.io',
         changeOrigin: true,
         secure: true,
       },
