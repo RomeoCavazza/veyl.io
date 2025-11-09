@@ -22,8 +22,9 @@ interface AISearchBarProps {
 }
 
 export function AISearchBar({ onSearch }: AISearchBarProps) {
+  const defaultModes: SearchMode[] = ['hashtag'];
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
-  const [selectedModes, setSelectedModes] = useState<SearchMode[]>(['hashtag']);
+  const [selectedModes, setSelectedModes] = useState<SearchMode[]>(defaultModes);
   const [query, setQuery] = useState('');
 
   const togglePlatform = (platformId: string) => {
@@ -45,7 +46,7 @@ export function AISearchBar({ onSearch }: AISearchBarProps) {
   };
 
   const clearModes = () => {
-    setSelectedModes(['hashtag']);
+    setSelectedModes(defaultModes);
   };
 
   const clearFilters = () => {

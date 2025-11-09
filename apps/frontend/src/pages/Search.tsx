@@ -12,10 +12,11 @@ import { Footer } from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Search() {
+  const defaultModes: SearchMode[] = ['hashtag'];
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
-  const [selectedModes, setSelectedModes] = useState<SearchMode[]>(['hashtag']);
+  const [selectedModes, setSelectedModes] = useState<SearchMode[]>(defaultModes);
   const [posts, setPosts] = useState<PostHit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
@@ -30,7 +31,7 @@ export default function Search() {
   const handleSearch = async (
     query: string,
     platforms: string[] = [],
-    modes: SearchMode[] = ['hashtag']
+    modes: SearchMode[] = defaultModes
   ) => {
     if (!query.trim()) return;
     
@@ -38,7 +39,7 @@ export default function Search() {
     setHasSearched(true);
     setSearchQuery(query);
     setSelectedPlatforms(platforms);
-    const normalizedModes = modes.length > 0 ? modes : ['hashtag'];
+    const normalizedModes = modes.length > 0 ? modes : defaultModes;
     setSelectedModes(normalizedModes);
     const normalizedPlatforms = platforms;
     const shouldFetchHashtag =
