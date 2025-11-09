@@ -12,12 +12,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl && \
     rm -rf /var/lib/apt/lists/*
 
-# dépendances Python
-COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# code backend
-COPY apps/backend/ ./
+# code backend + dépendances
+COPY . ./
+RUN if [ -f apps/backend/requirements.txt ]; then \
+      pip install --no-cache-dir -r apps/backend/requirements.txt; \
+    elif [ -f requirements.txt ]; then \
+      pip install --no-cache-dir -r requirements.txt; \
+    else \
+      echo "requirements.txt introuvable" && exit 1; \
+    fi
 
 # Copier start.sh
 COPY apps/backend/start.sh ./start.sh
