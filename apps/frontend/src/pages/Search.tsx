@@ -65,8 +65,8 @@ export default function Search() {
 
       if (shouldFetchHashtag) {
         const response = await searchPosts({
-          q: query,
-          limit: 12,
+        q: query,
+        limit: 12,
         });
         const data = response.data || [];
         data.forEach((item: any) => {
@@ -335,20 +335,20 @@ export default function Search() {
                     <p className="text-sm line-clamp-2">{post.caption}</p>
 
                     {post.platform === 'instagram' ? (
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Heart className="h-4 w-4" />
-                          <span>{(post.like_count / 1000).toFixed(1)}K</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MessageCircle className="h-4 w-4" />
-                          <span>{((post.comment_count || 0) / 1000).toFixed(1)}K</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-success">
-                          <TrendingUp className="h-4 w-4" />
-                          <span>{post.score_trend || 0}</span>
-                        </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Heart className="h-4 w-4" />
+                        <span>{(post.like_count / 1000).toFixed(1)}K</span>
                       </div>
+                      <div className="flex items-center gap-1">
+                        <MessageCircle className="h-4 w-4" />
+                        <span>{((post.comment_count || 0) / 1000).toFixed(1)}K</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-success">
+                        <TrendingUp className="h-4 w-4" />
+                        <span>{post.score_trend || 0}</span>
+                      </div>
+                    </div>
                     ) : (
                       <p className="text-xs text-muted-foreground">
                         Facebook public post (Page Public Content Access)
@@ -377,18 +377,18 @@ export default function Search() {
                           >
                             <RefreshCcw className="h-3 w-3 mr-1" />
                             {fetchingPostId === post.id ? 'Fetching…' : 'Fetch Live'}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPost(post);
-                              setEmbedDialogOpen(true);
-                            }}
-                          >
-                            <Code2 className="h-3 w-3 mr-1" />
-                            Embed
-                          </Button>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPost(post);
+                          setEmbedDialogOpen(true);
+                        }}
+                      >
+                        <Code2 className="h-3 w-3 mr-1" />
+                        Embed
+                      </Button>
                         </>
                       )}
                     </div>
@@ -477,11 +477,11 @@ export default function Search() {
 
               <div className="p-3 rounded-lg bg-accent/50 text-sm space-y-3">
                 <div>
-                  <p className="font-medium mb-1">Meta oEmbed Read Permission</p>
-                  <p className="text-muted-foreground">
-                    This feature allows you to get embed HTML and metadata for public Instagram posts
-                    to provide front-end views in your application.
-                  </p>
+                <p className="font-medium mb-1">Meta oEmbed Read Permission</p>
+                <p className="text-muted-foreground">
+                  This feature allows you to get embed HTML and metadata for public Instagram posts
+                  to provide front-end views in your application.
+                </p>
                 </div>
                 {embedHtml && (
                   <div>

@@ -98,7 +98,7 @@ export async function fetchMetaOEmbed(permalink: string): Promise<any> {
 
   if (!response.ok) {
     throw new Error(`HTTP_${response.status}`);
-  }
+    }
 
   return response.json();
 }
@@ -111,13 +111,13 @@ export async function fetchPagePublicPosts(pageId: string, limit = 10): Promise<
   });
 
   const url = apiBase ? `${apiBase}/api/v1/meta/page-public?${params.toString()}` : `/api/v1/meta/page-public?${params.toString()}`;
-
+  
   const response = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
     }
   });
-
+  
   if (!response.ok) {
     throw new Error(`HTTP_${response.status}`);
   }
@@ -144,7 +144,7 @@ export async function fetchMetaInsights(resourceId: string, platform: 'instagram
   if (!response.ok) {
     throw new Error(`HTTP_${response.status}`);
   }
-
+  
   return response.json();
 }
 
