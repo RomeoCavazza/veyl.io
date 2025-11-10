@@ -95,6 +95,37 @@ def create_project(
         # Sécuriser la présence des colonnes scope_* (cas legacy où la migration n'a pas été appliquée)
         db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS scope_type VARCHAR(50);"))
         db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS scope_query TEXT;"))
+        db.execute(
+            text(
+                """
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_name = 'projects'
+                          AND column_name = 'platforms'
+                          AND data_type = 'ARRAY'
+                    ) THEN
+                        EXECUTE '
+                            ALTER TABLE projects
+                            ALTER COLUMN platforms DROP DEFAULT;
+                        ';
+                        EXECUTE '
+                            ALTER TABLE projects
+                            ALTER COLUMN platforms
+                            TYPE text
+                            USING to_json(COALESCE(platforms, ARRAY[]::text[]))::text;
+                        ';
+                        EXECUTE '
+                            ALTER TABLE projects
+                            ALTER COLUMN platforms SET DEFAULT ''[]'';
+                        ';
+                    END IF;
+                END $$;
+                """
+            )
+        )
 
         # Compatibilité Pydantic v1 et v2
         if hasattr(project_in, 'model_dump'):
