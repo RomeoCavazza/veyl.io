@@ -381,12 +381,18 @@ jobs:
               
               for (const deployment of deployments.data) {
                 try {
+                  await github.rest.repos.createDeploymentStatus({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    deployment_id: deployment.id,
+                    state: 'inactive'
+                  });
                   await github.rest.repos.deleteDeployment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     deployment_id: deployment.id
                   });
-                  console.log(`🗑️  Déploiement #${deployment.id} supprimé`);
+                  console.log(`🗑️  Déploiement #${deployment.id} marqué inactif puis supprimé`);
                 } catch (error) {
                   console.log(`⚠️  Erreur: ${error.message}`);
                 }
@@ -439,12 +445,18 @@ jobs:
               
               for (const deployment of deployments.data) {
                 try {
+                  await github.rest.repos.createDeploymentStatus({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    deployment_id: deployment.id,
+                    state: 'inactive'
+                  });
                   await github.rest.repos.deleteDeployment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     deployment_id: deployment.id
                   });
-                  console.log(`🗑️  Déploiement #${deployment.id} supprimé`);
+                  console.log(`🗑️  Déploiement #${deployment.id} marqué inactif puis supprimé`);
                 } catch (error) {
                   console.log(`⚠️  Erreur: ${error.message}`);
                 }
