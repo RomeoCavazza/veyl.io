@@ -1,10 +1,10 @@
 // Trigger deployment to verify GitHub Deployments section appears
 import { createContext, useContext, useEffect, useState } from 'react';
-import { login, register, getMe } from '@/lib/api';
+import { login, register, getMe, getApiBase } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 
 interface User {
-  id: number;
+  id: string;
   email: string;
   name?: string;
   role: string;
@@ -101,8 +101,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
-      // Récupérer l'URL d'authentification Google depuis votre backend
-      const response = await fetch('http://localhost:8000/api/v1/auth/google/start');
+      const apiBase = getApiBase() || '';
+      const response = await fetch(`${apiBase}/api/v1/auth/google/start`, {
+        credentials: 'include',
+      });
       const { auth_url } = await response.json();
       
       // Rediriger vers Google OAuth 

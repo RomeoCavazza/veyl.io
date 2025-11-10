@@ -34,9 +34,10 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
         if user_id_str is None:
             raise HTTPException(status_code=401, detail="Token invalide")
         
-        # Convertir en int (sub est créé comme string)
+        # Supporter les UUID (utilisés depuis la correction de la BDD)
+        from uuid import UUID
         try:
-            user_id = int(user_id_str)
+            user_id = UUID(user_id_str)
         except (ValueError, TypeError):
             raise HTTPException(status_code=401, detail="Token invalide: user_id invalide")
     except JWTError:
