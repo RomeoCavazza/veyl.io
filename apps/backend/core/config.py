@@ -35,12 +35,12 @@ class Settings:
         self.IG_USER_ID: Optional[str] = os.getenv("IG_USER_ID")
         self.IG_APP_ID: Optional[str] = os.getenv("IG_APP_ID")
         self.IG_APP_SECRET: Optional[str] = os.getenv("IG_APP_SECRET")
-        self.IG_REDIRECT_URI: str = os.getenv("IG_REDIRECT_URI", "https://veyl.io/api/v1/auth/instagram/callback")
+        self.IG_REDIRECT_URI: str = os.getenv("IG_REDIRECT_URI", "https://api.veyl.io/api/v1/auth/instagram/callback")
         
         # Configuration Facebook API - OBLIGATOIRE
         self.FB_APP_ID: Optional[str] = os.getenv("FB_APP_ID")
         self.FB_APP_SECRET: Optional[str] = os.getenv("FB_APP_SECRET")
-        self.FB_REDIRECT_URI: str = os.getenv("FB_REDIRECT_URI", "https://veyl.io/api/v1/auth/facebook/callback")
+        self.FB_REDIRECT_URI: str = os.getenv("FB_REDIRECT_URI", "https://api.veyl.io/api/v1/auth/facebook/callback")
         
         # Configuration OAuth - OBLIGATOIRE
         self.OAUTH_STATE_SECRET: str = os.getenv("OAUTH_STATE_SECRET")
