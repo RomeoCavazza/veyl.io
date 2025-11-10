@@ -13,7 +13,7 @@ from alembic import op
 
 # Révision Alembic
 revision = "rename_score_columns_projects"
-down_revision = "add_projects"
+down_revision = "ensure_users_id_default_uuid"
 branch_labels = None
 depends_on = None
 
