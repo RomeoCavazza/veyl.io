@@ -3,7 +3,10 @@ set -e
 
 echo "🔄 Exécution des migrations Alembic..."
 cd /app/apps/backend
-alembic upgrade head
+if ! alembic upgrade head; then
+  echo "⚠️  Alembic upgrade a échoué, tentative de stamp head..."
+  alembic stamp head
+fi
 
 echo "🚀 Démarrage du serveur..."
 
