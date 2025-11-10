@@ -2,11 +2,10 @@
 set -e
 
 echo "🔄 Exécution des migrations Alembic..."
-cd /app
-alembic -c apps/backend/alembic.ini upgrade head
+cd /app/apps/backend
+alembic upgrade head
 
 echo "🚀 Démarrage du serveur..."
-cd /app/apps/backend
 
 PORT=${PORT:-8000}
 exec gunicorn app:app \
