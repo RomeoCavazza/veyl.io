@@ -20,21 +20,29 @@ def upgrade() -> None:
     conn.execute(
         """
         DO $$
+        DECLARE
+            column_udt text;
         BEGIN
-            IF EXISTS (
-                SELECT 1
-                FROM information_schema.columns
-                WHERE table_name = 'projects'
-                  AND column_name = 'platforms'
-                  AND data_type = 'ARRAY'
-            ) THEN
+            SELECT udt_name INTO column_udt
+            FROM information_schema.columns
+            WHERE table_name = 'projects'
+              AND column_name = 'platforms';
+
+            IF column_udt IS NOT NULL AND column_udt LIKE '\\_%' THEN
                 ALTER TABLE projects
                 ALTER COLUMN platforms DROP DEFAULT;
 
-                ALTER TABLE projects
-                ALTER COLUMN platforms
-                TYPE text
-                USING to_json(COALESCE(platforms, ARRAY[]::text[]))::text;
+                IF column_udt = '_int8' THEN
+                    ALTER TABLE projects
+                    ALTER COLUMN platforms
+                    TYPE text
+                    USING to_json(COALESCE(platforms::text[], ARRAY[]::text[]))::text;
+                ELSE
+                    ALTER TABLE projects
+                    ALTER COLUMN platforms
+                    TYPE text
+                    USING to_json(COALESCE(platforms, ARRAY[]::text[]))::text;
+                END IF;
 
                 ALTER TABLE projects
                 ALTER COLUMN platforms SET DEFAULT '[]';
@@ -49,14 +57,15 @@ def downgrade() -> None:
     conn.execute(
         """
         DO $$
+        DECLARE
+            column_udt text;
         BEGIN
-            IF EXISTS (
-                SELECT 1
-                FROM information_schema.columns
-                WHERE table_name = 'projects'
-                  AND column_name = 'platforms'
-                  AND data_type = 'text'
-            ) THEN
+            SELECT udt_name INTO column_udt
+            FROM information_schema.columns
+            WHERE table_name = 'projects'
+              AND column_name = 'platforms';
+
+            IF column_udt = 'text' THEN
                 ALTER TABLE projects
                 ALTER COLUMN platforms DROP DEFAULT;
 

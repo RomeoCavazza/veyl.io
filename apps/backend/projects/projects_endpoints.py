@@ -99,28 +99,30 @@ def create_project(
             text(
                 """
                 DO $$
+                DECLARE
+                    column_udt text;
                 BEGIN
-                    IF EXISTS (
-                        SELECT 1
-                        FROM information_schema.columns
-                        WHERE table_name = 'projects'
-                          AND column_name = 'platforms'
-                          AND data_type = 'ARRAY'
-                    ) THEN
-                        EXECUTE '
-                            ALTER TABLE projects
-                            ALTER COLUMN platforms DROP DEFAULT;
-                        ';
-                        EXECUTE '
-                            ALTER TABLE projects
-                            ALTER COLUMN platforms
-                            TYPE text
-                            USING to_json(COALESCE(platforms, ARRAY[]::text[]))::text;
-                        ';
-                        EXECUTE '
-                            ALTER TABLE projects
-                            ALTER COLUMN platforms SET DEFAULT ''[]'';
-                        ';
+                    SELECT udt_name INTO column_udt
+                    FROM information_schema.columns
+                    WHERE table_name = 'projects'
+                      AND column_name = 'platforms';
+
+                    IF column_udt IS NOT NULL AND column_udt LIKE '\\_%' THEN
+                        EXECUTE 'ALTER TABLE projects ALTER COLUMN platforms DROP DEFAULT;';
+
+                        IF column_udt = '_int8' THEN
+                            EXECUTE 'ALTER TABLE projects
+                                     ALTER COLUMN platforms
+                                     TYPE text
+                                     USING to_json(COALESCE(platforms::text[], ARRAY[]::text[]))::text;';
+                        ELSE
+                            EXECUTE 'ALTER TABLE projects
+                                     ALTER COLUMN platforms
+                                     TYPE text
+                                     USING to_json(COALESCE(platforms, ARRAY[]::text[]))::text;';
+                        END IF;
+
+                        EXECUTE 'ALTER TABLE projects ALTER COLUMN platforms SET DEFAULT ''[]'';';
                     END IF;
                 END $$;
                 """
