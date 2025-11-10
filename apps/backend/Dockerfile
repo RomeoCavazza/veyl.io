@@ -22,13 +22,12 @@ RUN if [ -f apps/backend/requirements.txt ]; then \
       echo "requirements.txt introuvable" && exit 1; \
     fi
 
-# Copier start.sh (depuis la racine du repo)
-COPY start.sh ./start.sh
-RUN chmod +x start.sh
+# Script de démarrage
+RUN chmod +x apps/backend/start.sh
 
 # ----- runtime -----
 # Railway expects port from $PORT environment variable
 EXPOSE $PORT
 
-CMD ["./start.sh"]
+CMD ["bash", "apps/backend/start.sh"]
 
