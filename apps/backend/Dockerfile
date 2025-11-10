@@ -22,8 +22,8 @@ RUN if [ -f apps/backend/requirements.txt ]; then \
       echo "requirements.txt introuvable" && exit 1; \
     fi
 
-# Copier start.sh
-COPY apps/backend/start.sh ./start.sh
+# Copier start.sh (depuis la racine du repo)
+COPY start.sh ./start.sh
 RUN chmod +x start.sh
 
 # ----- runtime -----
