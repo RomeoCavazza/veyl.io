@@ -2,8 +2,10 @@
 # Modèles SQLAlchemy pour Insider Trends MVP - VERSION SIMPLIFIÉE PROD
 # Architecture minimale et fonctionnelle
 
+import uuid
+
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, UniqueConstraint, Float
-from sqlalchemy.dialects.postgresql import JSONB, ARRAY
+from sqlalchemy.dialects.postgresql import JSONB, ARRAY, UUID
 from sqlalchemy.orm import relationship
 from db.base import Base
 import datetime as dt
@@ -20,7 +22,7 @@ class User(Base):
     """Utilisateur principal du système Insider Trends"""
     __tablename__ = "users"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(Text)  # bcrypt hash + salt
     name = Column(String(255))
@@ -39,7 +41,7 @@ class OAuthAccount(Base):
     __tablename__ = "oauth_accounts"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     provider = Column(String(50), nullable=False)  # 'google', 'instagram', 'tiktok', 'x'
     provider_user_id = Column(Text, nullable=False)
     access_token = Column(Text)
@@ -137,7 +139,7 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     plan = Column(String(50), default='free')
     quota = Column(JSONType)
     renewed_at = Column(DateTime)
@@ -156,7 +158,7 @@ class Project(Base):
     __tablename__ = "projects"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(255), nullable=False)
     description = Column(Text)  # Description du projet (remplace 'goal')
     status = Column(String(50), default='draft')  # 'draft', 'active', 'archived', 'paused'

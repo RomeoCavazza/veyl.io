@@ -4,6 +4,7 @@
 from pydantic import BaseModel, EmailStr, validator, Field  # type: ignore
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 import re
 
 class UserCreate(BaseModel):
@@ -29,7 +30,7 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     """Schéma pour la réponse utilisateur - SÉCURISÉ"""
-    id: int
+    id: UUID
     email: str
     name: Optional[str]
     role: str
