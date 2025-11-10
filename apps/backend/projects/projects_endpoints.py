@@ -3,6 +3,7 @@ import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -91,6 +92,10 @@ def create_project(
 ):
     """Créer un nouveau projet avec hashtags et créateurs"""
     try:
+        # Sécuriser la présence des colonnes scope_* (cas legacy où la migration n'a pas été appliquée)
+        db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS scope_type VARCHAR(50);"))
+        db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS scope_query TEXT;"))
+
         # Compatibilité Pydantic v1 et v2
         if hasattr(project_in, 'model_dump'):
             project_data = project_in.model_dump(exclude={'hashtag_names', 'creator_usernames'})
