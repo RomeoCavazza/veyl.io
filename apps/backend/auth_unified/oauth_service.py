@@ -3,7 +3,8 @@ import os
 import time
 import logging
 import httpx  # type: ignore
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from uuid import UUID
 from sqlalchemy.orm import Session  # type: ignore
 from fastapi import HTTPException  # type: ignore
 from core.config import settings
@@ -41,7 +42,7 @@ class OAuthService:
         provider_user_id: str,
         email: str = None,
         name: str = None,
-        linked_user_id: int = None
+        linked_user_id: Optional[UUID] = None
     ) -> User:
         """
         Fonction centralisée pour trouver ou créer un User lors d'une connexion OAuth.
@@ -154,7 +155,7 @@ class OAuthService:
         logger.info(f"✅ Nouveau User créé: user_id={user.id}, email={user.email}, name={user.name}")
         return user
     
-    def start_instagram_auth(self, user_id: int = None) -> Dict[str, str]:
+    def start_instagram_auth(self, user_id: Optional[UUID] = None) -> Dict[str, str]:
         """Démarrer le processus OAuth Instagram (via Facebook OAuth pour Instagram Business)
         
         Args:
@@ -196,11 +197,12 @@ class OAuthService:
         import hashlib
         timestamp = str(int(time.time()))
         if user_id:
+            user_id_str = str(user_id)
             # Encoder l'user_id de manière sécurisée dans le state
-            state_data = f"{timestamp}_{user_id}"
+            state_data = f"{timestamp}_{user_id_str}"
             # Hash simple pour éviter la manipulation (pas besoin de crypto fort ici, juste éviter la manipulation évidente)
             state_hash = hashlib.sha256(f"{state_data}_{settings.OAUTH_STATE_SECRET}".encode()).hexdigest()[:8]
-            state = f"{timestamp}_{user_id}_{state_hash}"
+            state = f"{timestamp}_{user_id_str}_{state_hash}"
         else:
             state = timestamp
         
@@ -256,7 +258,7 @@ class OAuthService:
                 # Vérifier le hash pour éviter la manipulation
                 expected_hash = hashlib.sha256(f"{timestamp}_{user_id_str}_{settings.OAUTH_STATE_SECRET}".encode()).hexdigest()[:8]
                 if state_hash == expected_hash:
-                    linked_user_id = int(user_id_str)
+                    linked_user_id = UUID(user_id_str)
                     logger.info(f"📎 Liaison Instagram OAuth au User ID: {linked_user_id}")
         except (ValueError, IndexError):
             # State ne contient pas d'user_id ou est un timestamp simple
@@ -475,7 +477,7 @@ class OAuthService:
         
         raise HTTPException(status_code=400, detail="Erreur OAuth Instagram")
     
-    def start_facebook_auth(self, user_id: int = None) -> Dict[str, str]:
+    def start_facebook_auth(self, user_id: Optional[UUID] = None) -> Dict[str, str]:
         """Démarrer le processus OAuth Facebook
         
         Args:
@@ -488,9 +490,10 @@ class OAuthService:
         import hashlib
         timestamp = str(int(time.time()))
         if user_id:
-            state_data = f"{timestamp}_{user_id}"
+            user_id_str = str(user_id)
+            state_data = f"{timestamp}_{user_id_str}"
             state_hash = hashlib.sha256(f"{state_data}_{settings.OAUTH_STATE_SECRET}".encode()).hexdigest()[:8]
-            state = f"{timestamp}_{user_id}_{state_hash}"
+            state = f"{timestamp}_{user_id_str}_{state_hash}"
         else:
             state = timestamp
         # Facebook Login for Business nécessite au moins une permission business
@@ -530,7 +533,7 @@ class OAuthService:
                 # Vérifier le hash pour éviter la manipulation
                 expected_hash = hashlib.sha256(f"{timestamp}_{user_id_str}_{settings.OAUTH_STATE_SECRET}".encode()).hexdigest()[:8]
                 if state_hash == expected_hash:
-                    linked_user_id = int(user_id_str)
+                    linked_user_id = UUID(user_id_str)
                     logger.info(f"📎 Liaison Facebook OAuth au User ID: {linked_user_id}")
         except (ValueError, IndexError):
             # State ne contient pas d'user_id, comportement normal
@@ -793,7 +796,7 @@ class OAuthService:
                         timestamp, user_id_str, state_hash = parts[0], parts[1], parts[2]
                         expected_hash = hashlib.sha256(f"{timestamp}_{user_id_str}_{settings.OAUTH_STATE_SECRET}".encode()).hexdigest()[:8]
                         if state_hash == expected_hash:
-                            linked_user_id = int(user_id_str)
+                            linked_user_id = UUID(user_id_str)
                             logger.info(f"📎 Liaison Google OAuth au User ID: {linked_user_id}")
                 except (ValueError, IndexError):
                     pass
@@ -858,7 +861,7 @@ class OAuthService:
         
         raise HTTPException(status_code=400, detail="Erreur OAuth Google: access_token ou google_user_id manquant")
     
-    def start_tiktok_auth(self, user_id: int = None) -> Dict[str, str]:
+    def start_tiktok_auth(self, user_id: Optional[UUID] = None) -> Dict[str, str]:
         """Démarrer le processus OAuth TikTok
         
         Args:
@@ -882,9 +885,10 @@ class OAuthService:
         if user_id:
             # Encoder l'user_id dans le state de manière sécurisée
             timestamp = str(int(time.time()))
-            state_data = f"{timestamp}_{user_id}"
+            user_id_str = str(user_id)
+            state_data = f"{timestamp}_{user_id_str}"
             state_hash = hashlib.sha256(f"{state_data}_{settings.OAUTH_STATE_SECRET}".encode()).hexdigest()[:8]
-            state = f"{timestamp}_{user_id}_{state_hash}"
+            state = f"{timestamp}_{user_id_str}_{state_hash}"
         else:
             state = secrets.token_urlsafe(32)
         
@@ -953,12 +957,12 @@ class OAuthService:
                     # Vérifier le hash pour éviter la manipulation
                     expected_hash = hashlib.sha256(f"{timestamp}_{user_id_str}_{settings.OAUTH_STATE_SECRET}".encode()).hexdigest()[:8]
                     if state_hash == expected_hash:
-                        linked_user_id = int(user_id_str)
+                        linked_user_id = UUID(user_id_str)
                         logger.info(f"📎 Liaison TikTok OAuth au User ID: {linked_user_id} (décodé depuis state)")
                 elif len(parts) == 2:
                     # Format alternatif: timestamp_userid (sans hash, moins sécurisé mais parfois utilisé)
                     try:
-                        linked_user_id = int(parts[1])
+                        linked_user_id = UUID(parts[1])
                         logger.info(f"📎 Liaison TikTok OAuth au User ID: {linked_user_id} (format simplifié)")
                     except ValueError:
                         pass

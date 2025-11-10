@@ -2,6 +2,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
+from uuid import UUID
 
 class ProjectBase(BaseModel):
     name: str
@@ -28,7 +29,7 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(BaseModel):
     id: int
-    user_id: int
+    user_id: UUID
     name: str
     description: Optional[str] = None
     status: str

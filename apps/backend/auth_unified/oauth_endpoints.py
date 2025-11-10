@@ -1,4 +1,7 @@
 # oauth/oauth_endpoints.py
+from typing import Optional
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -11,7 +14,7 @@ oauth_router = APIRouter(prefix="/api/v1/auth", tags=["oauth"])
 oauth_service = OAuthService()
 
 @oauth_router.get("/instagram/start")
-def instagram_auth_start(user_id: int = None):
+def instagram_auth_start(user_id: Optional[UUID] = None):
     """Démarrer OAuth Instagram - Redirection directe"""
     auth_data = oauth_service.start_instagram_auth(user_id=user_id)
     return RedirectResponse(url=auth_data["auth_url"])
@@ -77,7 +80,7 @@ async def auth_callback(
     return RedirectResponse(url="http://localhost:8081/auth/callback")
 
 @oauth_router.get("/facebook/start")
-def facebook_auth_start(user_id: int = None):
+def facebook_auth_start(user_id: Optional[UUID] = None):
     """Démarrer OAuth Facebook - Redirection directe"""
     auth_data = oauth_service.start_facebook_auth(user_id=user_id)
     return RedirectResponse(url=auth_data["auth_url"])
@@ -165,7 +168,7 @@ async def google_auth_callback(
         return RedirectResponse(url=f"{frontend_url}?error=internal_error&error_description={error_msg}")
 
 @oauth_router.get("/tiktok/start")
-def tiktok_auth_start(user_id: int = None):
+def tiktok_auth_start(user_id: Optional[UUID] = None):
     """Démarrer OAuth TikTok - Redirection directe"""
     auth_data = oauth_service.start_tiktok_auth(user_id=user_id)
     return RedirectResponse(url=auth_data["auth_url"])
