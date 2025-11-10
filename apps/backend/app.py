@@ -154,7 +154,7 @@ def test_meilisearch():
         return {
             "status": "error",
             "message": "Meilisearch client non initialisé",
-            "check": "Vérifier MEILI_HOST et MEILI_MASTER_KEY"
+            "check": "Vérifier MEILI_HOST et MEILI_API_KEY"
         }
     
     try:
