@@ -59,7 +59,7 @@ export default function AuthCallback() {
         const decodedEmail = email ? decodeURIComponent(email) : '';
         const decodedName = name ? decodeURIComponent(name) : '';
         setUser({
-          id: parseInt(userId),
+          id: userId,
           email: decodedEmail,
           name: decodedName || decodedEmail.split('@')[0],
           role: 'user',
@@ -78,7 +78,7 @@ export default function AuthCallback() {
       const decodedEmail = decodeURIComponent(email);
       const decodedName = name ? decodeURIComponent(name) : '';
       setUser({
-        id: parseInt(userId),
+        id: userId,
         email: decodedEmail,
         name: decodedName || decodedEmail.split('@')[0],
         role: 'user',
