@@ -86,6 +86,27 @@ export async function searchPosts(params: SearchParams): Promise<SearchResponse>
   return response.json();
 }
 
+export async function fetchMetaIGPublic(tag: string, limit: number = 12): Promise<any> {
+  const apiBase = getApiBase();
+  const searchParams = new URLSearchParams();
+  searchParams.set('tag', tag.replace('#', ''));
+  searchParams.set('limit', String(limit));
+  
+  const url = apiBase ? `${apiBase}/api/v1/meta/ig-public?${searchParams.toString()}` : `/api/v1/meta/ig-public?${searchParams.toString()}`;
+
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP_${response.status}`);
+  }
+
+  return response.json();
+}
+
 export async function fetchMetaOEmbed(permalink: string): Promise<any> {
   const apiBase = getApiBase();
   const url = apiBase ? `${apiBase}/api/v1/meta/oembed?url=${encodeURIComponent(permalink)}` : `/api/v1/meta/oembed?url=${encodeURIComponent(permalink)}`;

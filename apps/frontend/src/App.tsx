@@ -12,7 +12,6 @@ import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import Search from "./pages/Search";
 import Analytics from "./pages/Analytics";
-import Watch from "./pages/Watch";
 import Profile from "./pages/Profile";
 import Community from "./pages/Community";
 import Privacy from "./pages/Privacy";
@@ -46,13 +45,10 @@ const App = () => (
               <Route path="/projects/:id/creator/:username" element={<ProtectedRoute><CreatorDetail /></ProtectedRoute>} />
               <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
               {/* Other Routes */}
-                    <Route path="/dashboard" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
                     <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
                     <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-                    <Route path="/watch" element={<ProtectedRoute><Watch /></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
-                    <Route path="/explore" element={<Search />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/data-deletion" element={<DataDeletion />} />

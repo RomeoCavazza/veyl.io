@@ -3,8 +3,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search as SearchIcon, TrendingUp, Heart, MessageCircle, ExternalLink, Code2, Copy, CheckCircle2, RefreshCcw } from 'lucide-react';
-import { searchPosts, fetchMetaOEmbed, getProjects, getProjectPosts, type PostHit } from '@/lib/api';
+import { Search as SearchIcon, TrendingUp, Heart, MessageCircle, ExternalLink, Code2, Copy, CheckCircle2, RefreshCcw, Sparkles } from 'lucide-react';
+import { searchPosts, fetchMetaOEmbed, fetchMetaIGPublic, getProjects, getProjectPosts, type PostHit } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { AISearchBar, type SearchMode } from '@/components/AISearchBar';
 import { Navbar } from '@/components/Navbar';
@@ -28,6 +28,7 @@ export default function Search() {
   const [hasSearched, setHasSearched] = useState(false);
   const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
   const [fallbackCreators, setFallbackCreators] = useState<Array<{ projectId: string; handle: string; platform?: string }>>([]);
+  const [isFetchingLive, setIsFetchingLive] = useState(false);
   const { toast } = useToast();
 
   const handleSearch = async (
@@ -72,31 +73,66 @@ export default function Search() {
       const aggregatedPosts: PostHit[] = [];
 
       if (shouldFetchHashtag) {
-        const response = await searchPosts({
-          q: query,
-          limit: 12,
-        });
-        const data = response.data || [];
-        data.forEach((item: any) => {
-          aggregatedPosts.push({
-            id: item.id,
-            platform: 'instagram',
-            username: item.owner?.username,
-            caption: item.caption,
-            media_type: item.media_type,
-            media_url: item.media_url,
-            permalink: item.permalink,
-            posted_at: item.timestamp,
-            like_count: item.like_count,
-            comment_count: item.comments_count,
-            score_trend: item.like_count ?? 0,
-          });
-        });
+        // Essayer d'abord l'endpoint Meta IG Public (pour App Review)
+        console.log('[META_APP_REVIEW] Fetching live from Meta API:', query);
+        
+        try {
+          const response = await fetchMetaIGPublic(query, 12);
+          console.log('[META_APP_REVIEW] Meta API response:', response);
+
+          if (response.status === 'success' && response.data && response.data.length > 0) {
+            response.data.forEach((item: any) => {
+              aggregatedPosts.push({
+                id: item.id,
+                platform: 'instagram',
+                username: item.username,
+                caption: item.caption,
+                media_type: item.media_type,
+                media_url: item.media_url,
+                permalink: item.permalink,
+                posted_at: item.timestamp,
+                like_count: item.like_count,
+                comment_count: item.comments_count,
+                score_trend: item.like_count ?? 0,
+              });
+            });
+            
+            console.log('[META_APP_REVIEW] Successfully fetched', aggregatedPosts.length, 'posts from Meta API (HTTP 200)');
+          }
+        } catch (metaError) {
+          console.warn('[META_APP_REVIEW] Meta API failed, falling back to stored results:', metaError);
+          // Si Meta API échoue, essayer l'ancien endpoint (fallback)
+          try {
+            const response = await searchPosts({
+              q: query,
+              limit: 12,
+            });
+            const data = response.data || [];
+            data.forEach((item: any) => {
+              aggregatedPosts.push({
+                id: item.id,
+                platform: 'instagram',
+                username: item.owner?.username,
+                caption: item.caption,
+                media_type: item.media_type,
+                media_url: item.media_url,
+                permalink: item.permalink,
+                posted_at: item.timestamp,
+                like_count: item.like_count,
+                comment_count: item.comments_count,
+                score_trend: item.like_count ?? 0,
+              });
+            });
+          } catch (fallbackError) {
+            // Si les deux échouent, charger depuis les projets locaux
+            throw fallbackError;
+          }
+        }
       }
 
       setPosts(aggregatedPosts);
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('[META_APP_REVIEW] All API calls failed, loading from local projects:', error);
       await loadFallbackResults(query, normalizedModes);
     } finally {
       setIsLoading(false);
@@ -231,7 +267,6 @@ export default function Search() {
       setFetchingPostId(null);
     }
   };
-
 
   // Meta oEmbed Read functionality
   const getEmbedCode = (post: PostHit) => {
