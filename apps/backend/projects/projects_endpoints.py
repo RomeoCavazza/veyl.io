@@ -22,6 +22,158 @@ from projects.schemas import (
 logger = logging.getLogger(__name__)
 projects_router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 
+
+def _normalize_creator(value: str) -> str:
+    return value.strip().lstrip("@").lower()
+
+
+def _normalize_hashtag(value: str) -> str:
+    return value.strip().lstrip("#").lower()
+
+
+def _ensure_platform(db: Session, name: Optional[str]) -> Platform:
+    normalized = (name or "").strip().lower()
+    if not normalized:
+        raise HTTPException(status_code=400, detail="Platform invalide")
+    platform = db.query(Platform).filter(Platform.name == normalized).first()
+    if not platform:
+        platform = Platform(name=normalized)
+        db.add(platform)
+        db.flush()
+    return platform
+
+
+def _get_project_or_404(db: Session, current_user: User, project_id: str) -> Project:
+    try:
+        project_uuid = UUID(project_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Project ID invalide")
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_uuid, Project.user_id == current_user.id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+
+def _sync_project_metadata(db: Session, project: Project) -> None:
+    creators = (
+        db.query(ProjectCreator)
+        .filter(ProjectCreator.project_id == project.id)
+        .all()
+    )
+
+    hashtag_rows = (
+        db.query(ProjectHashtag, Hashtag)
+        .join(Hashtag, ProjectHashtag.hashtag_id == Hashtag.id)
+        .filter(ProjectHashtag.project_id == project.id)
+        .all()
+    )
+
+    platform_names: Set[str] = set()
+    scope_parts: List[str] = []
+
+    for creator in creators:
+        scope_parts.append(f"@{creator.creator_username}")
+        if creator.platform:
+            platform_names.add(creator.platform.name)
+
+    hashtag_count = 0
+    for _, hashtag in hashtag_rows:
+        hashtag_count += 1
+        scope_parts.append(f"#{hashtag.name}")
+        if hashtag.platform:
+            platform_names.add(hashtag.platform.name)
+
+    project.creators_count = len(creators)
+    if hashtag_count and project.creators_count:
+        project.scope_type = "both"
+    elif hashtag_count:
+        project.scope_type = "hashtags"
+    elif project.creators_count:
+        project.scope_type = "creators"
+    else:
+        project.scope_type = None
+
+    project.scope_query = ", ".join(scope_parts) if scope_parts else None
+    project.platforms = (
+        json.dumps(sorted(platform_names)) if platform_names else json.dumps([])
+    )
+
+
+def _attach_creator(
+    db: Session,
+    project: Project,
+    username: str,
+    platform_name: str,
+) -> ProjectCreator:
+    normalized_username = _normalize_creator(username)
+    if not normalized_username:
+        raise HTTPException(status_code=400, detail="Creator username invalide")
+
+    platform = _ensure_platform(db, platform_name)
+
+    existing = (
+        db.query(ProjectCreator)
+        .filter(
+            ProjectCreator.project_id == project.id,
+            ProjectCreator.platform_id == platform.id,
+            ProjectCreator.creator_username == normalized_username,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Creator already linked to project")
+
+    creator = ProjectCreator(
+        project_id=project.id,
+        creator_username=normalized_username,
+        platform_id=platform.id,
+    )
+    db.add(creator)
+    return creator
+
+
+def _attach_hashtag(
+    db: Session,
+    project: Project,
+    hashtag_value: str,
+    platform_name: str,
+) -> ProjectHashtag:
+    normalized_name = _normalize_hashtag(hashtag_value)
+    if not normalized_name:
+        raise HTTPException(status_code=400, detail="Hashtag invalide")
+
+    platform = _ensure_platform(db, platform_name)
+
+    hashtag = (
+        db.query(Hashtag)
+        .filter(Hashtag.name == normalized_name, Hashtag.platform_id == platform.id)
+        .first()
+    )
+    if not hashtag:
+        hashtag = Hashtag(name=normalized_name, platform_id=platform.id)
+        db.add(hashtag)
+        db.flush()
+
+    existing = (
+        db.query(ProjectHashtag)
+        .filter(
+            ProjectHashtag.project_id == project.id,
+            ProjectHashtag.hashtag_id == hashtag.id,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Hashtag already linked to project")
+
+    project_hashtag = ProjectHashtag(project_id=project.id, hashtag_id=hashtag.id)
+    db.add(project_hashtag)
+    return project_hashtag
+
+
 def serialize_project(project: Project, include_relations: bool = True) -> dict:
     """Sérialise un projet pour la réponse API"""
     result = {
