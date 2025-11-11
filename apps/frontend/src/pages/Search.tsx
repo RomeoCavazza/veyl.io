@@ -18,14 +18,27 @@ export default function Search() {
   const { toast } = useToast();
 
   // Charger posts depuis PostgreSQL (fashion project)
-  const loadPostsFromDatabase = async () => {
+  const loadPostsFromDatabase = async (): Promise<PostHit[]> => {
     try {
       const projects = await getProjects();
       const fashionProject = projects.find((p: any) => p.name.toLowerCase() === 'fashion');
       
       if (fashionProject) {
         const dbPosts = await getProjectPosts(fashionProject.id);
-        return dbPosts;
+        // Convertir ProjectPost[] en PostHit[]
+        return dbPosts.map((post: any) => ({
+          id: post.id || post.external_id,
+          platform: post.platform || 'instagram',
+          username: post.author || 'unknown',
+          caption: post.caption,
+          media_type: post.media_type || 'image',
+          media_url: post.media_url,
+          permalink: post.permalink,
+          posted_at: post.posted_at,
+          like_count: post.metrics?.like_count || 0,
+          comment_count: post.metrics?.comment_count || 0,
+          score_trend: post.score_trend || 0,
+        }));
       }
       return [];
     } catch (error) {
