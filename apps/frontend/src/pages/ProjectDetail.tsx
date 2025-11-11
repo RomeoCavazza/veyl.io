@@ -666,74 +666,148 @@ export default function ProjectDetail() {
 
           </TabsContent>
 
-          <TabsContent value="grid" className="space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {posts.length > 0 ? (
-                posts.map((post) => {
-                  const permalink = post.permalink;
-                  return (
-                    <div
-                      key={`${post.id}-grid`}
-                      className="group relative overflow-hidden rounded-lg border border-border bg-muted/30"
-                    >
-                      {post.media_url ? (
-                        <img
-                          src={post.media_url}
-                          alt={post.caption || post.author}
-                          className="h-48 w-full object-cover transition-transform group-hover:scale-105"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="h-48 w-full flex items-center justify-center text-sm text-muted-foreground bg-muted/50">
-                          No media
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-                      <div className="absolute bottom-3 left-3 right-3 space-y-2 text-white">
-                        <p className="text-sm font-semibold truncate">
-                          @{post.author || post.username || 'unknown'}
-                        </p>
-                        {post.caption && (
-                          <p className="text-xs line-clamp-2 leading-snug opacity-90">{post.caption}</p>
-                        )}
-                        <div className="flex items-center gap-3 text-xs">
-                          {(post.like_count ?? 0) > 0 && (
-                            <span className="flex items-center gap-1">
-                              <Heart className="h-3 w-3" />
-                              {post.like_count.toLocaleString()}
-                            </span>
-                          )}
-                          {(post.comment_count ?? 0) > 0 && (
-                            <span className="flex items-center gap-1">
-                              <MessageCircle className="h-3 w-3" />
-                              {post.comment_count.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-                        {permalink && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="w-full bg-white/10 backdrop-blur text-xs hover:bg-white/20"
-                            asChild
+          {/* Tab 3: Grid - Table View */}
+          <TabsContent value="grid" className="space-y-4">
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle>Posts ({sortedPosts.length})</CardTitle>
+                <CardDescription>
+                  Tabular view of all posts with sorting
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[60px]">Image</TableHead>
+                        <TableHead>Link</TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('caption')}
+                        >
+                          <div className="flex items-center">
+                            Description
+                            {getSortIcon('caption')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('posted_at')}
+                        >
+                          <div className="flex items-center">
+                            Added
+                            {getSortIcon('posted_at')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="text-right cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('like_count')}
+                        >
+                          <div className="flex items-center justify-end">
+                            Likes
+                            {getSortIcon('like_count')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="text-right cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('comment_count')}
+                        >
+                          <div className="flex items-center justify-end">
+                            Comments
+                            {getSortIcon('comment_count')}
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-right">Platform</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedPosts.length > 0 ? (
+                        sortedPosts.map((post: any) => (
+                          <TableRow
+                            key={post.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => {
+                              setSelectedPost(post);
+                              setPostDialogOpen(true);
+                            }}
                           >
-                            <a href={permalink} target="_blank" rel="noopener noreferrer">
-                              View on Instagram
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <Card className="col-span-full">
-                  <CardContent className="p-10 text-center text-muted-foreground">
-                    No posts yet. Add creators or hashtags first.
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+                            <TableCell>
+                              {post.media_url ? (
+                                <img
+                                  src={post.media_url}
+                                  alt={post.caption}
+                                  className="w-12 h-12 rounded object-cover"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                                  No img
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {post.permalink ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2"
+                                  asChild
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <a href={post.permalink} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                </Button>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <p className="max-w-md line-clamp-2 text-sm">
+                                {post.caption || '-'}
+                              </p>
+                            </TableCell>
+                            <TableCell>
+                              {post.posted_at || post.fetched_at ? (
+                                <div className="text-sm">
+                                  <div>{new Date(post.posted_at || post.fetched_at).toLocaleDateString('en-US')}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {formatDistanceToNow(new Date(post.posted_at || post.fetched_at), { addSuffix: true })}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Heart className="h-4 w-4" />
+                                <span>{post.like_count?.toLocaleString() || 0}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <MessageCircle className="h-4 w-4" />
+                                <span>{post.comment_count?.toLocaleString() || 0}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant="outline">{post.platform || 'instagram'}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            No posts yet. Add creators or hashtags first.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <Dialog open={addCreatorOpen} onOpenChange={setAddCreatorOpen}>
