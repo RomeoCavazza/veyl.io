@@ -5,7 +5,7 @@ from datetime import datetime
 from uuid import UUID
 
 class ProjectBase(BaseModel):
-    name: str
+    name: Optional[str] = None
     description: Optional[str] = None
     platforms: List[str] = Field(default_factory=list)
     scope_type: Optional[str] = None  # 'hashtags', 'creators', 'both'
@@ -49,4 +49,17 @@ class ProjectResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class ProjectCreatorCreate(BaseModel):
+    username: str
+    platform: str = Field(default="instagram", min_length=1)
+
+
+class ProjectHashtagCreate(BaseModel):
+    hashtag: str = Field(..., min_length=1)
+    platform: str = Field(default="instagram", min_length=1)
+
+    class Config:
+        allow_population_by_field_name = True
 
