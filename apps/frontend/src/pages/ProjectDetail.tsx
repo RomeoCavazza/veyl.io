@@ -78,6 +78,7 @@ export default function ProjectDetail() {
   const [editDescription, setEditDescription] = useState('');
   const [sortColumn, setSortColumn] = useState<string>('posted_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [refreshTrigger, setRefreshTrigger] = useState(Date.now());
   const [fetchingPostId, setFetchingPostId] = useState<string | null>(null);
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
 
@@ -413,6 +414,19 @@ export default function ProjectDetail() {
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Projects
+          </Button>
+          <Button
+            onClick={() => {
+              fetchProjectPosts();
+              setRefreshTrigger(Date.now());
+              toast({ title: 'Refreshing...', description: 'Updating project data and insights' });
+            }}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            Refresh All
           </Button>
         </div>
 
@@ -1214,16 +1228,16 @@ export default function ProjectDetail() {
 
           {/* Tab 2: Analytics */}
           <TabsContent value="analytics" className="space-y-6">
-            {/* Instagram Insights */}
-            <InstagramInsights projectId={project.id} />
+            {/* Instagram Insights - Auto refresh avec les graphs */}
+            <InstagramInsights projectId={project.id} triggerRefresh={refreshTrigger} />
 
             <div className="grid gap-4 md:grid-cols-2">
               {/* Content Type Distribution Chart */}
               <Card className="bg-card border-border shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-white">Content Type Distribution</CardTitle>
+                  <CardTitle className="text-white">Content Distribution</CardTitle>
                   <CardDescription className="text-gray-400">
-                    Breakdown by media type
+                    Media types
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

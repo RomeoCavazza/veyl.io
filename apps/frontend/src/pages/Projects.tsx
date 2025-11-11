@@ -30,6 +30,7 @@ export default function Projects() {
   const { toast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchProjects();
@@ -43,8 +44,10 @@ export default function Projects() {
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  const fetchProjects = async () => {
+  const fetchProjects = async (silent = false) => {
     try {
+      if (!silent) setLoading(true);
+      
       const token = localStorage.getItem('token');
       if (!token) {
         navigate('/auth');
@@ -82,6 +85,51 @@ export default function Projects() {
     }
   };
 
+  // Refresh complet : recharge projets + met à jour stats via /posts endpoint
+  const handleRefreshAll = async () => {
+    setRefreshing(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      // 1. Recharger les projets
+      await fetchProjects(true);
+
+      // 2. Pour chaque projet, appeler /projects/{id}/posts pour mettre à jour les stats
+      const refreshPromises = projects.map(async (project) => {
+        try {
+          const response = await fetch(`/api/v1/projects/${project.id}/posts`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            console.log(`✅ Refreshed stats for project ${project.name}`);
+          }
+        } catch (error) {
+          console.error(`❌ Failed to refresh project ${project.name}:`, error);
+        }
+      });
+
+      await Promise.all(refreshPromises);
+
+      // 3. Recharger une dernière fois pour avoir les stats à jour
+      await fetchProjects(true);
+
+      toast({
+        title: 'Projects refreshed',
+        description: 'All project stats have been updated.',
+      });
+    } catch (error: any) {
+      console.error('Refresh error:', error);
+      toast({
+        title: 'Refresh failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -91,13 +139,13 @@ export default function Projects() {
           <CardTitle className="text-2xl">My Projects</CardTitle>
           <div className="flex gap-2">
             <Button
-              onClick={() => fetchProjects()}
+              onClick={handleRefreshAll}
               variant="outline"
               size="sm"
-              disabled={loading}
+              disabled={refreshing || loading}
             >
-              <RefreshCcw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
+              <RefreshCcw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh All'}
             </Button>
             {projects.length > 0 && (
               <Button onClick={() => navigate('/projects/new')}>
