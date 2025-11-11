@@ -9,13 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Table,
   TableBody,
   TableCell,
@@ -54,6 +47,9 @@ import {
 // Import getApiBase from api.ts
 import { getApiBase, addProjectCreator, removeProjectCreator, addProjectHashtag, removeProjectHashtag } from '@/lib/api';
 
+const PLATFORM_OPTIONS = ['instagram', 'facebook', 'tiktok'] as const;
+const formatPlatformLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -79,7 +75,6 @@ export default function ProjectDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('week');
   const [sortColumn, setSortColumn] = useState<string>('posted_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -294,81 +289,6 @@ export default function ProjectDetail() {
     }
   };
 
-  // Calcul des statistiques de posts basées sur les dates
-  const calculatePostStats = () => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const monthAgo = new Date(today);
-    monthAgo.setMonth(monthAgo.getMonth() - 1);
-
-    const postsToday = posts.filter(post => {
-      if (!post.posted_at) return false;
-      const postDate = new Date(post.posted_at);
-      return postDate >= today;
-    }).length;
-
-    const postsThisWeek = posts.filter(post => {
-      if (!post.posted_at) return false;
-      const postDate = new Date(post.posted_at);
-      return postDate >= weekAgo;
-    }).length;
-
-    const postsThisMonth = posts.filter(post => {
-      if (!post.posted_at) return false;
-      const postDate = new Date(post.posted_at);
-      return postDate >= monthAgo;
-    }).length;
-
-    // If no dates, use approximations
-    if (posts.length > 0 && !posts.some(p => p.posted_at)) {
-      return {
-        perDay: Math.round(posts.length / 7) || 0,
-        perWeek: posts.length,
-        perMonth: posts.length * 4,
-      };
-    }
-
-    return {
-      perDay: postsToday,
-      perWeek: postsThisWeek,
-      perMonth: postsThisMonth,
-    };
-  };
-
-  const postStats = calculatePostStats();
-
-  // Fonction pour calculer les stats d'un creator selon la période
-  const getCreatorStats = (creatorHandle: string, period: 'day' | 'week' | 'month') => {
-    const now = new Date();
-    let startDate = new Date();
-    
-    if (period === 'day') {
-      startDate.setHours(0, 0, 0, 0);
-    } else if (period === 'week') {
-      startDate.setDate(startDate.getDate() - 7);
-    } else if (period === 'month') {
-      startDate.setMonth(startDate.getMonth() - 1);
-    }
-    
-    // Count creator posts in the period
-    const creatorPosts = posts.filter((post: any) => {
-      if (post.username?.toLowerCase() !== creatorHandle.toLowerCase()) return false;
-      if (!post.posted_at) return true; // If no date, include
-      const postDate = new Date(post.posted_at);
-      return postDate >= startDate;
-    });
-    
-    // Trouver le creator pour avoir les followers
-    const creator = creators.find((c: any) => c.handle?.toLowerCase() === creatorHandle.toLowerCase());
-    
-    return {
-      postsCount: creatorPosts.length,
-      followers: creator?.followers || 0,
-    };
-  };
-
   // Function to sort posts
   const sortedPosts = useMemo(() => {
     const sorted = [...posts];
@@ -463,95 +383,77 @@ export default function ProjectDetail() {
           />
           <div className="space-y-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between py-4">
-                <CardTitle className="text-lg">Hashtags</CardTitle>
-                <Button size="sm" onClick={handleAddNiche}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add hashtag
-                </Button>
+              <CardHeader className="flex flex-row items-center justify-between py-3">
+                <CardTitle className="text-base">Hashtags</CardTitle>
+                {hashtagLinks.length > 0 ? (
+                  <Button variant="ghost" size="sm" onClick={handleAddNiche}>
+                    <Plus className="h-4 w-4 mr-1" /> Add
+                  </Button>
+                ) : null}
               </CardHeader>
               <CardContent>
                 {hashtagLinks.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No hashtags linked yet.</p>
+                  <Button className="w-full" size="sm" onClick={handleAddNiche}>
+                    <Plus className="h-4 w-4 mr-1" /> Add hashtag
+                  </Button>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Hashtag</TableHead>
-                        <TableHead>Platform</TableHead>
-                        <TableHead>Added</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {hashtagLinks.map((link: any) => (
-                        <TableRow key={link.link_id ?? link.id}>
-                          <TableCell className="font-medium">#{link.name}</TableCell>
-                          <TableCell className="capitalize">{link.platform || 'instagram'}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {link.added_at ? formatDistanceToNow(new Date(link.added_at), { addSuffix: true, locale: fr }) : '—'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveHashtagLink(link.link_id ?? link.id)}
-                              title="Remove hashtag"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className="flex flex-col gap-2 text-sm">
+                    {hashtagLinks.map((link: any) => (
+                      <div key={link.link_id ?? link.id} className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2">
+                        <div className="flex flex-col">
+                          <span className="font-medium">#{link.name}</span>
+                          <span className="text-xs text-muted-foreground">{link.platform || 'instagram'}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleRemoveHashtagLink(link.link_id ?? link.id)}
+                          title="Remove hashtag"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between py-4">
-                <CardTitle className="text-lg">Creators</CardTitle>
-                <Button size="sm" onClick={handleAddCreator}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add creator
-                </Button>
+              <CardHeader className="flex flex-row items-center justify-between py-3">
+                <CardTitle className="text-base">Creators</CardTitle>
+                {creatorLinks.length > 0 ? (
+                  <Button variant="ghost" size="sm" onClick={handleAddCreator}>
+                    <Plus className="h-4 w-4 mr-1" /> Add
+                  </Button>
+                ) : null}
               </CardHeader>
               <CardContent>
                 {creatorLinks.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No creators linked yet.</p>
+                  <Button className="w-full" size="sm" onClick={handleAddCreator}>
+                    <Plus className="h-4 w-4 mr-1" /> Add creator
+                  </Button>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Creator</TableHead>
-                        <TableHead>Platform</TableHead>
-                        <TableHead>Added</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {creatorLinks.map((link: any) => (
-                        <TableRow key={link.id}>
-                          <TableCell className="font-medium">@{link.creator_username}</TableCell>
-                          <TableCell className="capitalize">{link.platform || 'instagram'}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {link.added_at ? formatDistanceToNow(new Date(link.added_at), { addSuffix: true, locale: fr }) : '—'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveCreatorLink(link.id)}
-                              title="Remove creator"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className="flex flex-col gap-2 text-sm">
+                    {creatorLinks.map((link: any) => (
+                      <div key={link.id} className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2">
+                        <div className="flex flex-col">
+                          <span className="font-medium">@{link.creator_username}</span>
+                          <span className="text-xs text-muted-foreground">{link.platform || 'instagram'}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleRemoveCreatorLink(link.id)}
+                          title="Remove creator"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -668,17 +570,20 @@ export default function ProjectDetail() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Platform</Label>
-                  <Select value={newCreatorPlatform} onValueChange={setNewCreatorPlatform}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select platform" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="instagram">Instagram</SelectItem>
-                      <SelectItem value="facebook">Facebook</SelectItem>
-                      <SelectItem value="tiktok">TikTok</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <span className="text-xs font-medium text-muted-foreground">Platform</span>
+                  <div className="flex gap-2">
+                    {PLATFORM_OPTIONS.map((option) => (
+                      <Button
+                        key={option}
+                        type="button"
+                        variant={newCreatorPlatform === option ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setNewCreatorPlatform(option)}
+                      >
+                        {formatPlatformLabel(option)}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -707,17 +612,20 @@ export default function ProjectDetail() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Platform</Label>
-                  <Select value={newHashtagPlatform} onValueChange={setNewHashtagPlatform}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select platform" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="instagram">Instagram</SelectItem>
-                      <SelectItem value="facebook">Facebook</SelectItem>
-                      <SelectItem value="tiktok">TikTok</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <span className="text-xs font-medium text-muted-foreground">Platform</span>
+                  <div className="flex gap-2">
+                    {PLATFORM_OPTIONS.map((option) => (
+                      <Button
+                        key={option}
+                        type="button"
+                        variant={newHashtagPlatform === option ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setNewHashtagPlatform(option)}
+                      >
+                        {formatPlatformLabel(option)}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </div>
               <DialogFooter>
