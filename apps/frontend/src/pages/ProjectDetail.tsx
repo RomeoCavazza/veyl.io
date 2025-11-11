@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { ProjectPanel } from '@/components/ProjectPanel';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -51,7 +52,7 @@ import {
 } from 'recharts';
 
 // Import getApiBase from api.ts
-import { getApiBase } from '@/lib/api';
+import { getApiBase, addProjectCreator, removeProjectCreator, addProjectHashtag, removeProjectHashtag } from '@/lib/api';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -61,6 +62,16 @@ export default function ProjectDetail() {
   const [posts, setPosts] = useState<any[]>([]);
   const [creators, setCreators] = useState<any[]>([]);
   const [niches, setNiches] = useState<any[]>([]);
+  const [creatorLinks, setCreatorLinks] = useState<any[]>([]);
+  const [hashtagLinks, setHashtagLinks] = useState<any[]>([]);
+  const [addCreatorOpen, setAddCreatorOpen] = useState(false);
+  const [newCreatorUsername, setNewCreatorUsername] = useState('');
+  const [newCreatorPlatform, setNewCreatorPlatform] = useState('instagram');
+  const [isSavingCreator, setIsSavingCreator] = useState(false);
+  const [addHashtagOpen, setAddHashtagOpen] = useState(false);
+  const [newHashtagName, setNewHashtagName] = useState('');
+  const [newHashtagPlatform, setNewHashtagPlatform] = useState('instagram');
+  const [isSavingHashtag, setIsSavingHashtag] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [postDialogOpen, setPostDialogOpen] = useState(false);
@@ -77,95 +88,210 @@ export default function ProjectDetail() {
   const engagementTrendData: Array<{ date: string; engagement: number; reach: number; impressions: number }> = [];
   const topPerformingCreators: Array<{ username: string; posts: number; avg_engagement: number; total_reach: number }> = [];
 
-  useEffect(() => {
-    // Load project from API
-    const loadProject = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/auth');
-          return;
-        }
+  const applyProjectData = useCallback((projectData: any) => {
+    setProject(projectData);
 
-        // Load project from API
-        // Use Vercel proxy (relative path)
-        const response = await fetch(`/api/v1/projects/${id}`, {
-          mode: 'cors',
-          credentials: 'same-origin',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+    const projectCreators = projectData.creators || [];
+    setCreatorLinks(projectCreators);
+    const creatorCards = projectCreators.map((c: any) => ({
+      handle: c.creator_username,
+      platform: c.platform || projectData.platforms?.[0] || 'instagram',
+      profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.creator_username}`,
+      linkId: c.id,
+    }));
+    if (creatorCards.length === 0 && projectData.scope_query) {
+      const queryUsers = projectData.scope_query
+        .split(',')
+        .map((q: string) => q.trim())
+        .filter((entry: string) => entry.startsWith('@'))
+        .map((entry: string) => entry.replace('@', ''));
+      setCreators(
+        queryUsers.map((username: string) => ({
+          handle: username,
+          platform: projectData.platforms?.[0] || 'instagram',
+          profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+        }))
+      );
+    } else {
+      setCreators(creatorCards);
+    }
 
-        if (!response.ok) {
-          throw new Error(`Failed to load project: ${response.status}`);
-        }
-
-        const projectData = await response.json();
-        console.log('Project loaded:', projectData);
-        
-        setProject(projectData);
-        
-               // Extract creators from creators (new structure)
-               const projectCreators = projectData.creators || [];
-               const creatorsData = projectCreators.map((c: any) => ({
-                 handle: c.creator_username,
-                 platform: projectData.platforms[0] || 'instagram',
-                 profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.creator_username}`,
-               }));
-               setCreators(creatorsData);
-               
-               // If no creators but scope_query contains users, extract
-               if (creatorsData.length === 0 && projectData.scope_query) {
-                 const queryUsers = projectData.scope_query.split(',').map((q: string) => q.trim().replace('@', ''));
-                 setCreators(queryUsers.map((username: string) => ({
-                   handle: username,
-                   platform: projectData.platforms[0] || 'instagram',
-                   profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
-                 })));
-               }
-        
-        // Extract hashtags from scope_query or separate by comma
-        const query = projectData.scope_query || '';
-        const hashtagsFromQuery = query.split(',').map((q: string) => q.trim()).filter(Boolean);
-        setNiches(hashtagsFromQuery.map((name: string, idx: number) => ({
+    const projectHashtags = projectData.hashtags || [];
+    setHashtagLinks(projectHashtags);
+    const hashtagEntries = projectHashtags.map((link: any, idx: number) => ({
+      id: link.id ?? idx + 1,
+      linkId: link.link_id ?? link.id,
+      name: link.name,
+      posts: link.posts ?? 0,
+      growth: link.growth ?? '0%',
+      engagement: link.engagement ?? 0,
+      platform: link.platform,
+    }));
+    if (hashtagEntries.length === 0 && projectData.scope_query) {
+      const queryHashtags = projectData.scope_query
+        .split(',')
+        .map((q: string) => q.trim())
+        .filter((entry: string) => entry.startsWith('#'))
+        .map((entry: string) => entry.replace('#', ''))
+        .map((name: string, idx: number) => ({
           id: idx + 1,
-          name: name.replace('#', ''),
+          linkId: idx + 1,
+          name,
           posts: 0,
           growth: '0%',
           engagement: 0,
-        })));
-        
-      } catch (error: any) {
-        console.error('Error loading project:', error);
-        toast({
-          title: 'Error',
-          description: error.message || 'Failed to load project',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id) {
-      loadProject();
+          platform: projectData.platforms?.[0] || 'instagram',
+        }));
+      setNiches(queryHashtags);
+    } else {
+      setNiches(hashtagEntries);
     }
-  }, [id, navigate, toast]);
+
+    setEditName(projectData.name || 'Untitled project');
+    setEditDescription(projectData.description || '');
+  }, []);
+
+  const fetchProject = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/auth');
+        return;
+      }
+
+      const response = await fetch(`/api/v1/projects/${id}`, {
+        mode: 'cors',
+        credentials: 'same-origin',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load project: ${response.status}`);
+      }
+
+      const projectData = await response.json();
+      console.log('Project loaded:', projectData);
+      applyProjectData(projectData);
+    } catch (error: any) {
+      console.error('Error loading project:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to load project',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [id, navigate, toast, applyProjectData]);
+
+  useEffect(() => {
+    fetchProject();
+  }, [fetchProject]);
 
   const handleAddCreator = () => {
-    toast({
-      title: 'Add Creator',
-      description: 'Feature coming soon',
-    });
+    setNewCreatorUsername('');
+    setNewCreatorPlatform('instagram');
+    setAddCreatorOpen(true);
   };
 
   const handleAddNiche = () => {
-    toast({
-      title: 'Add Niche',
-      description: 'Feature coming soon',
-    });
+    setNewHashtagName('');
+    setNewHashtagPlatform('instagram');
+    setAddHashtagOpen(true);
+  };
+
+  const handleSaveCreator = async () => {
+    if (!id) return;
+    const username = newCreatorUsername.trim();
+    if (!username) {
+      toast({ title: 'Username required', description: 'Enter a creator username', variant: 'destructive' });
+      return;
+    }
+    setIsSavingCreator(true);
+    try {
+      const updatedProject = await addProjectCreator(id, {
+        username,
+        platform: newCreatorPlatform,
+      });
+      applyProjectData(updatedProject);
+      setAddCreatorOpen(false);
+      setNewCreatorUsername('');
+      toast({ title: 'Creator added', description: `@${username} linked to the project.` });
+    } catch (error: any) {
+      console.error('Error adding creator:', error);
+      toast({
+        title: 'Error',
+        description: error?.message || 'Unable to add creator',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingCreator(false);
+    }
+  };
+
+  const handleRemoveCreatorLink = async (linkId: number) => {
+    if (!id) return;
+    try {
+      await removeProjectCreator(id, linkId);
+      await fetchProject();
+      toast({ title: 'Creator removed' });
+    } catch (error: any) {
+      console.error('Error removing creator:', error);
+      toast({
+        title: 'Error',
+        description: error?.message || 'Unable to remove creator',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSaveHashtag = async () => {
+    if (!id) return;
+    const hashtag = newHashtagName.trim().replace(/^#/, '');
+    if (!hashtag) {
+      toast({ title: 'Hashtag required', description: 'Enter a hashtag', variant: 'destructive' });
+      return;
+    }
+    setIsSavingHashtag(true);
+    try {
+      const updatedProject = await addProjectHashtag(id, {
+        hashtag,
+        platform: newHashtagPlatform,
+      });
+      applyProjectData(updatedProject);
+      setAddHashtagOpen(false);
+      setNewHashtagName('');
+      toast({ title: 'Hashtag added', description: `#${hashtag} linked to the project.` });
+    } catch (error: any) {
+      console.error('Error adding hashtag:', error);
+      toast({
+        title: 'Error',
+        description: error?.message || 'Unable to add hashtag',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingHashtag(false);
+    }
+  };
+
+  const handleRemoveHashtagLink = async (linkId: number) => {
+    if (!id) return;
+    try {
+      await removeProjectHashtag(id, linkId);
+      await fetchProject();
+      toast({ title: 'Hashtag removed' });
+    } catch (error: any) {
+      console.error('Error removing hashtag:', error);
+      toast({
+        title: 'Error',
+        description: error?.message || 'Unable to remove hashtag',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Calcul des statistiques de posts basées sur les dates
@@ -322,6 +448,102 @@ export default function ProjectDetail() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Projects
           </Button>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between py-4">
+              <CardTitle className="text-lg">Creators</CardTitle>
+              <Button size="sm" onClick={handleAddCreator}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add creator
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {creatorLinks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No creators linked yet.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Creator</TableHead>
+                      <TableHead>Platform</TableHead>
+                      <TableHead>Added</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {creatorLinks.map((link: any) => (
+                      <TableRow key={link.id}>
+                        <TableCell className="font-medium">@{link.creator_username}</TableCell>
+                        <TableCell className="capitalize">{link.platform || 'instagram'}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {link.added_at ? formatDistanceToNow(new Date(link.added_at), { addSuffix: true, locale: fr }) : '—'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveCreatorLink(link.id)}
+                            title="Remove creator"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between py-4">
+              <CardTitle className="text-lg">Hashtags</CardTitle>
+              <Button size="sm" onClick={handleAddNiche}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add hashtag
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {hashtagLinks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hashtags linked yet.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Hashtag</TableHead>
+                      <TableHead>Platform</TableHead>
+                      <TableHead>Added</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {hashtagLinks.map((link: any) => (
+                      <TableRow key={link.link_id ?? link.id}>
+                        <TableCell className="font-medium">#{link.name}</TableCell>
+                        <TableCell className="capitalize">{link.platform || 'instagram'}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {link.added_at ? formatDistanceToNow(new Date(link.added_at), { addSuffix: true, locale: fr }) : '—'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveHashtagLink(link.link_id ?? link.id)}
+                            title="Remove hashtag"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Tabs */}
@@ -481,165 +703,83 @@ export default function ProjectDetail() {
             </div>
           </TabsContent>
 
-          {/* Tab 2: Grid - Posts table */}
-          <TabsContent value="grid" className="space-y-6">
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle>Posts ({sortedPosts.length})</CardTitle>
-                <CardDescription>
-                  Tabular view of all posts with sorting and filters
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[60px]">Image</TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('username')}
-                        >
-                          <div className="flex items-center">
-                            Auteur
-                            {getSortIcon('username')}
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('caption')}
-                        >
-                          <div className="flex items-center">
-                            Description
-                            {getSortIcon('caption')}
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('posted_at')}
-                        >
-                          <div className="flex items-center">
-                            Date
-                            {getSortIcon('posted_at')}
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="text-right cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('like_count')}
-                        >
-                          <div className="flex items-center justify-end">
-                            Likes
-                            {getSortIcon('like_count')}
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="text-right cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('comment_count')}
-                        >
-                          <div className="flex items-center justify-end">
-                            Comments
-                            {getSortIcon('comment_count')}
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="text-right cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('score')}
-                        >
-                          <div className="flex items-center justify-end">
-                            Score
-                            {getSortIcon('score')}
-                          </div>
-                        </TableHead>
-                        <TableHead className="text-right">Platform</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sortedPosts.length > 0 ? (
-                        sortedPosts.map((post: any) => {
-                          const creator = creators.find((c: any) => c.handle?.toLowerCase() === post.username?.toLowerCase());
-                          return (
-                            <TableRow
-                              key={post.id}
-                              className="cursor-pointer hover:bg-muted/50"
-                              onClick={() => {
-                                setSelectedPost(post);
-                                setPostDialogOpen(true);
-                              }}
-                            >
-                              <TableCell>
-                                <img
-                                  src={post.media_url}
-                                  alt={post.caption}
-                                  className="w-12 h-12 rounded object-cover"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <img
-                                    src={creator?.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.username}`}
-                                    alt={post.username}
-                                    className="w-6 h-6 rounded-full"
-                                  />
-                                  <span className="font-medium">{post.username}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <p className="max-w-md line-clamp-2 text-sm">
-                                  {post.caption || '-'}
-                                </p>
-                              </TableCell>
-                              <TableCell>
-                                {post.posted_at ? (
-                                  <div className="text-sm">
-                                    <div>{new Date(post.posted_at).toLocaleDateString('fr-FR')}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {formatDistanceToNow(new Date(post.posted_at), { addSuffix: true, locale: fr })}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <Heart className="h-4 w-4" />
-                                  <span>{post.like_count?.toLocaleString() || 0}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <MessageCircle className="h-4 w-4" />
-                                  <span>{post.comment_count?.toLocaleString() || 0}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {post.score ? (
-                                  <Badge variant={post.score > 7 ? 'default' : post.score > 4 ? 'secondary' : 'outline'}>
-                                    {post.score.toFixed(1)}
-                                  </Badge>
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Badge variant="outline">{post.platform || 'instagram'}</Badge>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                            No posts found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+          <Dialog open={addCreatorOpen} onOpenChange={setAddCreatorOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add creator</DialogTitle>
+                <DialogDescription>Link a new creator to this project.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-creator-username">Username</Label>
+                  <Input
+                    id="new-creator-username"
+                    placeholder="selenagomez"
+                    value={newCreatorUsername}
+                    onChange={(e) => setNewCreatorUsername(e.target.value)}
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                <div className="space-y-2">
+                  <Label>Platform</Label>
+                  <Select value={newCreatorPlatform} onValueChange={setNewCreatorPlatform}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select platform" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                      <SelectItem value="facebook">Facebook</SelectItem>
+                      <SelectItem value="tiktok">TikTok</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddCreatorOpen(false)}>Cancel</Button>
+                <Button onClick={handleSaveCreator} disabled={isSavingCreator}>
+                  {isSavingCreator ? 'Saving…' : 'Save'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={addHashtagOpen} onOpenChange={setAddHashtagOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add hashtag</DialogTitle>
+                <DialogDescription>Link a new hashtag to this project.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-hashtag-name">Hashtag</Label>
+                  <Input
+                    id="new-hashtag-name"
+                    placeholder="fashion"
+                    value={newHashtagName}
+                    onChange={(e) => setNewHashtagName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Platform</Label>
+                  <Select value={newHashtagPlatform} onValueChange={setNewHashtagPlatform}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select platform" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                      <SelectItem value="facebook">Facebook</SelectItem>
+                      <SelectItem value="tiktok">TikTok</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddHashtagOpen(false)}>Cancel</Button>
+                <Button onClick={handleSaveHashtag} disabled={isSavingHashtag}>
+                  {isSavingHashtag ? 'Saving…' : 'Save'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Post Detail Dialog - Style Instagram */}
           <Dialog open={postDialogOpen} onOpenChange={setPostDialogOpen}>
@@ -816,16 +956,18 @@ export default function ProjectDetail() {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Name</label>
+                  <Label htmlFor="name">Name</Label>
                   <Input
+                    id="name"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     placeholder="Project name"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Description</label>
+                  <Label htmlFor="description">Description</Label>
                   <Input
+                    id="description"
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     placeholder="Project description"
@@ -859,7 +1001,7 @@ export default function ProjectDetail() {
                     }
 
                     const updatedProject = await response.json();
-                    setProject(updatedProject);
+                    applyProjectData(updatedProject);
                     setEditDialogOpen(false);
                     toast({
                       title: 'Success',

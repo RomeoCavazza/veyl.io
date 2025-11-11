@@ -245,8 +245,21 @@ export interface Project {
   last_signal_at?: string;
   created_at: string;
   updated_at: string;
-  hashtags?: Array<{id: number; name: string; platform_id: number}>;
-  creators?: Array<{id: number; creator_username: string; platform_id: number}>;
+  hashtags?: Array<{
+    id: number;
+    link_id?: number;
+    name: string;
+    platform_id?: number;
+    platform?: string;
+    added_at?: string;
+  }>;
+  creators?: Array<{
+    id: number;
+    creator_username: string;
+    platform_id?: number;
+    platform?: string;
+    added_at?: string;
+  }>;
 }
 
 export async function createProject(project: ProjectCreate): Promise<Project> {
@@ -315,4 +328,120 @@ export async function getProjects(): Promise<Project[]> {
   }
   
   return response.json();
+}
+
+export async function addProjectCreator(projectId: string, payload: { username: string; platform?: string }): Promise<Project> {
+  const token = localStorage.getItem('token');
+  const apiBase = getApiBase();
+  const url = apiBase ? `${apiBase}/api/v1/projects/${projectId}/creators` : `/api/v1/projects/${projectId}/creators`;
+
+  const response = await fetch(url, {
+    mode: 'cors',
+    credentials: 'same-origin',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token || ''}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let detail = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      detail = parsed.detail || errorText;
+    } catch (err) {
+      /* ignore */
+    }
+    throw new Error(detail || `HTTP ${response.status}: Failed to add creator`);
+  }
+
+  return response.json();
+}
+
+export async function removeProjectCreator(projectId: string, creatorLinkId: number): Promise<void> {
+  const token = localStorage.getItem('token');
+  const apiBase = getApiBase();
+  const url = apiBase ? `${apiBase}/api/v1/projects/${projectId}/creators/${creatorLinkId}` : `/api/v1/projects/${projectId}/creators/${creatorLinkId}`;
+
+  const response = await fetch(url, {
+    mode: 'cors',
+    credentials: 'same-origin',
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token || ''}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let detail = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      detail = parsed.detail || errorText;
+    } catch (err) {
+      /* ignore */
+    }
+    throw new Error(detail || `HTTP ${response.status}: Failed to remove creator`);
+  }
+}
+
+export async function addProjectHashtag(projectId: string, payload: { hashtag: string; platform?: string }): Promise<Project> {
+  const token = localStorage.getItem('token');
+  const apiBase = getApiBase();
+  const url = apiBase ? `${apiBase}/api/v1/projects/${projectId}/hashtags` : `/api/v1/projects/${projectId}/hashtags`;
+
+  const response = await fetch(url, {
+    mode: 'cors',
+    credentials: 'same-origin',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token || ''}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let detail = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      detail = parsed.detail || errorText;
+    } catch (err) {
+      /* ignore */
+    }
+    throw new Error(detail || `HTTP ${response.status}: Failed to add hashtag`);
+  }
+
+  return response.json();
+}
+
+export async function removeProjectHashtag(projectId: string, linkId: number): Promise<void> {
+  const token = localStorage.getItem('token');
+  const apiBase = getApiBase();
+  const url = apiBase ? `${apiBase}/api/v1/projects/${projectId}/hashtags/${linkId}` : `/api/v1/projects/${projectId}/hashtags/${linkId}`;
+
+  const response = await fetch(url, {
+    mode: 'cors',
+    credentials: 'same-origin',
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token || ''}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let detail = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      detail = parsed.detail || errorText;
+    } catch (err) {
+      /* ignore */
+    }
+    throw new Error(detail || `HTTP ${response.status}: Failed to remove hashtag`);
+  }
 }

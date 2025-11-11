@@ -196,16 +196,29 @@ def serialize_project(project: Project, include_relations: bool = True) -> dict:
     
     if include_relations:
         # Charger les hashtags liés
-        project_hashtags = project.hashtags if hasattr(project, 'hashtags') else []
+        project_hashtag_links = getattr(project, 'project_hashtag_links', [])
         result['hashtags'] = [
-            {'id': h.id, 'name': h.name, 'platform_id': h.platform_id}
-            for h in project_hashtags
-        ] if project_hashtags else []
+            {
+                'link_id': link.id,
+                'id': link.hashtag_id,
+                'name': link.hashtag.name if link.hashtag else None,
+                'platform_id': link.hashtag.platform_id if link.hashtag else None,
+                'platform': link.hashtag.platform.name if link.hashtag and link.hashtag.platform else None,
+                'added_at': link.added_at.isoformat() if link.added_at else None,
+            }
+            for link in project_hashtag_links
+        ] if project_hashtag_links else []
         
         # Charger les créateurs liés
         project_creators = project.creators if hasattr(project, 'creators') else []
         result['creators'] = [
-            {'id': c.id, 'creator_username': c.creator_username, 'platform_id': c.platform_id}
+            {
+                'id': c.id,
+                'creator_username': c.creator_username,
+                'platform_id': c.platform_id,
+                'platform': c.platform.name if c.platform else None,
+                'added_at': c.added_at.isoformat() if c.added_at else None,
+            }
             for c in project_creators
         ] if project_creators else []
     
