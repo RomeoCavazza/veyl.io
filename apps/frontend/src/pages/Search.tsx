@@ -17,14 +17,24 @@ export default function Search() {
   const [isTestingMetaAPI, setIsTestingMetaAPI] = useState(false);
   const { toast } = useToast();
 
-  // Charger posts depuis PostgreSQL (fashion project)
-  const loadPostsFromDatabase = async (): Promise<PostHit[]> => {
+  // Charger posts depuis PostgreSQL - cherche dans tous les projets qui matchent la query
+  const loadPostsFromDatabase = async (query: string): Promise<PostHit[]> => {
     try {
       const projects = await getProjects();
-      const fashionProject = projects.find((p: any) => p.name.toLowerCase() === 'fashion');
       
-      if (fashionProject) {
-        const dbPosts = await getProjectPosts(fashionProject.id);
+      // Chercher un projet qui contient la query dans son nom ou ses hashtags
+      const matchingProject = projects.find((p: any) => {
+        const nameMatch = p.name.toLowerCase().includes(query.toLowerCase());
+        const hashtagMatch = p.hashtags?.some((h: any) => 
+          h.name?.toLowerCase().includes(query.toLowerCase())
+        );
+        return nameMatch || hashtagMatch;
+      });
+      
+      if (matchingProject) {
+        console.log(`💾 [DB] Found matching project: ${matchingProject.name}`);
+        const dbPosts = await getProjectPosts(matchingProject.id);
+        
         // Convertir ProjectPost[] en PostHit[]
         return dbPosts.map((post: any) => ({
           id: post.id || post.external_id,
@@ -35,19 +45,21 @@ export default function Search() {
           media_url: post.media_url,
           permalink: post.permalink,
           posted_at: post.posted_at,
-          like_count: post.metrics?.like_count || 0,
-          comment_count: post.metrics?.comment_count || 0,
+          like_count: post.like_count || 0,
+          comment_count: post.comment_count || 0,
           score_trend: post.score_trend || 0,
         }));
       }
+      
+      console.log('💾 [DB] No matching project found');
       return [];
     } catch (error) {
-      console.error('[DB] Error:', error);
+      console.error('💾 [DB] Error:', error);
       return [];
     }
   };
 
-  // Recherche simplifiée: charge depuis DB pour "fashion"
+  // 🔥 STRATÉGIE: 1. Meta API → 2. DB Fallback
   const handleSearch = async (query: string) => {
     if (!query.trim()) return;
     
@@ -56,31 +68,65 @@ export default function Search() {
     setSearchQuery(query);
 
     try {
-      if (query.toLowerCase() === 'fashion') {
-        const dbPosts = await loadPostsFromDatabase();
+      console.log(`🔍 [SEARCH] Searching for: ${query}`);
+      
+      // 1️⃣ ESSAYER META API D'ABORD
+      console.log('📡 [SEARCH] Step 1: Trying Meta API...');
+      try {
+        const metaResponse = await fetchMetaIGPublic(query, 20);
         
-        if (dbPosts.length > 0) {
-          setPosts(dbPosts);
+        if (metaResponse.status === 'success' && metaResponse.data && metaResponse.data.length > 0) {
+          console.log(`✅ [SEARCH] Meta API success: ${metaResponse.data.length} posts`);
+          const metaPosts: PostHit[] = metaResponse.data.map((item: any) => ({
+            id: item.id,
+            platform: 'instagram',
+            username: item.username || 'unknown',
+            caption: item.caption,
+            media_type: item.media_type,
+            media_url: item.media_url,
+            permalink: item.permalink,
+            posted_at: item.timestamp,
+            like_count: item.like_count,
+            comment_count: item.comments_count,
+            score_trend: item.like_count ?? 0,
+          }));
+          setPosts(metaPosts);
           toast({
-            title: `Found ${dbPosts.length} posts`,
-            description: 'Loaded from your fashion project.',
+            title: `Found ${metaPosts.length} posts`,
+            description: '✨ Live data from Meta API',
           });
-        } else {
-          setPosts([]);
-          toast({
-            title: 'No stored posts',
-            description: 'Run the link script first, or use "Test Live Meta API"',
-          });
+          setIsLoading(false);
+          return;
         }
+        
+        console.log('⚠️ [SEARCH] Meta API returned 0 results, trying DB fallback...');
+      } catch (metaError: any) {
+        console.log(`⚠️ [SEARCH] Meta API failed: ${metaError.message}, trying DB fallback...`);
+      }
+      
+      // 2️⃣ FALLBACK: CHARGER DEPUIS DB
+      console.log('💾 [SEARCH] Step 2: Loading from database...');
+      const dbPosts = await loadPostsFromDatabase(query);
+      
+      if (dbPosts.length > 0) {
+        console.log(`✅ [SEARCH] DB success: ${dbPosts.length} posts`);
+        setPosts(dbPosts);
+        toast({
+          title: `Found ${dbPosts.length} posts`,
+          description: '💾 Loaded from database (Meta API unavailable)',
+        });
       } else {
+        console.log('❌ [SEARCH] No posts in DB either');
         setPosts([]);
         toast({
-          title: 'Search "fashion"',
-          description: 'Only "fashion" hashtag is populated for the demo.',
+          title: 'No results found',
+          description: 'Neither Meta API nor database returned results.',
+          variant: 'destructive',
         });
       }
+      
     } catch (error: any) {
-      console.error('[SEARCH] Error:', error);
+      console.error('❌ [SEARCH] Fatal error:', error);
       setPosts([]);
       toast({
         title: 'Search failed',

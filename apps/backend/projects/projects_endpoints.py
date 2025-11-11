@@ -19,6 +19,7 @@ from db.models import (
     Platform,
     Post,
     PostHashtag,
+    OAuthAccount,
 )
 from auth_unified.auth_endpoints import get_current_user
 from projects.schemas import (
@@ -671,10 +672,16 @@ def remove_project_creator(
 def add_project_hashtag(
     project_id: str,
     payload: ProjectHashtagCreate,
+    fetch_live: bool = Query(False, description="Fetch live posts from Meta API after adding hashtag"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Ajouter un hashtag au projet."""
+    """
+    Ajouter un hashtag au projet.
+    
+    Si fetch_live=true, essaie de fetcher des posts depuis Meta API après avoir lié le hashtag.
+    Sinon, utilise les posts déjà en DB (via post_hashtags).
+    """
     project = _get_project_or_404(db, current_user, project_id)
 
     try:
@@ -682,6 +689,35 @@ def add_project_hashtag(
         _sync_project_metadata(db, project)
         db.commit()
         db.refresh(project)
+        
+        # 🔥 OPTIONNEL: Fetch live posts from Meta API
+        if fetch_live:
+            logger.info(f"🌐 Fetching live posts for #{payload.hashtag} from Meta API...")
+            try:
+                from services.meta_client import call_meta
+                
+                # Récupérer le token Instagram de l'utilisateur
+                oauth_account = (
+                    db.query(OAuthAccount)
+                    .filter(
+                        OAuthAccount.user_id == current_user.id,
+                        OAuthAccount.provider == "instagram"
+                    )
+                    .first()
+                )
+                
+                if oauth_account and oauth_account.access_token:
+                    # Appeler Meta API pour récupérer des posts
+                    # Note: Ceci nécessite les permissions instagram_basic, instagram_content_publish
+                    # Pour l'instant, on log juste qu'on a essayé
+                    logger.info(f"✅ User has Instagram token, could fetch live posts (not implemented yet)")
+                else:
+                    logger.info(f"⚠️ User has no Instagram token, skipping live fetch")
+                    
+            except Exception as fetch_error:
+                logger.warning(f"⚠️ Failed to fetch live posts: {fetch_error}")
+                # Continue anyway, les posts en DB seront utilisés
+        
         return serialize_project(project)
     except HTTPException:
         db.rollback()
