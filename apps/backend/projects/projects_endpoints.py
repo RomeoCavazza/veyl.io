@@ -245,39 +245,17 @@ def _attach_hashtag(
     project_hashtag = ProjectHashtag(project_id=project.id, hashtag_id=hashtag.id)
     db.add(project_hashtag)
     
-    # 🔥 AUTO-LINK: Lier automatiquement les posts existants qui ont ce hashtag
-    # Chercher les posts qui contiennent ce hashtag dans leur caption
-    posts_with_hashtag = (
-        db.query(Post)
-        .filter(
-            Post.platform_id == platform.id,
-            Post.caption.ilike(f'%#{normalized_name}%')
-        )
-        .limit(50)  # Limiter à 50 posts pour éviter la surcharge
-        .all()
+    # 🔥 AUTO-LINK: Les posts sont déjà liés au hashtag dans post_hashtags
+    # Pas besoin de créer de nouveaux liens, ils existent déjà !
+    # Le endpoint /projects/{id}/posts va automatiquement les remonter via _collect_project_posts
+    
+    # Log pour debug
+    existing_posts_count = (
+        db.query(PostHashtag)
+        .filter(PostHashtag.hashtag_id == hashtag.id)
+        .count()
     )
-    
-    linked_count = 0
-    for post in posts_with_hashtag:
-        # Vérifier si le lien existe déjà
-        existing_link = (
-            db.query(PostHashtag)
-            .filter(
-                PostHashtag.post_id == post.id,
-                PostHashtag.hashtag_id == hashtag.id
-            )
-            .first()
-        )
-        if not existing_link:
-            post_hashtag_link = PostHashtag(
-                post_id=post.id,
-                hashtag_id=hashtag.id
-            )
-            db.add(post_hashtag_link)
-            linked_count += 1
-    
-    if linked_count > 0:
-        logger.info(f"✅ Auto-linked {linked_count} posts to #{normalized_name}")
+    logger.info(f"✅ Hashtag #{normalized_name} linked to project. {existing_posts_count} posts already linked to this hashtag in DB.")
     
     return project_hashtag
 
