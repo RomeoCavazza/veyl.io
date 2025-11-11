@@ -1151,7 +1151,6 @@ export default function ProjectDetail() {
               {/* Project Panel (Left - 50%) */}
               <ProjectPanel
                 project={project}
-                creators={creators}
                 onEdit={() => {
                   setEditName(project.name || '');
                   setEditDescription(project.description || '');

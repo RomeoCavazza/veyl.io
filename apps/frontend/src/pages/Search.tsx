@@ -36,7 +36,6 @@ export default function Search() {
     if (!query.trim()) return;
     
     setIsLoading(true);
-    setFallbackNotice(null);
     setHasSearched(true);
     setSearchQuery(query);
     setSelectedPlatforms(platforms);
@@ -272,10 +271,7 @@ export default function Search() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      setSelectedPost(null);
-                      setEmbedDialogOpen(true);
-                    }}
+                    onClick={() => setEmbedDialogOpen(true)}
                   >
                     <Code2 className="h-4 w-4 mr-2" />
                     Test oEmbed
