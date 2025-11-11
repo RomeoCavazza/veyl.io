@@ -129,6 +129,29 @@ def create_project(
             )
         )
 
+        db.execute(
+            text(
+                """
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'hashtags' AND column_name = 'last_scraped'
+                    ) THEN
+                        EXECUTE 'ALTER TABLE hashtags ADD COLUMN last_scraped TIMESTAMP;';
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'hashtags' AND column_name = 'updated_at'
+                    ) THEN
+                        EXECUTE 'ALTER TABLE hashtags ADD COLUMN updated_at TIMESTAMP;';
+                    END IF;
+                END $$;
+                """
+            )
+        )
+
         # Compatibilité Pydantic v1 et v2
         if hasattr(project_in, 'model_dump'):
             project_data = project_in.model_dump(exclude={'hashtag_names', 'creator_usernames'})
