@@ -133,8 +133,8 @@ export default function Projects() {
                       creator_username: handle.replace('@', ''),
                       platform_id: 0,
                     }));
-                  let allCreators = projectCreators.length > 0 
-                    ? projectCreators 
+                  const allCreators = projectCreators.length > 0
+                    ? projectCreators
                     : fallbackHandles;
                   
                   const totalCreatorsCount = project.creatorsCount ?? allCreators.length;
@@ -185,16 +185,33 @@ export default function Projects() {
                           {displayedCreators.length > 0 && (
                             <div className="flex items-center gap-2 mt-3">
                               <div className="flex -space-x-2">
-                                {displayedCreators.map((creator, idx) => (
-                                  <img
-                                    key={creator.id || creator.creator_username}
-                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.creator_username}`}
-                                    alt={creator.creator_username}
-                                    className="w-10 h-10 rounded-full border-2 border-background"
-                                    style={{ zIndex: displayedCreators.length - idx }}
-                                    title={creator.creator_username}
-                                  />
-                                ))}
+                                {displayedCreators.map((creator, idx) => {
+                                  const isHashtag = project.scope_query
+                                    ?.split(',')
+                                    .map((entry: string) => entry.trim())
+                                    .filter(Boolean)
+                                    .some((entry: string) =>
+                                      entry.startsWith('#') &&
+                                      entry.replace('#', '').toLowerCase() === creator.creator_username?.toLowerCase()
+                                    );
+                                  const label = creator.creator_username
+                                    ? creator.creator_username.charAt(0).toUpperCase()
+                                    : '?';
+                                  return (
+                                    <div
+                                      key={creator.id || creator.creator_username || `fallback-${idx}`}
+                                      className={`w-10 h-10 rounded-full border-2 border-background flex items-center justify-center text-sm font-medium uppercase ${
+                                        isHashtag
+                                          ? 'bg-secondary/50 text-secondary-foreground'
+                                          : 'bg-muted text-muted-foreground'
+                                      }`}
+                                      style={{ zIndex: displayedCreators.length - idx }}
+                                      title={creator.creator_username || label}
+                                    >
+                                      {label}
+                                    </div>
+                                  );
+                                })}
                               </div>
                               <span className="text-xs text-muted-foreground">
                                 {totalCreatorsCount} {totalCreatorsCount > 1 ? 'creators' : 'creator'}
