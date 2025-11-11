@@ -65,6 +65,7 @@ export default function ProjectDetail() {
   const [newCreatorUsername, setNewCreatorUsername] = useState('');
   const [newCreatorPlatform, setNewCreatorPlatform] = useState('instagram');
   const [isSavingCreator, setIsSavingCreator] = useState(false);
+  const [creatorSuggestions, setCreatorSuggestions] = useState<string[]>([]);
   const [addHashtagOpen, setAddHashtagOpen] = useState(false);
   const [newHashtagName, setNewHashtagName] = useState('');
   const [newHashtagPlatform, setNewHashtagPlatform] = useState('instagram');
@@ -349,28 +350,43 @@ export default function ProjectDetail() {
     return sorted;
   }, [posts, sortColumn, sortDirection]);
 
-  const availableCreatorHandles = useMemo(() => {
-    const handles = new Set<string>();
-    posts.forEach((post: any) => {
-      if (post.author) {
-        handles.add(String(post.author));
+  // 🔍 Autocomplétion creators: fetch depuis l'API quand l'utilisateur tape
+  useEffect(() => {
+    const fetchCreatorSuggestions = async () => {
+      if (newCreatorUsername.trim().length < 2) {
+        setCreatorSuggestions([]);
+        return;
       }
-    });
-    if (project?.scope_query) {
-      project.scope_query
-        .split(',')
-        .map((value: string) => value.trim())
-        .filter((value: string) => value.startsWith('@'))
-        .forEach((value) => handles.add(value.replace('@', '')));
-    }
-    // Exclure ceux déjà liés
-    creatorLinks.forEach((link: any) => {
-      if (link.creator_username) {
-        handles.delete(link.creator_username);
+      
+      try {
+        const token = localStorage.getItem('token');
+        const apiBase = getApiBase();
+        const response = await fetch(
+          `${apiBase}/api/v1/projects/creators/search?q=${encodeURIComponent(newCreatorUsername)}&limit=10`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Filtrer ceux déjà liés au projet
+          const linkedUsernames = new Set(creatorLinks.map((link: any) => link.creator_username));
+          const filtered = data.creators
+            .map((c: any) => c.username)
+            .filter((username: string) => !linkedUsernames.has(username));
+          setCreatorSuggestions(filtered);
+        }
+      } catch (error) {
+        console.error('Error fetching creator suggestions:', error);
       }
-    });
-    return Array.from(handles);
-  }, [posts, creatorLinks, project]);
+    };
+    
+    const debounceTimer = setTimeout(fetchCreatorSuggestions, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [newCreatorUsername, creatorLinks]);
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -845,25 +861,18 @@ export default function ProjectDetail() {
                     value={newCreatorUsername}
                     onChange={(e) => setNewCreatorUsername(e.target.value)}
                   />
-                {newCreatorUsername.trim().length > 0 && (
-                  <div className="space-y-1 pt-1">
-                    {availableCreatorHandles
-                      .filter((handle) =>
-                        handle
-                          .toLowerCase()
-                          .includes(newCreatorUsername.trim().toLowerCase())
-                      )
-                      .slice(0, 5)
-                      .map((handle) => (
-                        <button
-                          key={handle}
-                          type="button"
-                          className="w-full text-left text-xs py-1 px-2 rounded-md hover:bg-muted transition-colors"
-                          onClick={() => setNewCreatorUsername(handle)}
-                        >
-                          @{handle}
-                        </button>
-                      ))}
+                {creatorSuggestions.length > 0 && (
+                  <div className="space-y-1 pt-1 max-h-40 overflow-y-auto border border-border rounded-md p-2">
+                    {creatorSuggestions.map((handle) => (
+                      <button
+                        key={handle}
+                        type="button"
+                        className="w-full text-left text-xs py-1 px-2 rounded-md hover:bg-muted transition-colors"
+                        onClick={() => setNewCreatorUsername(handle)}
+                      >
+                        @{handle}
+                      </button>
+                    ))}
                   </div>
                 )}
                 </div>

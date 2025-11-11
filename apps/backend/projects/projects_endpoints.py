@@ -3,7 +3,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import Dict, List, Optional, Set
@@ -244,6 +244,41 @@ def _attach_hashtag(
 
     project_hashtag = ProjectHashtag(project_id=project.id, hashtag_id=hashtag.id)
     db.add(project_hashtag)
+    
+    # 🔥 AUTO-LINK: Lier automatiquement les posts existants qui ont ce hashtag
+    # Chercher les posts qui contiennent ce hashtag dans leur caption
+    posts_with_hashtag = (
+        db.query(Post)
+        .filter(
+            Post.platform_id == platform.id,
+            Post.caption.ilike(f'%#{normalized_name}%')
+        )
+        .limit(50)  # Limiter à 50 posts pour éviter la surcharge
+        .all()
+    )
+    
+    linked_count = 0
+    for post in posts_with_hashtag:
+        # Vérifier si le lien existe déjà
+        existing_link = (
+            db.query(PostHashtag)
+            .filter(
+                PostHashtag.post_id == post.id,
+                PostHashtag.hashtag_id == hashtag.id
+            )
+            .first()
+        )
+        if not existing_link:
+            post_hashtag_link = PostHashtag(
+                post_id=post.id,
+                hashtag_id=hashtag.id
+            )
+            db.add(post_hashtag_link)
+            linked_count += 1
+    
+    if linked_count > 0:
+        logger.info(f"✅ Auto-linked {linked_count} posts to #{normalized_name}")
+    
     return project_hashtag
 
 
@@ -581,6 +616,27 @@ def delete_project(
     db.delete(project)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@projects_router.get("/creators/search")
+def search_creators(
+    q: str = Query(..., min_length=1, description="Search query for creator username"),
+    limit: int = Query(10, ge=1, le=50, description="Max results"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """🔍 Autocomplete: Chercher des creators dans la DB pour l'autocomplétion."""
+    # Chercher dans la table posts les auteurs uniques qui matchent la query
+    results = (
+        db.query(Post.author)
+        .filter(Post.author.ilike(f'%{q}%'))
+        .distinct()
+        .limit(limit)
+        .all()
+    )
+    
+    creators = [{"username": r[0]} for r in results if r[0]]
+    return {"creators": creators, "count": len(creators)}
 
 
 @projects_router.post("/{project_id}/creators", response_model=ProjectResponse)
