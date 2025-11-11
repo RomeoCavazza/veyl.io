@@ -567,10 +567,6 @@ export default function ProjectDetail() {
                               src={post.media_url}
                               alt={post.caption || post.author}
                               className="object-cover w-full h-full"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = `https://picsum.photos/800/800?random=${post.id}`;
-                              }}
                             />
                           ) : embedUrl ? (
                             <iframe
@@ -581,7 +577,7 @@ export default function ProjectDetail() {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-muted/50">
-                              <span className="text-muted-foreground text-sm">Media unavailable</span>
+                              <span className="text-muted-foreground text-sm">No media</span>
                             </div>
                           )}
                           <Badge className="absolute top-2 right-2 bg-accent">
@@ -686,13 +682,10 @@ export default function ProjectDetail() {
                           alt={post.caption || post.author}
                           className="h-48 w-full object-cover transition-transform group-hover:scale-105"
                           loading="lazy"
-                          onError={(event) => {
-                            (event.target as HTMLImageElement).src = `https://picsum.photos/600/600?random=${post.id}`;
-                          }}
                         />
                       ) : (
-                        <div className="h-48 w-full flex items-center justify-center text-sm text-muted-foreground">
-                          Media unavailable
+                        <div className="h-48 w-full flex items-center justify-center text-sm text-muted-foreground bg-muted/50">
+                          No media
                         </div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
@@ -1146,20 +1139,8 @@ export default function ProjectDetail() {
 
           {/* Tab 2: Analytics */}
           <TabsContent value="analytics" className="space-y-6">
-            {/* Layout 50/50 : Project Panel + Chart/Creators */}
             <div className="grid gap-4 md:grid-cols-2">
-              {/* Project Panel (Left - 50%) */}
-              <ProjectPanel
-                project={project}
-                onEdit={() => {
-                  setEditName(project.name || '');
-                  setEditDescription(project.description || '');
-                  setEditDialogOpen(true);
-                }}
-                onDelete={() => setDeleteDialogOpen(true)}
-              />
-
-              {/* Content Type Distribution Chart (Right - 50%) */}
+              {/* Content Type Distribution Chart */}
               <Card className="bg-card border-border shadow-lg">
                 <CardHeader>
                   <CardTitle className="text-white">Content Type Distribution</CardTitle>
