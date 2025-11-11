@@ -347,6 +347,29 @@ export default function ProjectDetail() {
     return sorted;
   }, [posts, sortColumn, sortDirection]);
 
+  const availableCreatorHandles = useMemo(() => {
+    const handles = new Set<string>();
+    posts.forEach((post: any) => {
+      if (post.author) {
+        handles.add(String(post.author));
+      }
+    });
+    if (project?.scope_query) {
+      project.scope_query
+        .split(',')
+        .map((value: string) => value.trim())
+        .filter((value: string) => value.startsWith('@'))
+        .forEach((value) => handles.add(value.replace('@', '')));
+    }
+    // Exclure ceux déjà liés
+    creatorLinks.forEach((link: any) => {
+      if (link.creator_username) {
+        handles.delete(link.creator_username);
+      }
+    });
+    return Array.from(handles);
+  }, [posts, creatorLinks, project]);
+
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -637,6 +660,27 @@ export default function ProjectDetail() {
                     value={newCreatorUsername}
                     onChange={(e) => setNewCreatorUsername(e.target.value)}
                   />
+                {newCreatorUsername.trim().length > 0 && (
+                  <div className="space-y-1 pt-1">
+                    {availableCreatorHandles
+                      .filter((handle) =>
+                        handle
+                          .toLowerCase()
+                          .includes(newCreatorUsername.trim().toLowerCase())
+                      )
+                      .slice(0, 5)
+                      .map((handle) => (
+                        <button
+                          key={handle}
+                          type="button"
+                          className="w-full text-left text-xs py-1 px-2 rounded-md hover:bg-muted transition-colors"
+                          onClick={() => setNewCreatorUsername(handle)}
+                        >
+                          @{handle}
+                        </button>
+                      ))}
+                  </div>
+                )}
                 </div>
                 <div className="space-y-2">
                   <span className="text-xs font-medium text-muted-foreground">Platform</span>

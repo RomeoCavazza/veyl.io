@@ -27,6 +27,7 @@ export default function Search() {
   const [fetchingPostId, setFetchingPostId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
+  const [fallbackCreators, setFallbackCreators] = useState<Array<{ projectId: string; handle: string; platform?: string }>>([]);
   const { toast } = useToast();
 
   const handleSearch = async (
@@ -106,8 +107,44 @@ export default function Search() {
     try {
       const projects = await getProjects();
       const aggregated: PostHit[] = [];
+      const matchedCreators: Array<{ projectId: string; handle: string; platform?: string }> = [];
+
+      const normalizedQueryRaw = query.trim().toLowerCase();
+      const normalizedQuery = normalizedQueryRaw.replace(/^[@#]/, '');
+      const isHashtagMode = modes.includes('hashtag');
+      const isCreatorMode = modes.includes('creator');
 
       for (const project of projects) {
+        const scope = (project.scope_query || '').toLowerCase();
+        const matchesHashtag =
+          isHashtagMode &&
+          (scope.includes(`#${normalizedQuery}`) ||
+            scope.includes(normalizedQuery));
+
+        const projectCreators = project.creators || [];
+        const creatorMatchHandles = projectCreators
+          .filter((creator) =>
+            creator.creator_username
+              ?.toLowerCase()
+              .includes(normalizedQuery.replace('@', ''))
+          )
+          .map((creator) => ({
+            projectId: project.id,
+            handle: creator.creator_username,
+            platform: creator.platform,
+          }));
+
+        const matchesCreator =
+          isCreatorMode && creatorMatchHandles.length > 0;
+
+        if (!matchesHashtag && !matchesCreator) {
+          continue;
+        }
+
+        if (matchesCreator) {
+          matchedCreators.push(...creatorMatchHandles);
+        }
+
         const projectPosts = await getProjectPosts(project.id);
         projectPosts.forEach((post) => {
           aggregated.push({
@@ -117,7 +154,9 @@ export default function Search() {
             caption: post.caption,
             media_type: post.media_url ? 'IMAGE' : undefined,
             media_url: post.media_url,
-            permalink: post.permalink || (post.media_url?.startsWith('http') ? post.media_url : undefined),
+            permalink:
+              post.permalink ||
+              (post.media_url?.startsWith('http') ? post.media_url : undefined),
             posted_at: post.posted_at,
             like_count: post.like_count,
             comment_count: post.comment_count,
@@ -126,27 +165,38 @@ export default function Search() {
         });
       }
 
-      const normalizedQuery = query.trim().toLowerCase();
       const filtered = aggregated.filter((item) => {
         const caption = (item.caption || '').toLowerCase();
         const username = (item.username || '').toLowerCase();
-        const matchesHashtag = modes.includes('hashtag')
-          ? caption.includes(`#${normalizedQuery}`) || caption.includes(normalizedQuery)
-          : false;
-        const matchesCreator = modes.includes('creator')
-          ? username.includes(normalizedQuery.replace('@', ''))
-          : false;
+        const matchesHashtag =
+          isHashtagMode &&
+          (caption.includes(`#${normalizedQuery}`) ||
+            caption.includes(normalizedQuery));
+        const matchesCreator =
+          isCreatorMode &&
+          username.includes(normalizedQuery.replace('@', ''));
         return matchesHashtag || matchesCreator;
       });
 
+      setFallbackCreators(matchedCreators);
+
       if (filtered.length === 0) {
-        setPosts([]);
-        toast({
-          title: 'No results',
-          description: 'No stored posts match your search query.',
-        });
+        if (matchedCreators.length === 0) {
+          setPosts([]);
+          toast({
+            title: 'No results',
+            description: 'No stored posts match your search query.',
+          });
+        } else {
+          setFallbackNotice(
+            'Showing stored creators (Meta API currently unavailable).'
+          );
+          setPosts([]);
+        }
       } else {
-        setFallbackNotice('Showing stored results (Meta API currently unavailable).');
+        setFallbackNotice(
+          'Showing stored results (Meta API currently unavailable).'
+        );
         setPosts(filtered);
       }
     } catch (fallbackError) {
@@ -333,6 +383,36 @@ export default function Search() {
               </div>
               {fallbackNotice && (
                 <p className="text-xs text-muted-foreground">{fallbackNotice}</p>
+              )}
+              {fallbackCreators.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold uppercase text-muted-foreground">Creators</h3>
+                  <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                    {fallbackCreators.map((creator) => (
+                      <Card
+                        key={`${creator.projectId}-${creator.handle}`}
+                        className="p-3 text-sm flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="font-medium">@{creator.handle}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {creator.platform || 'instagram'}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSearchQuery(creator.handle);
+                            handleSearch(creator.handle, selectedPlatforms, ['creator']);
+                          }}
+                        >
+                          Search
+                        </Button>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
               )}
               {selectedModes.includes('creator') && !fallbackNotice && (
                 <p className="text-xs text-muted-foreground">
