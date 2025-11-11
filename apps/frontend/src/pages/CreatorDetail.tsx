@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,12 +26,14 @@ import {
 } from 'recharts';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CreatorDetail() {
   const engagementTrendData: Array<{ date: string; engagement: number }> = [];
   const topPerformingCreators: Array<{ username: string; avg_engagement: number }> = [];
   const { id, username } = useParams<{ id: string; username: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [sortColumn, setSortColumn] = useState<string>('posted_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedPost, setSelectedPost] = useState<any>(null);
@@ -90,6 +92,88 @@ export default function CreatorDetail() {
     }
     return sortDirection === 'asc' ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />;
   };
+
+  useEffect(() => {
+    const fetchCreator = async () => {
+      if (!id || !username) {
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/auth');
+          return;
+        }
+
+        const response = await fetch(`/api/v1/projects/${id}`, {
+          mode: 'cors',
+          credentials: 'same-origin',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load project: ${response.status}`);
+        }
+
+        const projectData = await response.json();
+        const normalizedUsername = username.toLowerCase();
+        const projectCreators = projectData.creators || [];
+
+        const matchedCreator = projectCreators.find(
+          (c: any) => (c.creator_username || '').toLowerCase() === normalizedUsername
+        );
+
+        if (matchedCreator) {
+          setCreator({
+            handle: matchedCreator.creator_username,
+            platform: projectData.platforms?.[0] || 'instagram',
+            profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${matchedCreator.creator_username}`,
+            followers: matchedCreator.followers || 0,
+            following: matchedCreator.following || 0,
+            avg_engagement: matchedCreator.avg_engagement || 0,
+            bio: matchedCreator.bio,
+            category: matchedCreator.category,
+            verified: matchedCreator.verified || false,
+            full_name: matchedCreator.full_name,
+          });
+          return;
+        }
+
+        const fallbackHandle = (projectData.scope_query || '')
+          .split(',')
+          .map((entry: string) => entry.trim())
+          .find((entry: string) => entry.startsWith('@') && entry.replace('@', '').toLowerCase() === normalizedUsername);
+
+        if (fallbackHandle) {
+          const cleanHandle = fallbackHandle.replace('@', '');
+          setCreator({
+            handle: cleanHandle,
+            platform: projectData.platforms?.[0] || 'instagram',
+            profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanHandle}`,
+            followers: 0,
+            following: 0,
+            avg_engagement: 0,
+          });
+          return;
+        }
+
+        setCreator(null);
+      } catch (error: any) {
+        console.error('Error loading creator:', error);
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to load creator',
+          variant: 'destructive',
+        });
+        setCreator(null);
+      }
+    };
+
+    fetchCreator();
+  }, [id, username, navigate, toast]);
 
   if (!creator) {
     return (

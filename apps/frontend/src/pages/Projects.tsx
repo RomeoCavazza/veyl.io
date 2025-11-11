@@ -20,6 +20,7 @@ interface Project {
   updatedAt: string;
   status: 'active' | 'archived' | 'draft';
   creators?: Array<{ id: number; creator_username: string; platform_id: number }>;
+  creatorsCount?: number;
   platforms?: string[];
   scope_query?: string;
 }
@@ -69,6 +70,7 @@ export default function Projects() {
           updatedAt: p.updated_at,
           status: p.status || 'draft',
           creators: p.creators || [],
+          creatorsCount: typeof p.creators_count === 'number' ? p.creators_count : undefined,
           platforms: p.platforms || [],
           scope_query: p.scope_query || '',
         })));
@@ -122,15 +124,20 @@ export default function Projects() {
                 {projects.map((project) => {
                   // Obtenir tous les créateurs réels
                   const projectCreators = (project.creators || []);
+                  const fallbackHandles = (project.scope_query || '')
+                    .split(',')
+                    .map((q: string) => q.trim())
+                    .filter((entry: string) => entry.startsWith('@'))
+                    .map((handle: string) => ({
+                      id: 0,
+                      creator_username: handle.replace('@', ''),
+                      platform_id: 0,
+                    }));
                   let allCreators = projectCreators.length > 0 
                     ? projectCreators 
-                    : (project.scope_query || '').split(',').map((q: string) => ({
-                        id: 0,
-                        creator_username: q.trim().replace('@', ''),
-                        platform_id: 0,
-                      })).filter((c: any) => c.creator_username);
+                    : fallbackHandles;
                   
-                  const totalCreatorsCount = allCreators.length;
+                  const totalCreatorsCount = project.creatorsCount ?? allCreators.length;
                   const displayedCreators = allCreators.slice(0, 3);
                   const recentPosts: Array<{ id: string; media_url?: string; caption?: string }> = [];
                   

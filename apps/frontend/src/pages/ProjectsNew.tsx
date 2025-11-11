@@ -21,12 +21,7 @@ const SUGGESTED_HASHTAGS = [
   'lifestyle', 'motivation', 'inspiration', 'happy',
 ];
 
-const SUGGESTED_CREATORS = [
-  'selenagomez', 'cristiano', 'kyliejenner', 'beyonce', 'kendalljenner',
-  'fashionista_alice', 'style_blogger', 'fashion_designer', 'beauty_guru',
-  'makeup_artist', 'beauty_tips', 'tech_trends', 'tech_reviewer',
-  'fitness_coach', 'travel_explorer', 'food_lover', 'photographer_pro',
-];
+const SUGGESTED_CREATORS: string[] = [];
 
 export default function ProjectsNew() {
   const navigate = useNavigate();
