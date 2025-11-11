@@ -270,15 +270,15 @@ export default function Search() {
             <div className="space-y-8">
               <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold">
-                  Results for #{searchQuery}
+                  Results for {searchQuery.startsWith('#') ? searchQuery : `#${searchQuery}`}
                 </h2>
                 <Badge variant="outline" className="text-sm">
                   {posts.length} posts found
                 </Badge>
               </div>
-              {selectedModes.includes('page') && (
+              {selectedModes.includes('creator') && (
                 <p className="text-xs text-muted-foreground">
-                  Showing public posts fetched via Facebook Page Public Content Access. Use a Page ID you do not manage (e.g. 106182309397812).
+                  Creator search will soon pull live posts from specific profiles. For now, use hashtag mode to explore trending content.
                 </p>
               )}
 
@@ -319,7 +319,6 @@ export default function Search() {
 
                     <p className="text-sm line-clamp-2">{post.caption}</p>
 
-                    {post.platform === 'instagram' ? (
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Heart className="h-4 w-4" />
@@ -334,11 +333,6 @@ export default function Search() {
                         <span>{post.score_trend || 0}</span>
                       </div>
                     </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        Facebook public post (Page Public Content Access)
-                      </p>
-                    )}
 
                     <div className="pt-2 border-t flex flex-wrap gap-2">
                       <Button
@@ -349,23 +343,26 @@ export default function Search() {
                       >
                         <a href={post.permalink} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="h-3 w-3 mr-1" />
-                          {post.platform === 'facebook' ? 'View on Facebook' : 'View on Instagram'}
+                          View on Instagram
                         </a>
-                      </Button>
-                      {post.platform === 'instagram' && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => fetchLivePost(post)}
-                            disabled={fetchingPostId === post.id}
-                          >
-                            <RefreshCcw className="h-3 w-3 mr-1" />
-                            {fetchingPostId === post.id ? 'Fetching…' : 'Fetch Live'}
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
+                        className="flex-1"
+                        onClick={() => fetchLivePost(post)}
+                        disabled={fetchingPostId === post.id}
+                      >
+                        {fetchingPostId === post.id ? (
+                          <span className="flex items-center gap-2"><RefreshCcw className="h-3 w-3 animate-spin" /> Fetching…</span>
+                        ) : (
+                          'Fetch Live'
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
                         onClick={() => {
                           setSelectedPost(post);
                           setEmbedDialogOpen(true);
@@ -374,8 +371,6 @@ export default function Search() {
                         <Code2 className="h-3 w-3 mr-1" />
                         Embed
                       </Button>
-                        </>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
