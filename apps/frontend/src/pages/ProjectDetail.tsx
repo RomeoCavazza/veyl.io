@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { ProjectPanel } from '@/components/ProjectPanel';
+import { InstagramInsights } from '@/components/InstagramInsights';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1213,6 +1214,9 @@ export default function ProjectDetail() {
 
           {/* Tab 2: Analytics */}
           <TabsContent value="analytics" className="space-y-6">
+            {/* Instagram Insights */}
+            <InstagramInsights projectId={project.id} />
+
             <div className="grid gap-4 md:grid-cols-2">
               {/* Content Type Distribution Chart */}
               <Card className="bg-card border-border shadow-lg">
