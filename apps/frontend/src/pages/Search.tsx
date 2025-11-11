@@ -213,17 +213,14 @@ export default function Search() {
               {posts.map((post) => (
                 <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <CardContent className="p-0">
-                    {/* Image */}
-                    {post.media_url && (
+                    {/* Instagram Embed */}
+                    {post.permalink && (
                       <div className="aspect-square bg-muted relative">
-                        <img
-                          src={post.media_url}
-                          alt={post.caption || 'Post'}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                          }}
+                        <iframe
+                          src={`https://www.instagram.com/p/${post.permalink.split('/p/')[1]?.replace('/', '')}/embed`}
+                          className="w-full h-full border-0"
+                          scrolling="no"
+                          allowTransparency
                         />
                       </div>
                     )}

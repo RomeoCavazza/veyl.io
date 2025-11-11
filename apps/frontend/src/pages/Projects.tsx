@@ -4,7 +4,7 @@ import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Calendar, Plus } from 'lucide-react';
+import { FileText, Calendar, Plus, RefreshCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -89,12 +89,23 @@ export default function Projects() {
       <div className="container py-8 px-4">
         <div className="mb-6 flex items-center justify-between">
           <CardTitle className="text-2xl">My Projects</CardTitle>
-          {projects.length > 0 && (
-            <Button onClick={() => navigate('/projects/new')}>
-              <Plus className="h-4 w-4 mr-2" />
-              New project
+          <div className="flex gap-2">
+            <Button
+              onClick={() => fetchProjects()}
+              variant="outline"
+              size="sm"
+              disabled={loading}
+            >
+              <RefreshCcw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
-          )}
+            {projects.length > 0 && (
+              <Button onClick={() => navigate('/projects/new')}>
+                <Plus className="h-4 w-4 mr-2" />
+                New project
+              </Button>
+            )}
+          </div>
         </div>
         <div className="space-y-4">
             {loading ? (
@@ -129,9 +140,9 @@ export default function Projects() {
                     .map((q: string) => q.trim())
                     .filter((entry: string) => entry.startsWith('@'))
                     .map((handle: string) => ({
-                      id: 0,
+                        id: 0,
                       creator_username: handle.replace('@', ''),
-                      platform_id: 0,
+                        platform_id: 0,
                     }));
                   const allCreators = projectCreators.length > 0
                     ? projectCreators
@@ -205,7 +216,7 @@ export default function Projects() {
                                           ? 'bg-secondary/50 text-secondary-foreground'
                                           : 'bg-muted text-muted-foreground'
                                       }`}
-                                      style={{ zIndex: displayedCreators.length - idx }}
+                                    style={{ zIndex: displayedCreators.length - idx }}
                                       title={creator.creator_username || label}
                                     >
                                       {label}
