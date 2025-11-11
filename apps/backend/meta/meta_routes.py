@@ -2,7 +2,6 @@ import json
 import logging
 from datetime import datetime
 from typing import Optional
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_
@@ -11,7 +10,7 @@ from sqlalchemy.orm import Session
 from auth_unified.auth_endpoints import get_current_user
 from core.config import settings
 from db.base import get_db
-from db.models import Post, Platform, User, Project
+from db.models import Post, Platform, User
 from services.meta_client import call_meta
 
 router = APIRouter(prefix="/api/v1/meta", tags=["meta"])
@@ -88,8 +87,6 @@ async def get_oembed(
     if not url:
         raise HTTPException(status_code=400, detail="url parameter required")
 
-    # Log explicite pour App Review
-    logger.info(f"[META_APP_REVIEW] oEmbed request | URL: {url} | User: {current_user.email}")
 
     payload = await call_meta(
         method="GET",
@@ -97,8 +94,6 @@ async def get_oembed(
         params={"url": url, "maxwidth": 540},
     )
 
-    # Log succès pour App Review
-    logger.info(f"[META_APP_REVIEW] oEmbed success | URL: {url} | Status: 200 | Author: {payload.get('author_name')}")
 
     media_id = payload.get("media_id") or url
     platform_name = (payload.get("provider_name") or "instagram").lower()
@@ -148,8 +143,6 @@ async def get_instagram_public_content(
     if not ig_user_id:
         raise HTTPException(status_code=400, detail="IG_USER_ID required")
 
-    # Log explicite pour App Review
-    logger.info(f"[META_APP_REVIEW] IG Public Content request | Tag: #{tag} | Limit: {limit} | User: {current_user.email}")
 
     search = await call_meta(
         method="GET",
@@ -158,7 +151,6 @@ async def get_instagram_public_content(
     )
     data = search.get("data", [])
     if not data:
-        logger.info(f"[META_APP_REVIEW] IG Public Content | Tag: #{tag} | Status: 200 | Posts: 0 (no results)")
         return {"status": "no_results", "http_status": 200, "data": [], "meta": {"tag": tag}}
 
     hashtag_id = data[0]["id"]
@@ -173,9 +165,6 @@ async def get_instagram_public_content(
     )
 
     posts = media.get("data", [])
-    
-    # Log succès pour App Review
-    logger.info(f"[META_APP_REVIEW] IG Public Content success | Tag: #{tag} | Status: 200 | Posts: {len(posts)}")
 
     for item in posts:
         external_id = item.get("id")
@@ -307,64 +296,4 @@ async def get_insights(
 
     db.commit()
     return insights
-
-
-@router.post("/refresh")
-async def refresh_project_posts(
-    project_id: str = Query(..., description="UUID du projet"),
-    limit: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Rafraîchit les posts d'un projet via oEmbed + Graph API.
-    Prouve l'intégration end-to-end pour App Review.
-    """
-    # Log explicite pour App Review
-    logger.info(f"[META_APP_REVIEW] Refresh project request | Project: {project_id} | Limit: {limit} | User: {current_user.email}")
-    
-    # Vérifier que le projet existe et appartient à l'utilisateur
-    try:
-        project_uuid = UUID(project_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Project ID invalide")
-    
-    project = db.query(Project).filter(
-        Project.id == project_uuid,
-        Project.user_id == current_user.id
-    ).first()
-    
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    
-    # Appeler le job de refresh existant
-    from jobs.post_refresh import refresh_posts
-    
-    try:
-        refresh_posts(project_id=project_id, limit=limit)
-        
-        # Recharger le projet pour obtenir les stats à jour
-        db.refresh(project)
-        
-        # Log succès pour App Review
-        logger.info(f"[META_APP_REVIEW] Refresh project success | Project: {project_id} | Status: 200 | Posts refreshed: {project.posts_count}")
-        
-        return {
-            "status": "success",
-            "http_status": 200,
-            "project_id": project_id,
-            "posts_refreshed": project.posts_count or 0,
-            "creators_count": project.creators_count or 0,
-            "meta": {
-                "fetched_at": datetime.utcnow().isoformat(),
-                "source": "meta_refresh_job"
-            }
-        }
-    except Exception as e:
-        logger.error(f"[META_APP_REVIEW] Refresh project error | Project: {project_id} | Error: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erreur lors du rafraîchissement: {str(e)}"
-        )
-
 

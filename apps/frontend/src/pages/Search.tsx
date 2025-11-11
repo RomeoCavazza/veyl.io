@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Search as SearchIcon, TrendingUp, Heart, MessageCircle, ExternalLink, Code2, Copy, CheckCircle2, RefreshCcw, Sparkles } from 'lucide-react';
 import { searchPosts, fetchMetaOEmbed, fetchMetaIGPublic, getProjects, getProjectPosts, type PostHit } from '@/lib/api';
@@ -20,15 +21,11 @@ export default function Search() {
   const [posts, setPosts] = useState<PostHit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
-  const [selectedPost, setSelectedPost] = useState<PostHit | null>(null);
   const [embedCopied, setEmbedCopied] = useState(false);
   const [embedHtml, setEmbedHtml] = useState<string | null>(null);
   const [isFetchingEmbed, setIsFetchingEmbed] = useState(false);
-  const [fetchingPostId, setFetchingPostId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
-  const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
-  const [fallbackCreators, setFallbackCreators] = useState<Array<{ projectId: string; handle: string; platform?: string }>>([]);
-  const [isFetchingLive, setIsFetchingLive] = useState(false);
+  const [customEmbedUrl, setCustomEmbedUrl] = useState('');
   const { toast } = useToast();
 
   const handleSearch = async (
@@ -73,255 +70,114 @@ export default function Search() {
       const aggregatedPosts: PostHit[] = [];
 
       if (shouldFetchHashtag) {
-        // Essayer d'abord l'endpoint Meta IG Public (pour App Review)
-        console.log('[META_APP_REVIEW] Fetching live from Meta API:', query);
+        // Appel direct Meta IG Public (simple, pas de fallback)
+        console.log('🔍 Fetching from Meta API:', query);
         
-        try {
-          const response = await fetchMetaIGPublic(query, 12);
-          console.log('[META_APP_REVIEW] Meta API response:', response);
+        const response = await fetchMetaIGPublic(query, 12);
+        console.log('✅ Meta API response:', response);
 
-          if (response.status === 'success' && response.data && response.data.length > 0) {
-            response.data.forEach((item: any) => {
-              aggregatedPosts.push({
-                id: item.id,
-                platform: 'instagram',
-                username: item.username,
-                caption: item.caption,
-                media_type: item.media_type,
-                media_url: item.media_url,
-                permalink: item.permalink,
-                posted_at: item.timestamp,
-                like_count: item.like_count,
-                comment_count: item.comments_count,
-                score_trend: item.like_count ?? 0,
-              });
+        if (response.status === 'success' && response.data && response.data.length > 0) {
+          response.data.forEach((item: any) => {
+            aggregatedPosts.push({
+              id: item.id,
+              platform: 'instagram',
+              username: item.username,
+              caption: item.caption,
+              media_type: item.media_type,
+              media_url: item.media_url,
+              permalink: item.permalink,
+              posted_at: item.timestamp,
+              like_count: item.like_count,
+              comment_count: item.comments_count,
+              score_trend: item.like_count ?? 0,
             });
-            
-            console.log('[META_APP_REVIEW] Successfully fetched', aggregatedPosts.length, 'posts from Meta API (HTTP 200)');
-          }
-        } catch (metaError) {
-          console.warn('[META_APP_REVIEW] Meta API failed, falling back to stored results:', metaError);
-          // Si Meta API échoue, essayer l'ancien endpoint (fallback)
-          try {
-            const response = await searchPosts({
-              q: query,
-              limit: 12,
-            });
-            const data = response.data || [];
-            data.forEach((item: any) => {
-              aggregatedPosts.push({
-                id: item.id,
-                platform: 'instagram',
-                username: item.owner?.username,
-                caption: item.caption,
-                media_type: item.media_type,
-                media_url: item.media_url,
-                permalink: item.permalink,
-                posted_at: item.timestamp,
-                like_count: item.like_count,
-                comment_count: item.comments_count,
-                score_trend: item.like_count ?? 0,
-              });
-            });
-          } catch (fallbackError) {
-            // Si les deux échouent, charger depuis les projets locaux
-            throw fallbackError;
-          }
+          });
         }
       }
 
       setPosts(aggregatedPosts);
-    } catch (error) {
-      console.error('[META_APP_REVIEW] All API calls failed, loading from local projects:', error);
-      await loadFallbackResults(query, normalizedModes);
+      
+      if (aggregatedPosts.length === 0) {
+        toast({
+          title: 'No results',
+          description: 'No public posts found for this hashtag. Try another one.',
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Meta API error:', error);
+      setPosts([]);
+      toast({
+        title: 'Search failed',
+        description: error.message || 'Meta API error. Check your token and permissions.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadFallbackResults = async (query: string, modes: SearchMode[]) => {
-    try {
-      const projects = await getProjects();
-      const aggregated: PostHit[] = [];
-      const matchedCreators: Array<{ projectId: string; handle: string; platform?: string }> = [];
 
-      const normalizedQueryRaw = query.trim().toLowerCase();
-      const normalizedQuery = normalizedQueryRaw.replace(/^[@#]/, '');
-      const isHashtagMode = modes.includes('hashtag');
-      const isCreatorMode = modes.includes('creator');
-
-      for (const project of projects) {
-        const scope = (project.scope_query || '').toLowerCase();
-        const matchesHashtag =
-          isHashtagMode &&
-          (scope.includes(`#${normalizedQuery}`) ||
-            scope.includes(normalizedQuery));
-
-        const projectCreators = project.creators || [];
-        const creatorMatchHandles = projectCreators
-          .filter((creator) =>
-            creator.creator_username
-              ?.toLowerCase()
-              .includes(normalizedQuery.replace('@', ''))
-          )
-          .map((creator) => ({
-            projectId: project.id,
-            handle: creator.creator_username,
-            platform: creator.platform,
-          }));
-
-        const matchesCreator =
-          isCreatorMode && creatorMatchHandles.length > 0;
-
-        if (!matchesHashtag && !matchesCreator) {
-          continue;
-        }
-
-        if (matchesCreator) {
-          matchedCreators.push(...creatorMatchHandles);
-        }
-
-        const projectPosts = await getProjectPosts(project.id);
-        projectPosts.forEach((post) => {
-          aggregated.push({
-            id: post.id,
-            platform: post.platform || 'instagram',
-            username: post.author,
-            caption: post.caption,
-            media_type: post.media_url ? 'IMAGE' : undefined,
-            media_url: post.media_url,
-            permalink:
-              post.permalink ||
-              (post.media_url?.startsWith('http') ? post.media_url : undefined),
-            posted_at: post.posted_at,
-            like_count: post.like_count,
-            comment_count: post.comment_count,
-            score_trend: post.score_trend,
-          });
-        });
-      }
-
-      const filtered = aggregated.filter((item) => {
-        const caption = (item.caption || '').toLowerCase();
-        const username = (item.username || '').toLowerCase();
-        const matchesHashtag =
-          isHashtagMode &&
-          (caption.includes(`#${normalizedQuery}`) ||
-            caption.includes(normalizedQuery));
-        const matchesCreator =
-          isCreatorMode &&
-          username.includes(normalizedQuery.replace('@', ''));
-        return matchesHashtag || matchesCreator;
-      });
-
-      setFallbackCreators(matchedCreators);
-
-      if (filtered.length === 0) {
-        if (matchedCreators.length === 0) {
-          setPosts([]);
-          toast({
-            title: 'No results',
-            description: 'No stored posts match your search query.',
-          });
-        } else {
-          setFallbackNotice(
-            'Showing stored creators (Meta API currently unavailable).'
-          );
-          setPosts([]);
-        }
-      } else {
-        setFallbackNotice(
-          'Showing stored results (Meta API currently unavailable).'
-        );
-        setPosts(filtered);
-      }
-    } catch (fallbackError) {
-      console.error('Fallback search error:', fallbackError);
-      setPosts([]);
-      toast({
-        title: 'Search failed',
-        description: 'Unable to fetch posts. Please verify the search query and try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const fetchLivePost = async (post: PostHit) => {
-    if (post.platform !== 'instagram' || !post.permalink) return;
-
-    try {
-      setFetchingPostId(post.id);
-      await fetchMetaOEmbed(post.permalink);
-      toast({
-        title: 'Live fetch successful',
-        description: 'Meta oEmbed response stored.',
-      });
-    } catch (error) {
-      console.error('Fetch live error:', error);
-      toast({
-        title: 'Live fetch failed',
-        description: 'Check console/logs for details.',
-        variant: 'destructive',
-      });
-    } finally {
-      setFetchingPostId(null);
-    }
-  };
-
-  // Meta oEmbed Read functionality
-  const getEmbedCode = (post: PostHit) => {
-    return `<iframe
-  src="${post.permalink}/embed"
-  width="400"
-  height="480"
-  frameborder="0"
-  scrolling="no"
-  allowtransparency="true"
-></iframe>`;
-  };
 
   const handleCopyEmbed = () => {
-    if (!selectedPost) return;
-    const code = embedHtml || getEmbedCode(selectedPost);
-    navigator.clipboard.writeText(code);
+    if (!embedHtml) return;
+    navigator.clipboard.writeText(embedHtml);
     setEmbedCopied(true);
     toast({
       title: "Embed code copied!",
-      description: "Instagram post embed code copied to clipboard",
+      description: "HTML copied to clipboard",
     });
     setTimeout(() => setEmbedCopied(false), 2000);
   };
 
-  useEffect(() => {
-    const loadEmbed = async () => {
-      if (
-        !embedDialogOpen ||
-        !selectedPost?.permalink ||
-        selectedPost.platform !== 'instagram'
-      ) {
-        setEmbedHtml(null);
-        return;
-      }
-      setIsFetchingEmbed(true);
-      try {
-        const data = await fetchMetaOEmbed(selectedPost.permalink);
-        const html = typeof data === 'string' ? data : data.html ?? '';
-        setEmbedHtml(html);
-      } catch (error) {
-        console.error('Embed fetch error:', error);
+  const handleTestCustomUrl = async () => {
+    if (!customEmbedUrl.trim()) {
+      toast({
+        title: 'URL required',
+        description: 'Please enter an Instagram post URL',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsFetchingEmbed(true);
+    setEmbedHtml(null);
+
+    try {
+      const response = await fetchMetaOEmbed(customEmbedUrl);
+
+      if (response.data && response.data.html) {
+        setEmbedHtml(response.data.html);
         toast({
-          title: 'Embed fetch failed',
-          description: 'Unable to load oEmbed HTML from Meta.',
+          title: '✅ Success',
+          description: `@${response.data.author_name || 'Post'} embed fetched`,
+        });
+      } else {
+        toast({
+          title: 'No HTML returned',
+          description: 'Post may be private or unavailable',
           variant: 'destructive',
         });
-        setEmbedHtml(null);
-      } finally {
-        setIsFetchingEmbed(false);
       }
-    };
+    } catch (error: any) {
+      console.error('oEmbed error:', error);
+      toast({
+        title: 'Failed',
+        description: error.message || 'Meta API error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsFetchingEmbed(false);
+    }
+  };
 
-    loadEmbed();
-  }, [embedDialogOpen, selectedPost]);
+  // Reset modal when it closes
+  useEffect(() => {
+    if (!embedDialogOpen) {
+      setEmbedHtml(null);
+      setCustomEmbedUrl('');
+      setEmbedCopied(false);
+    }
+  }, [embedDialogOpen]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -412,48 +268,23 @@ export default function Search() {
                 <h2 className="text-3xl font-bold">
                   Results for {searchQuery.startsWith('#') ? searchQuery : `#${searchQuery}`}
                 </h2>
-                <Badge variant="outline" className="text-sm">
-                  {posts.length} posts found
-                </Badge>
-              </div>
-              {fallbackNotice && (
-                <p className="text-xs text-muted-foreground">{fallbackNotice}</p>
-              )}
-              {fallbackCreators.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold uppercase text-muted-foreground">Creators</h3>
-                  <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-                    {fallbackCreators.map((creator) => (
-                      <Card
-                        key={`${creator.projectId}-${creator.handle}`}
-                        className="p-3 text-sm flex items-center justify-between"
-                      >
-                        <div>
-                          <p className="font-medium">@{creator.handle}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {creator.platform || 'instagram'}
-                          </p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSearchQuery(creator.handle);
-                            handleSearch(creator.handle, selectedPlatforms, ['creator']);
-                          }}
-                        >
-                          Search
-                        </Button>
-                      </Card>
-                    ))}
-                  </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedPost(null);
+                      setEmbedDialogOpen(true);
+                    }}
+                  >
+                    <Code2 className="h-4 w-4 mr-2" />
+                    Test oEmbed
+                  </Button>
+                  <Badge variant="outline" className="text-sm">
+                    {posts.length} posts found
+                  </Badge>
                 </div>
-              )}
-              {selectedModes.includes('creator') && !fallbackNotice && (
-                <p className="text-xs text-muted-foreground">
-                  Creator search will soon pull live posts from specific profiles. For now, use hashtag mode to explore trending content.
-                </p>
-              )}
+              </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {posts.map((post) => (
@@ -519,31 +350,6 @@ export default function Search() {
                           View on Instagram
                         </a>
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => fetchLivePost(post)}
-                        disabled={fetchingPostId === post.id}
-                      >
-                        {fetchingPostId === post.id ? (
-                          <span className="flex items-center gap-2"><RefreshCcw className="h-3 w-3 animate-spin" /> Fetching…</span>
-                        ) : (
-                          'Fetch Live'
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => {
-                          setSelectedPost(post);
-                          setEmbedDialogOpen(true);
-                        }}
-                      >
-                        <Code2 className="h-3 w-3 mr-1" />
-                        Embed
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -570,48 +376,49 @@ export default function Search() {
       <Dialog open={embedDialogOpen} onOpenChange={setEmbedDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Embed Instagram Post</DialogTitle>
+            <DialogTitle>Embed Instagram Post (Meta oEmbed Read)</DialogTitle>
             <DialogDescription>
-              Meta oEmbed Read feature - Get embed HTML code for public Instagram posts
+              Test Meta oEmbed API - Enter any public Instagram post URL to fetch embed code
             </DialogDescription>
           </DialogHeader>
 
-          {selectedPost && (
-            <div className="space-y-4">
-              <div className="flex gap-4">
-                <img
-                  src={selectedPost.media_url}
-                  alt="Preview"
-                  className="w-32 h-32 object-cover rounded-lg"
-                />
-                <div className="flex-1">
-                  <p className="font-semibold">{selectedPost.username}</p>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {selectedPost.caption}
-                  </p>
-                  <div className="flex items-center gap-3 mt-2 text-sm">
-                    <span>{((selectedPost.like_count || 0) / 1000).toFixed(1)}K likes</span>
-                    <span>{((selectedPost.comment_count || 0) / 1000).toFixed(1)}K comments</span>
-                  </div>
-                </div>
-              </div>
+          {/* Custom URL Test (for App Review) */}
+          <div className="space-y-3 p-4 rounded-lg bg-accent/30 border border-accent">
+            <label className="text-sm font-semibold">🎥 App Review Test: Try any Instagram post URL</label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="https://www.instagram.com/p/XXXXX/"
+                value={customEmbedUrl}
+                onChange={(e) => setCustomEmbedUrl(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleTestCustomUrl()}
+                className="flex-1"
+              />
+              <Button 
+                onClick={handleTestCustomUrl}
+                disabled={isFetchingEmbed}
+              >
+                {isFetchingEmbed ? 'Fetching...' : 'Get Embed'}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              💡 Enter a public Instagram post URL and click "Get Embed" to test the Meta oEmbed Read permission (HTTP 200 in Network tab)
+            </p>
+          </div>
 
+          {/* Result Section */}
+          {embedHtml && (
+            <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Embed Code:</label>
+                <label className="text-sm font-medium mb-2 block">Embed Code (from Meta):</label>
                 <div className="relative">
-                  <pre className="p-4 rounded-lg bg-muted text-xs overflow-x-auto">
-                    <code>
-                      {isFetchingEmbed
-                        ? 'Loading oEmbed response...'
-                        : embedHtml || getEmbedCode(selectedPost)}
-                    </code>
+                  <pre className="p-4 rounded-lg bg-muted text-xs overflow-x-auto max-h-40">
+                    <code>{embedHtml}</code>
                   </pre>
                   <Button
                     size="sm"
                     variant="ghost"
                     className="absolute top-2 right-2"
                     onClick={handleCopyEmbed}
-                    disabled={isFetchingEmbed}
                   >
                     {embedCopied ? (
                       <>
@@ -621,33 +428,19 @@ export default function Search() {
                     ) : (
                       <>
                         <Copy className="h-4 w-4 mr-1" />
-                        {isFetchingEmbed ? 'Wait' : 'Copy'}
+                        Copy
                       </>
                     )}
                   </Button>
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-accent/50 text-sm space-y-3">
-                <div>
-                <p className="font-medium mb-1">Meta oEmbed Read Permission</p>
-                <p className="text-muted-foreground">
-                  This feature allows you to get embed HTML and metadata for public Instagram posts
-                  to provide front-end views in your application.
-                </p>
-                </div>
-                {embedHtml && (
-                  <div>
-                    <p className="text-xs font-semibold mb-2">Live Preview (rendered from Meta response):</p>
-                    <div
-                      className="border rounded-lg overflow-hidden bg-background"
-                      dangerouslySetInnerHTML={{ __html: embedHtml }}
-                    />
-                  </div>
-                )}
-                {!embedHtml && isFetchingEmbed && (
-                  <p className="text-xs text-muted-foreground">Fetching live oEmbed data from Meta...</p>
-                )}
+              <div className="p-3 rounded-lg bg-accent/50 text-sm">
+                <p className="font-medium mb-2">Preview:</p>
+                <div
+                  className="border rounded-lg overflow-hidden bg-background"
+                  dangerouslySetInnerHTML={{ __html: embedHtml }}
+                />
               </div>
             </div>
           )}

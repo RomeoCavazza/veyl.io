@@ -20,6 +20,7 @@ from auth_unified.oauth_endpoints import oauth_router
 from posts.posts_endpoints import posts_router
 from hashtags.hashtags_endpoints import hashtags_router
 from platforms.platforms_endpoints import platforms_router
+from analytics.analytics_endpoints import analytics_router
 from projects.projects_endpoints import projects_router
 from meta.meta_routes import router as meta_router
 
@@ -109,6 +110,7 @@ app.include_router(oauth_router)
 app.include_router(posts_router)
 app.include_router(hashtags_router)
 app.include_router(platforms_router)
+app.include_router(analytics_router)
 app.include_router(projects_router)
 app.include_router(meta_router)
 from auth_unified.oauth_accounts_endpoints import oauth_accounts_router
