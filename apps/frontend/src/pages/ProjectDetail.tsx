@@ -418,7 +418,6 @@ export default function ProjectDetail() {
         <div className="grid gap-4 md:grid-cols-2 mb-6">
           <ProjectPanel
             project={project}
-            creators={creators}
             onEdit={() => {
               setEditName(project.name || '');
               setEditDescription(project.description || '');
@@ -482,13 +481,24 @@ export default function ProjectDetail() {
                           key={link.id}
                           className="flex items-center justify-between border-b border-border/40 py-2 last:border-b-0"
                         >
-                          <div className="flex items-center gap-2 text-sm">
-                            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
-                              {link.creator_username?.charAt(0).toUpperCase() || '?'}
-                            </div>
+                          <button
+                            type="button"
+                            className="flex items-center gap-2 text-sm text-left hover:text-primary transition-colors"
+                            onClick={() => navigate(`/projects/${id}/creator/${link.creator_username}`)}
+                          >
+                            <img
+                              src={`https://unavatar.io/instagram/${link.creator_username}`}
+                              alt={link.creator_username}
+                              className="h-6 w-6 rounded-full object-cover bg-muted"
+                              onError={(event) => {
+                                (event.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${link.creator_username}`;
+                              }}
+                            />
                             <span className="font-medium">@{link.creator_username}</span>
-                            <span className="text-xs text-muted-foreground">· {formatPlatformLabel(link.platform || 'instagram')}</span>
-                          </div>
+                            <span className="text-xs text-muted-foreground">
+                              · {formatPlatformLabel(link.platform || 'instagram')}
+                            </span>
+                          </button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -581,9 +591,14 @@ export default function ProjectDetail() {
                         
                         <CardContent className="p-4 space-y-3">
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
-                              {(post.author || post.username || 'U').charAt(0).toUpperCase()}
-                            </div>
+                            <img
+                              src={`https://unavatar.io/instagram/${post.author || post.username || 'instagram'}`}
+                              alt={post.author || post.username || 'creator'}
+                              className="w-8 h-8 rounded-full object-cover bg-muted"
+                              onError={(event) => {
+                                (event.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${post.author || post.username || 'IG'}`;
+                              }}
+                            />
                             <div className="flex-1 min-w-0">
                               <p className="font-semibold text-sm truncate">{post.author || post.username || 'Unknown User'}</p>
                               <p className="text-xs text-muted-foreground truncate">
@@ -597,11 +612,11 @@ export default function ProjectDetail() {
                           <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Heart className="h-4 w-4" />
-                              <span>{post.like_count ? post.like_count.toLocaleString() : '0'}</span>
+                              <span>{(post.like_count ?? 0) > 0 ? post.like_count.toLocaleString() : '—'}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <MessageCircle className="h-4 w-4" />
-                              <span>{post.comment_count ? post.comment_count.toLocaleString() : '0'}</span>
+                              <span>{(post.comment_count ?? 0) > 0 ? post.comment_count.toLocaleString() : '—'}</span>
                             </div>
                             {post.score_trend !== undefined && (
                               <div className="flex items-center gap-1 text-success">
@@ -653,6 +668,79 @@ export default function ProjectDetail() {
               </div>
             </div>
 
+          </TabsContent>
+
+          <TabsContent value="grid" className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {posts.length > 0 ? (
+                posts.map((post) => {
+                  const permalink = post.permalink;
+                  return (
+                    <div
+                      key={`${post.id}-grid`}
+                      className="group relative overflow-hidden rounded-lg border border-border bg-muted/30"
+                    >
+                      {post.media_url ? (
+                        <img
+                          src={post.media_url}
+                          alt={post.caption || post.author}
+                          className="h-48 w-full object-cover transition-transform group-hover:scale-105"
+                          loading="lazy"
+                          onError={(event) => {
+                            (event.target as HTMLImageElement).src = `https://picsum.photos/600/600?random=${post.id}`;
+                          }}
+                        />
+                      ) : (
+                        <div className="h-48 w-full flex items-center justify-center text-sm text-muted-foreground">
+                          Media unavailable
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                      <div className="absolute bottom-3 left-3 right-3 space-y-2 text-white">
+                        <p className="text-sm font-semibold truncate">
+                          @{post.author || post.username || 'unknown'}
+                        </p>
+                        {post.caption && (
+                          <p className="text-xs line-clamp-2 leading-snug opacity-90">{post.caption}</p>
+                        )}
+                        <div className="flex items-center gap-3 text-xs">
+                          {(post.like_count ?? 0) > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Heart className="h-3 w-3" />
+                              {post.like_count.toLocaleString()}
+                            </span>
+                          )}
+                          {(post.comment_count ?? 0) > 0 && (
+                            <span className="flex items-center gap-1">
+                              <MessageCircle className="h-3 w-3" />
+                              {post.comment_count.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                        {permalink && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-full bg-white/10 backdrop-blur text-xs hover:bg-white/20"
+                            asChild
+                          >
+                            <a href={permalink} target="_blank" rel="noopener noreferrer">
+                              View on Instagram
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <Card className="col-span-full">
+                  <CardContent className="p-10 text-center text-muted-foreground">
+                    No posts yet. Add creators or hashtags first.
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
 
           <Dialog open={addCreatorOpen} onOpenChange={setAddCreatorOpen}>
@@ -764,8 +852,9 @@ export default function ProjectDetail() {
           <Dialog open={postDialogOpen} onOpenChange={setPostDialogOpen}>
             <DialogContent className="max-w-5xl max-h-[90vh] p-0 gap-0 overflow-hidden">
               {selectedPost && (() => {
-                const creator = creators.find(c => c.handle === selectedPost.username);
-                const profilePic = creator?.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedPost.username}`;
+                const handle = selectedPost.username || selectedPost.author || 'instagram';
+                const handleSlug = handle.replace('@', '');
+                const profilePic = `https://unavatar.io/instagram/${handle}`;
                 const postedDate = selectedPost.posted_at ? new Date(selectedPost.posted_at) : new Date();
                 const relativeTime = formatDistanceToNow(postedDate, { addSuffix: true, locale: fr });
                 const caption = selectedPost.caption || '';
@@ -789,20 +878,23 @@ export default function ProjectDetail() {
                       <div className="flex items-center justify-between p-4 border-b border-border">
                         <div className="flex items-center gap-3">
                           <img
-                            src={profilePic}
-                            alt={selectedPost.username}
-                            className="w-10 h-10 rounded-full cursor-pointer hover:opacity-80"
-                            onClick={() => {
-                              setPostDialogOpen(false);
-                              navigate(`/projects/${id}/creator/${selectedPost.username}`);
-                            }}
+                          src={profilePic}
+                          alt={selectedPost.username}
+                          className="w-10 h-10 rounded-full cursor-pointer hover:opacity-80 object-cover bg-muted"
+                          onError={(event) => {
+                            (event.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${handle}`;
+                          }}
+                          onClick={() => {
+                            setPostDialogOpen(false);
+                              navigate(`/projects/${id}/creator/${handleSlug}`);
+                          }}
                           />
                           <div>
                             <div 
                               className="font-semibold text-sm cursor-pointer hover:opacity-80"
                               onClick={() => {
                                 setPostDialogOpen(false);
-                                navigate(`/projects/${id}/creator/${selectedPost.username}`);
+                                navigate(`/projects/${id}/creator/${handleSlug}`);
                               }}
                             >
                               {selectedPost.username}

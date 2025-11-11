@@ -355,7 +355,12 @@ def list_project_posts(
         elif post.api_payload:
             try:
                 payload_data = json.loads(post.api_payload)
-                permalink_candidate = payload_data.get('url') or payload_data.get('author_url')
+                media_details = payload_data.get('media_details') or {}
+                permalink_candidate = (
+                    media_details.get('permalink')
+                    or payload_data.get('url')
+                    or payload_data.get('author_url')
+                )
                 if isinstance(permalink_candidate, str) and permalink_candidate.startswith('http'):
                     permalink = permalink_candidate
             except (TypeError, ValueError):

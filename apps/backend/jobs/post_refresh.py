@@ -15,7 +15,8 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Iterable, List, Optional, Set
+from typing import Iterable, List, Optional, Set, Dict, Any
+from uuid import UUID
 import re
 
 import requests
@@ -29,6 +30,8 @@ from db.models import (
     PostHashtag,
     Hashtag,
     Platform,
+    Project,
+    ProjectHashtag,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,6 +39,7 @@ logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
 
 GRAPH_BASE_URL = "https://graph.facebook.com/v21.0/instagram_oembed"
+GRAPH_MEDIA_URL = "https://graph.facebook.com/v21.0"
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE = os.getenv("SUPABASE_SERVICE_ROLE")
@@ -142,6 +146,27 @@ def fetch_oembed(permalink: str) -> Optional[dict]:
         return None
 
 
+def fetch_media_details(media_id: Optional[str]) -> Optional[dict]:
+    if not media_id:
+        return None
+    if not settings.IG_ACCESS_TOKEN:
+        return None
+    try:
+        resp = requests.get(
+            f"{GRAPH_MEDIA_URL}/{media_id}",
+            params={
+                "fields": "like_count,comments_count,timestamp,permalink,media_url,thumbnail_url,media_type,caption",
+                "access_token": settings.IG_ACCESS_TOKEN,
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        return resp.json()
+    except requests.RequestException as exc:
+        logger.warning("Graph media fetch failed for %s: %s", media_id, exc)
+        return None
+
+
 def push_meilisearch(records: List[dict]) -> None:
     if not records:
         return
@@ -188,21 +213,53 @@ def push_supabase(records: List[dict]) -> None:
 
 
 def _iter_project_posts(session: Session, project_id: Optional[str], limit: int) -> Iterable[Post]:
-    query = session.query(Post)
-    if project_id:
-        creator_usernames = [
-            row.creator_username
-            for row in session.query(ProjectCreator)
-            .filter(ProjectCreator.project_id == project_id)
+    if not project_id:
+        return (
+            session.query(Post)
+            .order_by(Post.fetched_at.desc().nullslast(), Post.posted_at.desc().nullslast())
+            .limit(limit)
             .all()
-        ]
-        if not creator_usernames:
-            logger.warning("Aucun créateur lié au projet %s.", project_id)
-            return []
-        query = query.filter(Post.author.in_(creator_usernames))
+        )
+
+    creator_usernames = [
+        row.creator_username
+        for row in session.query(ProjectCreator)
+        .filter(ProjectCreator.project_id == project_id)
+        .all()
+    ]
+    hashtag_ids = [
+        row.hashtag_id
+        for row in session.query(ProjectHashtag)
+        .filter(ProjectHashtag.project_id == project_id)
+        .all()
+    ]
+
+    post_ids: Set[str] = set()
+    if creator_usernames:
+        for (post_id,) in (
+            session.query(Post.id)
+            .filter(Post.author.in_(creator_usernames))
+            .order_by(Post.fetched_at.desc().nullslast(), Post.posted_at.desc().nullslast())
+            .limit(limit * 2)
+        ):
+            post_ids.add(post_id)
+
+    if hashtag_ids:
+        for (post_id,) in (
+            session.query(PostHashtag.post_id)
+            .filter(PostHashtag.hashtag_id.in_(hashtag_ids))
+            .limit(limit * 2)
+        ):
+            post_ids.add(post_id)
+
+    if not post_ids:
+        logger.warning("Aucun contenu associé au projet %s.", project_id)
+        return []
 
     return (
-        query.order_by(Post.fetched_at.desc().nullslast(), Post.posted_at.desc().nullslast())
+        session.query(Post)
+        .filter(Post.id.in_(post_ids))
+        .order_by(Post.fetched_at.desc().nullslast(), Post.posted_at.desc().nullslast())
         .limit(limit)
         .all()
     )
@@ -230,15 +287,29 @@ def refresh_posts(project_id: Optional[str], limit: int = 20) -> None:
             if not payload:
                 continue
 
-            thumbnail = payload.get("thumbnail_url")
+            media_id = payload.get("media_id")
+            media_details = fetch_media_details(media_id)
+
+            thumbnail = (
+                (media_details or {}).get("media_url")
+                or (media_details or {}).get("thumbnail_url")
+                or payload.get("thumbnail_url")
+            )
             author_name = payload.get("author_name") or post.author
-            caption = payload.get("title") or post.caption
+            caption = (
+                (media_details or {}).get("caption")
+                or payload.get("title")
+                or post.caption
+            )
 
             if thumbnail:
                 post.media_url = thumbnail
             post.caption = caption
             post.author = author_name
-            post.api_payload = json.dumps(payload)
+            combined_payload: Dict[str, Any] = dict(payload)
+            if media_details:
+                combined_payload["media_details"] = media_details
+            post.api_payload = json.dumps(combined_payload)
             post.fetched_at = datetime.utcnow()
 
             platform_name = (payload.get("provider_name") or "instagram").lower()
@@ -251,10 +322,18 @@ def refresh_posts(project_id: Optional[str], limit: int = 20) -> None:
 
             # Mettre à jour quelques métriques si disponibles
             metrics = {
-                "like_count": payload.get("like_count"),
-                "comment_count": payload.get("comment_count"),
+                "like_count": (media_details or {}).get("like_count"),
+                "comment_count": (media_details or {}).get("comments_count"),
             }
-            post.metrics = json.dumps({k: v for k, v in metrics.items() if v is not None})
+            metrics_clean = {k: v for k, v in metrics.items() if v is not None}
+            post.metrics = json.dumps(metrics_clean) if metrics_clean else None
+
+            timestamp = (media_details or {}).get("timestamp")
+            if timestamp:
+                try:
+                    post.posted_at = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                except ValueError:
+                    logger.debug("Timestamp invalide pour %s: %s", post.id, timestamp)
 
             meili_records.append(
                 {
@@ -263,21 +342,28 @@ def refresh_posts(project_id: Optional[str], limit: int = 20) -> None:
                     "caption": post.caption,
                     "platform": "instagram",
                     "media_url": post.media_url,
-                    "permalink": permalink,
+                    "permalink": (media_details or {}).get("permalink") or permalink,
                     "posted_at": post.posted_at.isoformat() if post.posted_at else None,
+                    "like_count": metrics_clean.get("like_count") if metrics_clean else None,
+                    "comment_count": metrics_clean.get("comment_count") if metrics_clean else None,
                 }
             )
             supabase_records.append(
                 {
                     "id": post.id,
                     "provider": "instagram",
-                    "url": permalink,
+                    "url": (media_details or {}).get("permalink") or permalink,
                     "creator": post.author,
                     "title": post.caption,
                     "thumbnail": post.media_url,
                     "last_fetch_at": datetime.utcnow().isoformat(),
+                    "like_count": metrics_clean.get("like_count") if metrics_clean else None,
+                    "comment_count": metrics_clean.get("comment_count") if metrics_clean else None,
                 }
             )
+
+        if project_id:
+            _update_project_metrics(session, project_id)
 
         session.commit()
         logger.info("Posts mis à jour en base.")
@@ -287,6 +373,75 @@ def refresh_posts(project_id: Optional[str], limit: int = 20) -> None:
 
     finally:
         session.close()
+
+
+def _update_project_metrics(session: Session, project_id: str) -> None:
+    try:
+        project_uuid = UUID(str(project_id))
+    except ValueError:
+        logger.warning("Project ID invalide: %s", project_id)
+        return
+
+    project = session.query(Project).filter(Project.id == project_uuid).first()
+    if not project:
+        logger.warning("Projet introuvable pour mise à jour: %s", project_id)
+        return
+
+    creators = (
+        session.query(ProjectCreator)
+        .filter(ProjectCreator.project_id == project.id)
+        .all()
+    )
+    hashtag_links = (
+        session.query(ProjectHashtag)
+        .filter(ProjectHashtag.project_id == project.id)
+        .all()
+    )
+
+    author_usernames = [link.creator_username for link in creators if link.creator_username]
+    hashtag_ids = [link.hashtag_id for link in hashtag_links]
+
+    post_ids: Set[str] = set()
+    if author_usernames:
+        for (post_id,) in session.query(Post.id).filter(Post.author.in_(author_usernames)):
+            post_ids.add(post_id)
+    if hashtag_ids:
+        for (post_id,) in (
+            session.query(PostHashtag.post_id)
+            .filter(PostHashtag.hashtag_id.in_(hashtag_ids))
+        ):
+            post_ids.add(post_id)
+
+    project.creators_count = len(creators)
+    project.posts_count = len(post_ids)
+    project.last_run_at = datetime.utcnow()
+
+    scope_parts: List[str] = []
+    platform_names: Set[str] = set()
+    for creator in creators:
+        if creator.creator_username:
+            scope_parts.append(f"@{creator.creator_username}")
+        if creator.platform and creator.platform.name:
+            platform_names.add(creator.platform.name)
+    for link in hashtag_links:
+        if link.hashtag and link.hashtag.name:
+            scope_parts.append(f"#{link.hashtag.name}")
+        if link.hashtag and link.hashtag.platform and link.hashtag.platform.name:
+            platform_names.add(link.hashtag.platform.name)
+
+    if len(hashtag_links) and project.creators_count:
+        project.scope_type = "both"
+    elif len(hashtag_links):
+        project.scope_type = "hashtags"
+    elif project.creators_count:
+        project.scope_type = "creators"
+    else:
+        project.scope_type = None
+
+    project.scope_query = ", ".join(scope_parts) if scope_parts else None
+    project.platforms = json.dumps(sorted(platform_names)) if platform_names else json.dumps([])
+    session.add(project)
+    logger.info("Projet %s mis à jour: %s posts suivis.", project_id, project.posts_count)
 
 
 def main() -> None:
