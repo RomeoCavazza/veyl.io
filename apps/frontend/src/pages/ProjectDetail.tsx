@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Bell, AtSign, Trash2, ExternalLink, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Bell, AtSign, Trash2, ExternalLink, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, RefreshCcw, Code2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -77,6 +77,8 @@ export default function ProjectDetail() {
   const [editDescription, setEditDescription] = useState('');
   const [sortColumn, setSortColumn] = useState<string>('posted_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [fetchingPostId, setFetchingPostId] = useState<string | null>(null);
+  const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
 
   const pieData: Array<{ name: string; value: number; color: string }> = [];
   const reachData: Array<{ date: string; organic: number; paid: number }> = [];
@@ -228,6 +230,7 @@ export default function ProjectDetail() {
       });
       applyProjectData(updatedProject);
       await fetchProjectPosts();
+      await fetchProject();
       setAddCreatorOpen(false);
       setNewCreatorUsername('');
       toast({ title: 'Creator added', description: `@${username} linked to the project.` });
@@ -275,6 +278,7 @@ export default function ProjectDetail() {
       });
       applyProjectData(updatedProject);
       await fetchProjectPosts();
+      await fetchProject();
       setAddHashtagOpen(false);
       setNewHashtagName('');
       toast({ title: 'Hashtag added', description: `#${hashtag} linked to the project.` });
@@ -402,79 +406,82 @@ export default function ProjectDetail() {
           <div className="space-y-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between py-3">
-                <CardTitle className="text-base">Hashtags</CardTitle>
-                {hashtagLinks.length > 0 ? (
-                  <Button variant="ghost" size="sm" onClick={handleAddNiche}>
-                    <Plus className="h-4 w-4 mr-1" /> Add
+                <CardTitle className="text-base">Tracking</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={handleAddNiche}>
+                    <Hash className="h-4 w-4 mr-1" /> Add hashtag
                   </Button>
-                ) : null}
+                  <Button variant="outline" size="sm" onClick={handleAddCreator}>
+                    <User className="h-4 w-4 mr-1" /> Add creator
+                  </Button>
+                </div>
               </CardHeader>
-              <CardContent>
-                {hashtagLinks.length === 0 ? (
-                  <Button className="w-full" size="sm" onClick={handleAddNiche}>
-                    <Plus className="h-4 w-4 mr-1" /> Add hashtag
-                  </Button>
-                ) : (
-                  <div className="flex flex-col gap-2 text-sm">
-                    {hashtagLinks.map((link: any) => (
-                      <div key={link.link_id ?? link.id} className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2">
-                        <div className="flex flex-col">
-                          <span className="font-medium">#{link.name}</span>
-                          <span className="text-xs text-muted-foreground">{link.platform || 'instagram'}</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleRemoveHashtagLink(link.link_id ?? link.id)}
-                          title="Remove hashtag"
+              <CardContent className="space-y-5">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Hashtags</p>
+                  {hashtagLinks.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No hashtags linked yet.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {hashtagLinks.map((link: any) => (
+                        <div
+                          key={link.link_id ?? link.id}
+                          className="flex items-center justify-between border-b border-border/40 py-2 last:border-b-0"
                         >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="font-medium">#{link.name}</span>
+                            <span className="text-xs text-muted-foreground">· {formatPlatformLabel(link.platform || 'instagram')}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleRemoveHashtagLink(link.link_id ?? link.id)}
+                            title="Remove hashtag"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Creators</p>
+                  {creatorLinks.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No creators linked yet.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {creatorLinks.map((link: any) => (
+                        <div
+                          key={link.id}
+                          className="flex items-center justify-between border-b border-border/40 py-2 last:border-b-0"
+                        >
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+                              {link.creator_username?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                            <span className="font-medium">@{link.creator_username}</span>
+                            <span className="text-xs text-muted-foreground">· {formatPlatformLabel(link.platform || 'instagram')}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleRemoveCreatorLink(link.id)}
+                            title="Remove creator"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between py-3">
-                <CardTitle className="text-base">Creators</CardTitle>
-                {creatorLinks.length > 0 ? (
-                  <Button variant="ghost" size="sm" onClick={handleAddCreator}>
-                    <Plus className="h-4 w-4 mr-1" /> Add
-                  </Button>
-                ) : null}
-              </CardHeader>
-              <CardContent>
-                {creatorLinks.length === 0 ? (
-                  <Button className="w-full" size="sm" onClick={handleAddCreator}>
-                    <Plus className="h-4 w-4 mr-1" /> Add creator
-                  </Button>
-                ) : (
-                  <div className="flex flex-col gap-2 text-sm">
-                    {creatorLinks.map((link: any) => (
-                      <div key={link.id} className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2">
-                        <div className="flex flex-col">
-                          <span className="font-medium">@{link.creator_username}</span>
-                          <span className="text-xs text-muted-foreground">{link.platform || 'instagram'}</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleRemoveCreatorLink(link.id)}
-                          title="Remove creator"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
         </div>
 
@@ -499,61 +506,105 @@ export default function ProjectDetail() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {posts.length > 0 ? (
                   posts.map((post) => {
-                    const creator = creators.find(c => c.handle === post.username);
+                    const creator = creators.find(c => c.handle === post.author || c.handle === post.username);
+                    const isImage = post.media_url ? /\.(jpg|jpeg|png|gif|webp)$/i.test(post.media_url.split('?')[0]) : false;
+                    const embedUrl = post.permalink ? `${post.permalink.replace(/\/$/, '')}/embed` : undefined;
                     return (
                       <Card 
                         key={post.id} 
-                        className="overflow-hidden cursor-pointer hover:border-primary transition-colors"
+                        className="overflow-hidden hover:shadow-lg transition-shadow"
                         onClick={() => {
                           setSelectedPost(post);
                           setPostDialogOpen(true);
                         }}
                       >
-                        <div className="relative">
-                          <img
-                            src={post.media_url}
-                            alt={post.caption}
-                            className="w-full h-64 object-cover"
-                          />
-                          <div className="absolute top-2 right-2 flex gap-2">
-                            <Badge variant="secondary" className="bg-black/50 text-white">
-                              {post.platform}
-                            </Badge>
-                          </div>
-                        </div>
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-2">
+                        <div className="aspect-square relative overflow-hidden bg-muted">
+                          {post.media_url && isImage ? (
                             <img
-                              src={creator?.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.username}`}
-                              alt={post.username || 'creator'}
-                              className="w-6 h-6 rounded-full flex-shrink-0"
-                            />
-                            <span 
-                              className="text-sm font-medium hover:text-primary cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/projects/${id}/creator/${post.username}`);
+                              src={post.media_url}
+                              alt={post.caption || post.author}
+                              className="object-cover w-full h-full"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = `https://picsum.photos/800/800?random=${post.id}`;
                               }}
-                            >
-                              {post.username}
-                            </span>
+                            />
+                          ) : embedUrl ? (
+                            <iframe
+                              src={embedUrl}
+                              title={post.id}
+                              className="w-full h-full"
+                              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-muted/50">
+                              <span className="text-muted-foreground text-sm">Media unavailable</span>
+                            </div>
+                          )}
+                          <Badge className="absolute top-2 right-2 bg-accent">
+                            {post.platform?.toUpperCase() || 'INSTAGRAM'}
+                          </Badge>
+                        </div>
+                        
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
+                              {(post.author || post.username || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm truncate">{post.author || post.username || 'Unknown User'}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                @{post.author || post.username || 'unknown'}
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                            {post.caption}
-                          </p>
-                          <div className="flex items-center gap-4 text-sm">
+
+                          <p className="text-sm line-clamp-2">{post.caption}</p>
+
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Heart className="h-4 w-4" />
-                              <span>{post.like_count?.toLocaleString() || 0}</span>
+                              <span>{post.like_count ? post.like_count.toLocaleString() : '0'}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <MessageCircle className="h-4 w-4" />
-                              <span>{post.comment_count?.toLocaleString() || 0}</span>
+                              <span>{post.comment_count ? post.comment_count.toLocaleString() : '0'}</span>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Eye className="h-4 w-4" />
-                              <span>{post.view_count?.toLocaleString() || 0}</span>
-                            </div>
+                            {post.score_trend !== undefined && (
+                              <div className="flex items-center gap-1 text-success">
+                                <TrendingUp className="h-4 w-4" />
+                                <span>{post.score_trend}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="pt-2 border-t flex flex-wrap gap-2">
+                            {post.permalink && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1"
+                                asChild
+                              >
+                                <a href={post.permalink} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  View post
+                                </a>
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedPost(post);
+                                setEmbedDialogOpen(true);
+                              }}
+                            >
+                              <Code2 className="h-3 w-3 mr-1" />
+                              Embed
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
