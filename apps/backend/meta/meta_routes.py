@@ -88,10 +88,13 @@ async def get_oembed(
         raise HTTPException(status_code=400, detail="url parameter required")
 
 
+    # oEmbed utilise APP_ID|APP_SECRET (pas besoin de user token)
+    client_token = f"{settings.IG_APP_ID}|{settings.IG_APP_SECRET}"
     payload = await call_meta(
         method="GET",
         endpoint="v21.0/instagram_oembed",
         params={"url": url, "maxwidth": 540},
+        access_token=client_token,
     )
 
 
