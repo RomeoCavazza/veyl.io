@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List
+from uuid import UUID
 
 from db.base import get_db
 from db.models import Project, User, ProjectHashtag, ProjectCreator, Hashtag, Platform
@@ -71,13 +72,18 @@ def list_projects(
 
 @projects_router.get("/{project_id}", response_model=ProjectResponse)
 def get_project(
-    project_id: int,
+    project_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Récupérer un projet spécifique"""
+    try:
+        project_uuid = UUID(project_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Project ID invalide")
+
     project = db.query(Project).filter(
-        Project.id == project_id,
+        Project.id == project_uuid,
         Project.user_id == current_user.id
     ).first()
     if not project:
@@ -256,14 +262,19 @@ def create_project(
 
 @projects_router.put("/{project_id}", response_model=ProjectResponse)
 def update_project(
-    project_id: int,
+    project_id: str,
     project_in: ProjectUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Mettre à jour un projet"""
+    try:
+        project_uuid = UUID(project_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Project ID invalide")
+
     project = db.query(Project).filter(
-        Project.id == project_id,
+        Project.id == project_uuid,
         Project.user_id == current_user.id
     ).first()
     if not project:
@@ -338,13 +349,18 @@ def update_project(
 
 @projects_router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_project(
-    project_id: int,
+    project_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Supprimer un projet"""
+    try:
+        project_uuid = UUID(project_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Project ID invalide")
+
     project = db.query(Project).filter(
-        Project.id == project_id,
+        Project.id == project_uuid,
         Project.user_id == current_user.id
     ).first()
     if not project:

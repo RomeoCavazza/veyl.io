@@ -157,7 +157,7 @@ class Project(Base):
     """Projets de monitoring de tendances"""
     __tablename__ = "projects"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(255), nullable=False)
     description = Column(Text)  # Description du projet (remplace 'goal')
@@ -191,7 +191,7 @@ class ProjectHashtag(Base):
     __tablename__ = "project_hashtags"
     
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     hashtag_id = Column(Integer, ForeignKey("hashtags.id", ondelete="CASCADE"), nullable=False)
     added_at = Column(DateTime, default=dt.datetime.utcnow)
     
@@ -209,7 +209,7 @@ class ProjectCreator(Base):
     __tablename__ = "project_creators"
     
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     creator_username = Column(String(255), nullable=False)  # "@username" ou "username"
     platform_id = Column(Integer, ForeignKey("platforms.id"), nullable=False)
     added_at = Column(DateTime, default=dt.datetime.utcnow)
