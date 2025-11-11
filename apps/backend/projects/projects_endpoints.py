@@ -18,7 +18,7 @@ projects_router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 def serialize_project(project: Project, include_relations: bool = True) -> dict:
     """Sérialise un projet pour la réponse API"""
     result = {
-        'id': project.id,
+        'id': str(project.id),
         'user_id': project.user_id,
         'name': project.name,
         'description': project.description,

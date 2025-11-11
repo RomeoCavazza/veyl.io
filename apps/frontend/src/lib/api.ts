@@ -230,7 +230,7 @@ export interface ProjectCreate {
 }
 
 export interface Project {
-  id: number;
+  id: string;
   user_id: string;
   name: string;
   description?: string;

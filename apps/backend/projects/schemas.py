@@ -28,7 +28,7 @@ class ProjectUpdate(BaseModel):
     creator_usernames: Optional[List[str]] = None
 
 class ProjectResponse(BaseModel):
-    id: int
+    id: str
     user_id: UUID
     name: str
     description: Optional[str] = None
