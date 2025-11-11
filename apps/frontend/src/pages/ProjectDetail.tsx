@@ -451,99 +451,111 @@ export default function ProjectDetail() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between py-4">
-              <CardTitle className="text-lg">Creators</CardTitle>
-              <Button size="sm" onClick={handleAddCreator}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add creator
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {creatorLinks.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No creators linked yet.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Creator</TableHead>
-                      <TableHead>Platform</TableHead>
-                      <TableHead>Added</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {creatorLinks.map((link: any) => (
-                      <TableRow key={link.id}>
-                        <TableCell className="font-medium">@{link.creator_username}</TableCell>
-                        <TableCell className="capitalize">{link.platform || 'instagram'}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {link.added_at ? formatDistanceToNow(new Date(link.added_at), { addSuffix: true, locale: fr }) : '—'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveCreatorLink(link.id)}
-                            title="Remove creator"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
+          <ProjectPanel
+            project={project}
+            creators={creators}
+            onEdit={() => {
+              setEditName(project.name || '');
+              setEditDescription(project.description || '');
+              setEditDialogOpen(true);
+            }}
+            onDelete={() => setDeleteDialogOpen(true)}
+          />
+          <div className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between py-4">
+                <CardTitle className="text-lg">Hashtags</CardTitle>
+                <Button size="sm" onClick={handleAddNiche}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add hashtag
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {hashtagLinks.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No hashtags linked yet.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Hashtag</TableHead>
+                        <TableHead>Platform</TableHead>
+                        <TableHead>Added</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {hashtagLinks.map((link: any) => (
+                        <TableRow key={link.link_id ?? link.id}>
+                          <TableCell className="font-medium">#{link.name}</TableCell>
+                          <TableCell className="capitalize">{link.platform || 'instagram'}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {link.added_at ? formatDistanceToNow(new Date(link.added_at), { addSuffix: true, locale: fr }) : '—'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveHashtagLink(link.link_id ?? link.id)}
+                              title="Remove hashtag"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between py-4">
-              <CardTitle className="text-lg">Hashtags</CardTitle>
-              <Button size="sm" onClick={handleAddNiche}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add hashtag
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {hashtagLinks.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No hashtags linked yet.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Hashtag</TableHead>
-                      <TableHead>Platform</TableHead>
-                      <TableHead>Added</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {hashtagLinks.map((link: any) => (
-                      <TableRow key={link.link_id ?? link.id}>
-                        <TableCell className="font-medium">#{link.name}</TableCell>
-                        <TableCell className="capitalize">{link.platform || 'instagram'}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {link.added_at ? formatDistanceToNow(new Date(link.added_at), { addSuffix: true, locale: fr }) : '—'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveHashtagLink(link.link_id ?? link.id)}
-                            title="Remove hashtag"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between py-4">
+                <CardTitle className="text-lg">Creators</CardTitle>
+                <Button size="sm" onClick={handleAddCreator}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add creator
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {creatorLinks.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No creators linked yet.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Creator</TableHead>
+                        <TableHead>Platform</TableHead>
+                        <TableHead>Added</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {creatorLinks.map((link: any) => (
+                        <TableRow key={link.id}>
+                          <TableCell className="font-medium">@{link.creator_username}</TableCell>
+                          <TableCell className="capitalize">{link.platform || 'instagram'}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {link.added_at ? formatDistanceToNow(new Date(link.added_at), { addSuffix: true, locale: fr }) : '—'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveCreatorLink(link.id)}
+                              title="Remove creator"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -562,79 +574,8 @@ export default function ProjectDetail() {
 
           {/* Tab 1: Watchlist - Feed + Creators + Hashtags/Commentaires/Mentions */}
           <TabsContent value="watchlist" className="space-y-6">
-            {/* Layout 50/50 : Project Panel + Chart/Creators */}
-            <div className="grid gap-4 md:grid-cols-2">
-              {/* Project Panel (Left - 50%) */}
-              <ProjectPanel
-                project={project}
-                creators={creators}
-                onEdit={() => {
-                  setEditName(project.name || '');
-                  setEditDescription(project.description || '');
-                  setEditDialogOpen(true);
-                }}
-                onDelete={() => setDeleteDialogOpen(true)}
-              />
-
-              {/* Section: Creators (Right - 50%) */}
-              {creators.length > 0 && (
-                <Card className="bg-card border-border flex flex-col">
-                  <CardHeader className="flex-shrink-0">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">Creators ({creators.length})</CardTitle>
-                      <Select value={selectedPeriod} onValueChange={(value: 'day' | 'week' | 'month') => setSelectedPeriod(value)}>
-                        <SelectTrigger className="w-32 h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="day">Day</SelectItem>
-                          <SelectItem value="week">Week</SelectItem>
-                          <SelectItem value="month">Month</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-1 overflow-hidden">
-                    <div className="space-y-3 h-[400px] overflow-y-auto pr-2">
-                      {creators.map((creator) => {
-                        const stats = getCreatorStats(creator.handle, selectedPeriod);
-                        return (
-                          <div
-                            key={creator.id || creator.handle}
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                            onClick={() => navigate(`/projects/${id}/creator/${creator.handle.replace('@', '')}`)}
-                          >
-                            <img
-                              src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
-                              alt={creator.handle}
-                              className="w-10 h-10 rounded-full flex-shrink-0"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{creator.handle}</p>
-                              <div className="flex items-center gap-3 mt-1">
-                                <p className="text-xs text-muted-foreground">
-                                  {stats.followers.toLocaleString()} followers
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {stats.postsCount} {selectedPeriod === 'day' ? 'post' : selectedPeriod === 'week' ? 'posts/week' : 'posts/month'}
-                                </p>
-                              </div>
-                            </div>
-                            {creator.avg_engagement && (
-                              <Badge variant="outline" className="flex-shrink-0">{creator.avg_engagement}%</Badge>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
             {/* Section: Feed Posts */}
             <div>
-              <h2 className="text-xl font-semibold mb-4">Posts Feed</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {posts.length > 0 ? (
                   posts.map((post) => {
@@ -689,18 +630,25 @@ export default function ProjectDetail() {
                               <MessageCircle className="h-4 w-4" />
                               <span>{post.comment_count?.toLocaleString() || 0}</span>
                             </div>
+                            <div className="flex items-center gap-1">
+                              <Eye className="h-4 w-4" />
+                              <span>{post.view_count?.toLocaleString() || 0}</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
                     );
                   })
                 ) : (
-                  <div className="col-span-full text-center py-12 text-muted-foreground">
-                    No posts found
-                  </div>
+                  <Card className="col-span-full">
+                    <CardContent className="p-10 text-center text-muted-foreground">
+                      No posts yet. Add creators or hashtags to start tracking content.
+                    </CardContent>
+                  </Card>
                 )}
               </div>
             </div>
+
           </TabsContent>
 
           <Dialog open={addCreatorOpen} onOpenChange={setAddCreatorOpen}>

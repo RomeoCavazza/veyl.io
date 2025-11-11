@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Search as SearchIcon, TrendingUp, Heart, MessageCircle, ExternalLink, Code2, Copy, CheckCircle2, RefreshCcw } from 'lucide-react';
-import { searchPosts, fetchMetaOEmbed, fetchPagePublicPosts, type PostHit } from '@/lib/api';
+import { searchPosts, fetchMetaOEmbed, type PostHit } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { AISearchBar, type SearchMode } from '@/components/AISearchBar';
 import { Navbar } from '@/components/Navbar';
@@ -45,19 +45,24 @@ export default function Search() {
     const shouldFetchHashtag =
       normalizedModes.includes('hashtag') &&
       (normalizedPlatforms.length === 0 || normalizedPlatforms.includes('instagram'));
-    const shouldFetchPage =
-      normalizedModes.includes('page') &&
-      (normalizedPlatforms.length === 0 || normalizedPlatforms.includes('facebook'));
+    const wantsCreator = normalizedModes.includes('creator');
 
-    if (!shouldFetchHashtag && !shouldFetchPage) {
+    if (!shouldFetchHashtag && !wantsCreator) {
       setIsLoading(false);
       setPosts([]);
       toast({
-        title: 'No Meta platform selected',
-        description: 'Select Instagram for hashtag search or Facebook for public page fetch.',
+        title: 'Select a search mode',
+        description: 'Choose hashtag or creator to run a search.',
         variant: 'destructive',
       });
       return;
+    }
+    
+    if (wantsCreator) {
+      toast({
+        title: 'Creator search coming soon',
+        description: 'Creator lookup will be enabled once Meta permissions are confirmed. For now, try hashtag search.',
+      });
     }
     
     try {
@@ -65,8 +70,8 @@ export default function Search() {
 
       if (shouldFetchHashtag) {
         const response = await searchPosts({
-        q: query,
-        limit: 12,
+          q: query,
+          limit: 12,
         });
         const data = response.data || [];
         data.forEach((item: any) => {
@@ -82,26 +87,6 @@ export default function Search() {
             like_count: item.like_count,
             comment_count: item.comments_count,
             score_trend: item.like_count ?? 0,
-          });
-        });
-      }
-
-      if (shouldFetchPage) {
-        const pageResponse = await fetchPagePublicPosts(query, 12);
-        const data = pageResponse.data || [];
-        data.forEach((item: any) => {
-          aggregatedPosts.push({
-            id: item.id,
-            platform: 'facebook',
-            username: item.from?.name ?? 'Facebook Page',
-            caption: item.message,
-            media_type: item.full_picture ? 'IMAGE' : 'LINK',
-            media_url: item.full_picture,
-            permalink: item.permalink_url ?? '',
-            posted_at: item.created_time ?? '',
-            like_count: 0,
-            comment_count: 0,
-            score_trend: 0,
           });
         });
       }

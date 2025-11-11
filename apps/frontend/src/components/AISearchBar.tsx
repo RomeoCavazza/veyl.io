@@ -11,10 +11,10 @@ const platforms = [
   { id: 'x', name: 'X', icon: Globe },
 ];
 
-export type SearchMode = 'hashtag' | 'page';
+export type SearchMode = 'hashtag' | 'creator';
 const modes: Array<{ id: SearchMode; name: string }> = [
   { id: 'hashtag', name: 'Hashtag' },
-  { id: 'page', name: 'Facebook Page' },
+  { id: 'creator', name: 'Creator' },
 ];
 
 interface AISearchBarProps {
