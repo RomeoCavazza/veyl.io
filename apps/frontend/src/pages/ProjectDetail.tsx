@@ -415,19 +415,6 @@ export default function ProjectDetail() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Projects
           </Button>
-          <Button
-            onClick={() => {
-              fetchProjectPosts();
-              setRefreshTrigger(Date.now());
-              toast({ title: 'Refreshing...', description: 'Updating project data and insights' });
-            }}
-            variant="outline"
-            size="sm"
-            className="gap-2"
-          >
-            <RefreshCcw className="h-4 w-4" />
-            Refresh All
-          </Button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 mb-6">
@@ -545,17 +532,33 @@ export default function ProjectDetail() {
 
         {/* Tabs */}
         <Tabs defaultValue="watchlist" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="watchlist">
-              Watchlist
-            </TabsTrigger>
-            <TabsTrigger value="grid">
-              Grid
-            </TabsTrigger>
-            <TabsTrigger value="analytics">
-              Analytics
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between mb-4">
+            <TabsList>
+              <TabsTrigger value="watchlist">
+                Watchlist
+              </TabsTrigger>
+              <TabsTrigger value="grid">
+                Grid
+              </TabsTrigger>
+              <TabsTrigger value="analytics">
+                Analytics
+              </TabsTrigger>
+            </TabsList>
+            
+            <Button
+              onClick={() => {
+                fetchProjectPosts();
+                setRefreshTrigger(Date.now());
+                toast({ title: 'Refreshing...', description: 'Updating project data and insights' });
+              }}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <RefreshCcw className="h-4 w-4" />
+              Refresh All
+            </Button>
+          </div>
 
           {/* Tab 1: Watchlist - Feed + Creators + Hashtags/Commentaires/Mentions */}
           <TabsContent value="watchlist" className="space-y-6">
@@ -748,12 +751,14 @@ export default function ProjectDetail() {
                             }}
                           >
                             <TableCell>
-                              {post.media_url ? (
-                                <img
-                                  src={post.media_url}
-                                  alt={post.caption}
-                                  className="w-12 h-12 rounded object-cover"
-                                />
+                              {post.permalink ? (
+                                <div className="w-12 h-12 rounded overflow-hidden">
+                                  <iframe
+                                    src={`${post.permalink.replace(/\/$/, '')}/embed`}
+                                    className="w-full h-full border-0 pointer-events-none"
+                                    scrolling="no"
+                                  />
+                                </div>
                               ) : (
                                 <div className="w-12 h-12 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground">
                                   No img
@@ -1230,45 +1235,6 @@ export default function ProjectDetail() {
           <TabsContent value="analytics" className="space-y-6">
             {/* Instagram Insights - Auto refresh avec les graphs */}
             <InstagramInsights projectId={project.id} triggerRefresh={refreshTrigger} />
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {/* Content Type Distribution Chart */}
-              <Card className="bg-card border-border shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-white">Content Distribution</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Media types
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '6px',
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
 
             {/* Analytics Content - Charts */}
             <div className="grid gap-4 md:grid-cols-2">

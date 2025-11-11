@@ -137,23 +137,12 @@ export default function Projects() {
       <div className="container py-8 px-4">
         <div className="mb-6 flex items-center justify-between">
           <CardTitle className="text-2xl">My Projects</CardTitle>
-          <div className="flex gap-2">
-            <Button
-              onClick={handleRefreshAll}
-              variant="outline"
-              size="sm"
-              disabled={refreshing || loading}
-            >
-              <RefreshCcw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Refreshing...' : 'Refresh All'}
+          {projects.length > 0 && (
+            <Button onClick={() => navigate('/projects/new')}>
+              <Plus className="h-4 w-4 mr-2" />
+              New project
             </Button>
-            {projects.length > 0 && (
-              <Button onClick={() => navigate('/projects/new')}>
-                <Plus className="h-4 w-4 mr-2" />
-                New project
-              </Button>
-            )}
-          </div>
+          )}
         </div>
         <div className="space-y-4">
             {loading ? (
