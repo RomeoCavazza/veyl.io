@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Search as SearchIcon, TrendingUp, Heart, MessageCircle, ExternalLink, Code2, Copy, CheckCircle2, RefreshCcw } from 'lucide-react';
-import { searchPosts, fetchMetaOEmbed, type PostHit } from '@/lib/api';
+import { searchPosts, fetchMetaOEmbed, getProjects, getProjectPosts, type PostHit } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { AISearchBar, type SearchMode } from '@/components/AISearchBar';
 import { Navbar } from '@/components/Navbar';
@@ -26,6 +26,7 @@ export default function Search() {
   const [isFetchingEmbed, setIsFetchingEmbed] = useState(false);
   const [fetchingPostId, setFetchingPostId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleSearch = async (
@@ -36,6 +37,7 @@ export default function Search() {
     if (!query.trim()) return;
     
     setIsLoading(true);
+    setFallbackNotice(null);
     setHasSearched(true);
     setSearchQuery(query);
     setSelectedPlatforms(platforms);
@@ -94,14 +96,67 @@ export default function Search() {
       setPosts(aggregatedPosts);
     } catch (error) {
       console.error('Search error:', error);
+      await loadFallbackResults(query, normalizedModes);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadFallbackResults = async (query: string, modes: SearchMode[]) => {
+    try {
+      const projects = await getProjects();
+      const aggregated: PostHit[] = [];
+
+      for (const project of projects) {
+        const projectPosts = await getProjectPosts(project.id);
+        projectPosts.forEach((post) => {
+          aggregated.push({
+            id: post.id,
+            platform: post.platform || 'instagram',
+            username: post.author,
+            caption: post.caption,
+            media_type: post.media_url ? 'IMAGE' : undefined,
+            media_url: post.media_url,
+            permalink: post.permalink || (post.media_url?.startsWith('http') ? post.media_url : undefined),
+            posted_at: post.posted_at,
+            like_count: post.like_count,
+            comment_count: post.comment_count,
+            score_trend: post.score_trend,
+          });
+        });
+      }
+
+      const normalizedQuery = query.trim().toLowerCase();
+      const filtered = aggregated.filter((item) => {
+        const caption = (item.caption || '').toLowerCase();
+        const username = (item.username || '').toLowerCase();
+        const matchesHashtag = modes.includes('hashtag')
+          ? caption.includes(`#${normalizedQuery}`) || caption.includes(normalizedQuery)
+          : false;
+        const matchesCreator = modes.includes('creator')
+          ? username.includes(normalizedQuery.replace('@', ''))
+          : false;
+        return matchesHashtag || matchesCreator;
+      });
+
+      if (filtered.length === 0) {
+        setPosts([]);
+        toast({
+          title: 'No results',
+          description: 'No stored posts match your search query.',
+        });
+      } else {
+        setFallbackNotice('Showing stored results (Meta API currently unavailable).');
+        setPosts(filtered);
+      }
+    } catch (fallbackError) {
+      console.error('Fallback search error:', fallbackError);
       setPosts([]);
       toast({
         title: 'Search failed',
         description: 'Unable to fetch posts. Please verify the search query and try again.',
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -276,7 +331,10 @@ export default function Search() {
                   {posts.length} posts found
                 </Badge>
               </div>
-              {selectedModes.includes('creator') && (
+              {fallbackNotice && (
+                <p className="text-xs text-muted-foreground">{fallbackNotice}</p>
+              )}
+              {selectedModes.includes('creator') && !fallbackNotice && (
                 <p className="text-xs text-muted-foreground">
                   Creator search will soon pull live posts from specific profiles. For now, use hashtag mode to explore trending content.
                 </p>
