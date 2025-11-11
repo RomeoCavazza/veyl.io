@@ -1,15 +1,25 @@
 # projects/projects_endpoints.py
 import json
 import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from typing import List, Optional, Set
+from typing import Dict, List, Optional, Set
 from uuid import UUID
 
 from db.base import get_db
-from db.models import Project, User, ProjectHashtag, ProjectCreator, Hashtag, Platform, Post
+from db.models import (
+    Project,
+    User,
+    ProjectHashtag,
+    ProjectCreator,
+    Hashtag,
+    Platform,
+    Post,
+    PostHashtag,
+)
 from auth_unified.auth_endpoints import get_current_user
 from projects.schemas import (
     ProjectCreate,
@@ -59,6 +69,65 @@ def _get_project_or_404(db: Session, current_user: User, project_id: str) -> Pro
     return project
 
 
+def _collect_project_posts(
+    db: Session,
+    project: Project,
+    limit: Optional[int] = None,
+) -> List[Post]:
+    post_map: Dict[str, Post] = {}
+
+    creator_links = (
+        db.query(ProjectCreator)
+        .filter(ProjectCreator.project_id == project.id)
+        .all()
+    )
+    usernames = [link.creator_username for link in creator_links]
+    if usernames:
+        query = (
+            db.query(Post)
+            .filter(Post.author.in_(usernames))
+            .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
+        )
+        if limit:
+            query = query.limit(limit)
+        for post in query.all():
+            post_map[post.id] = post
+
+    hashtag_links = (
+        db.query(ProjectHashtag)
+        .filter(ProjectHashtag.project_id == project.id)
+        .all()
+    )
+    hashtag_ids = [link.hashtag_id for link in hashtag_links]
+    if hashtag_ids:
+        hashtag_query = (
+            db.query(Post)
+            .join(PostHashtag, PostHashtag.post_id == Post.id)
+            .filter(PostHashtag.hashtag_id.in_(hashtag_ids))
+            .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
+        )
+        if limit:
+            hashtag_query = hashtag_query.limit(limit)
+        for post in hashtag_query.all():
+            post_map[post.id] = post
+
+    posts = list(post_map.values())
+
+    def _sort_key(post: Post) -> float:
+        for candidate in (post.posted_at, post.fetched_at):
+            if candidate:
+                if candidate.tzinfo:
+                    return candidate.timestamp()
+                return candidate.replace(tzinfo=timezone.utc).timestamp()
+        return 0.0
+
+    posts.sort(key=_sort_key, reverse=True)
+
+    if limit:
+        return posts[:limit]
+    return posts
+
+
 def _sync_project_metadata(db: Session, project: Project) -> None:
     creators = (
         db.query(ProjectCreator)
@@ -88,6 +157,8 @@ def _sync_project_metadata(db: Session, project: Project) -> None:
         if hashtag.platform:
             platform_names.add(hashtag.platform.name)
 
+    posts = _collect_project_posts(db, project)
+
     project.creators_count = len(creators)
     if hashtag_count and project.creators_count:
         project.scope_type = "both"
@@ -102,6 +173,7 @@ def _sync_project_metadata(db: Session, project: Project) -> None:
     project.platforms = (
         json.dumps(sorted(platform_names)) if platform_names else json.dumps([])
     )
+    project.posts_count = len(posts)
 
 
 def _attach_creator(
@@ -261,22 +333,9 @@ def list_project_posts(
     """Retourne les posts associés au projet (via ses créateurs)."""
     project = _get_project_or_404(db, current_user, project_id)
 
-    creator_links = (
-        db.query(ProjectCreator)
-        .filter(ProjectCreator.project_id == project.id)
-        .all()
-    )
-    usernames = [link.creator_username for link in creator_links]
-    if not usernames:
+    posts = _collect_project_posts(db, project, limit=60)
+    if not posts:
         return []
-
-    posts = (
-        db.query(Post)
-        .filter(Post.author.in_(usernames))
-        .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
-        .limit(60)
-        .all()
-    )
 
     results: List[ProjectPostResponse] = []
     for post in posts:
@@ -287,10 +346,20 @@ def list_project_posts(
             except (TypeError, ValueError):
                 metrics = {}
         permalink = None
-        if post.media_url and post.media_url.startswith('http'):
-            permalink = post.media_url
-        elif post.external_id:
-            permalink = post.external_id if post.external_id.startswith('http') else f"https://www.instagram.com/p/{post.external_id.strip('/')}/"
+        if post.external_id:
+            permalink = (
+                post.external_id
+                if post.external_id.startswith('http')
+                else f"https://www.instagram.com/p/{post.external_id.strip('/')}/"
+            )
+        elif post.api_payload:
+            try:
+                payload_data = json.loads(post.api_payload)
+                permalink_candidate = payload_data.get('url') or payload_data.get('author_url')
+                if isinstance(permalink_candidate, str) and permalink_candidate.startswith('http'):
+                    permalink = permalink_candidate
+            except (TypeError, ValueError):
+                permalink = None
 
         results.append(ProjectPostResponse(
             id=post.id,

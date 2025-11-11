@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Hash, User, Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Bell, AtSign, Trash2, ExternalLink, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, RefreshCcw, Code2 } from 'lucide-react';
+import { Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Bell, AtSign, Trash2, ExternalLink, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, RefreshCcw, Code2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -428,16 +428,8 @@ export default function ProjectDetail() {
           />
           <div className="space-y-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between py-3">
+              <CardHeader className="py-3">
                 <CardTitle className="text-base">Tracking</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={handleAddNiche}>
-                    <Hash className="h-4 w-4 mr-1" /> Add hashtag
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleAddCreator}>
-                    <User className="h-4 w-4 mr-1" /> Add creator
-                  </Button>
-                </div>
               </CardHeader>
               <CardContent className="space-y-5">
                 <div>
@@ -468,6 +460,15 @@ export default function ProjectDetail() {
                       ))}
                     </div>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 h-7 px-2 text-xs text-muted-foreground justify-start"
+                    onClick={handleAddNiche}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add hashtag
+                  </Button>
                 </div>
 
                 <div>
@@ -501,6 +502,15 @@ export default function ProjectDetail() {
                       ))}
                     </div>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 h-7 px-2 text-xs text-muted-foreground justify-start"
+                    onClick={handleAddCreator}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add creator
+                  </Button>
                 </div>
               </CardContent>
             </Card>

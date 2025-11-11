@@ -15,14 +15,21 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Set
+import re
 
 import requests
 from sqlalchemy.orm import Session
 
 from core.config import settings
 from db.base import SessionLocal
-from db.models import Post, ProjectCreator
+from db.models import (
+    Post,
+    ProjectCreator,
+    PostHashtag,
+    Hashtag,
+    Platform,
+)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
@@ -48,6 +55,70 @@ def _ensure_permalink(post: Post) -> Optional[str]:
     if not slug:
         return None
     return f"https://www.instagram.com/p/{slug}/"
+
+
+HASHTAG_PATTERN = re.compile(r"#([\w\d_]+)", re.UNICODE)
+
+
+def _ensure_platform(session: Session, name: str) -> Platform:
+    platform = (
+        session.query(Platform)
+        .filter(Platform.name == name.lower())
+        .first()
+    )
+    if not platform:
+        platform = Platform(name=name.lower())
+        session.add(platform)
+        session.flush()
+    return platform
+
+
+def _upsert_post_hashtags(
+    session: Session,
+    post: Post,
+    caption: Optional[str],
+    platform_name: str,
+) -> None:
+    if not caption:
+        return
+
+    hashtags: Set[str] = set(
+        match.group(1).lower()
+        for match in HASHTAG_PATTERN.finditer(caption)
+    )
+    if not hashtags:
+        return
+
+    platform = _ensure_platform(session, platform_name)
+    for tag in hashtags:
+        hashtag = (
+            session.query(Hashtag)
+            .filter(Hashtag.name == tag)
+            .first()
+        )
+        if not hashtag:
+            hashtag = Hashtag(
+                name=tag,
+                platform_id=platform.id,
+            )
+            session.add(hashtag)
+            session.flush()
+
+        existing_link = (
+            session.query(PostHashtag)
+            .filter(
+                PostHashtag.post_id == post.id,
+                PostHashtag.hashtag_id == hashtag.id,
+            )
+            .first()
+        )
+        if not existing_link:
+            session.add(
+                PostHashtag(
+                    post_id=post.id,
+                    hashtag_id=hashtag.id,
+                )
+            )
 
 
 def fetch_oembed(permalink: str) -> Optional[dict]:
@@ -169,6 +240,14 @@ def refresh_posts(project_id: Optional[str], limit: int = 20) -> None:
             post.author = author_name
             post.api_payload = json.dumps(payload)
             post.fetched_at = datetime.utcnow()
+
+            platform_name = (payload.get("provider_name") or "instagram").lower()
+            _upsert_post_hashtags(
+                session=session,
+                post=post,
+                caption=caption,
+                platform_name=platform_name,
+            )
 
             # Mettre à jour quelques métriques si disponibles
             metrics = {
