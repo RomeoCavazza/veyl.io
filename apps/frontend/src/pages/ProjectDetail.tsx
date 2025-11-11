@@ -45,7 +45,7 @@ import {
 } from 'recharts';
 
 // Import getApiBase from api.ts
-import { getApiBase, addProjectCreator, removeProjectCreator, addProjectHashtag, removeProjectHashtag } from '@/lib/api';
+import { getApiBase, addProjectCreator, removeProjectCreator, addProjectHashtag, removeProjectHashtag, getProjectPosts } from '@/lib/api';
 
 const PLATFORM_OPTIONS = ['instagram', 'facebook', 'tiktok'] as const;
 const formatPlatformLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
@@ -146,6 +146,16 @@ export default function ProjectDetail() {
     setEditDescription(projectData.description || '');
   }, []);
 
+  const fetchProjectPosts = useCallback(async () => {
+    if (!id) return;
+    try {
+      const postsData = await getProjectPosts(id);
+      setPosts(postsData);
+    } catch (error) {
+      console.error('Error loading project posts:', error);
+    }
+  }, [id]);
+
   const fetchProject = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -187,6 +197,10 @@ export default function ProjectDetail() {
     fetchProject();
   }, [fetchProject]);
 
+  useEffect(() => {
+    fetchProjectPosts();
+  }, [fetchProjectPosts]);
+
   const handleAddCreator = () => {
     setNewCreatorUsername('');
     setNewCreatorPlatform('instagram');
@@ -213,6 +227,7 @@ export default function ProjectDetail() {
         platform: newCreatorPlatform,
       });
       applyProjectData(updatedProject);
+      await fetchProjectPosts();
       setAddCreatorOpen(false);
       setNewCreatorUsername('');
       toast({ title: 'Creator added', description: `@${username} linked to the project.` });
@@ -233,6 +248,7 @@ export default function ProjectDetail() {
     try {
       await removeProjectCreator(id, linkId);
       await fetchProject();
+      await fetchProjectPosts();
       toast({ title: 'Creator removed' });
     } catch (error: any) {
       console.error('Error removing creator:', error);
@@ -258,6 +274,7 @@ export default function ProjectDetail() {
         platform: newHashtagPlatform,
       });
       applyProjectData(updatedProject);
+      await fetchProjectPosts();
       setAddHashtagOpen(false);
       setNewHashtagName('');
       toast({ title: 'Hashtag added', description: `#${hashtag} linked to the project.` });
@@ -278,6 +295,7 @@ export default function ProjectDetail() {
     try {
       await removeProjectHashtag(id, linkId);
       await fetchProject();
+      await fetchProjectPosts();
       toast({ title: 'Hashtag removed' });
     } catch (error: any) {
       console.error('Error removing hashtag:', error);

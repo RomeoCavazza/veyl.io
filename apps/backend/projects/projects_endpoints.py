@@ -9,7 +9,7 @@ from typing import List, Optional, Set
 from uuid import UUID
 
 from db.base import get_db
-from db.models import Project, User, ProjectHashtag, ProjectCreator, Hashtag, Platform
+from db.models import Project, User, ProjectHashtag, ProjectCreator, Hashtag, Platform, Post
 from auth_unified.auth_endpoints import get_current_user
 from projects.schemas import (
     ProjectCreate,
@@ -17,6 +17,7 @@ from projects.schemas import (
     ProjectResponse,
     ProjectCreatorCreate,
     ProjectHashtagCreate,
+    ProjectPostResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -250,6 +251,61 @@ def get_project(
     """Récupérer un projet spécifique"""
     project = _get_project_or_404(db, current_user, project_id)
     return serialize_project(project)
+
+@projects_router.get("/{project_id}/posts", response_model=List[ProjectPostResponse])
+def list_project_posts(
+    project_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Retourne les posts associés au projet (via ses créateurs)."""
+    project = _get_project_or_404(db, current_user, project_id)
+
+    creator_links = (
+        db.query(ProjectCreator)
+        .filter(ProjectCreator.project_id == project.id)
+        .all()
+    )
+    usernames = [link.creator_username for link in creator_links]
+    if not usernames:
+        return []
+
+    posts = (
+        db.query(Post)
+        .filter(Post.author.in_(usernames))
+        .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
+        .limit(60)
+        .all()
+    )
+
+    results: List[ProjectPostResponse] = []
+    for post in posts:
+        metrics: dict = {}
+        if post.metrics:
+            try:
+                metrics = json.loads(post.metrics)
+            except (TypeError, ValueError):
+                metrics = {}
+        permalink = None
+        if post.media_url and post.media_url.startswith('http'):
+            permalink = post.media_url
+        elif post.external_id:
+            permalink = post.external_id if post.external_id.startswith('http') else f"https://www.instagram.com/p/{post.external_id.strip('/')}/"
+
+        results.append(ProjectPostResponse(
+            id=post.id,
+            author=post.author,
+            caption=post.caption,
+            media_url=post.media_url,
+            permalink=permalink,
+            posted_at=post.posted_at,
+            platform=post.platform.name if post.platform else None,
+            like_count=metrics.get('like_count') or metrics.get('likes') or 0,
+            comment_count=metrics.get('comment_count') or metrics.get('comments_count') or 0,
+            score_trend=post.score_trend,
+        ))
+
+    return results
 
 @projects_router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 def create_project(

@@ -51,6 +51,22 @@ class ProjectResponse(BaseModel):
         from_attributes = True
 
 
+class ProjectPostResponse(BaseModel):
+    id: str
+    author: Optional[str] = None
+    caption: Optional[str] = None
+    media_url: Optional[str] = None
+    permalink: Optional[str] = None
+    posted_at: Optional[datetime] = None
+    platform: Optional[str] = None
+    like_count: Optional[int] = 0
+    comment_count: Optional[int] = 0
+    score_trend: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
 class ProjectCreatorCreate(BaseModel):
     username: str
     platform: str = Field(default="instagram", min_length=1)

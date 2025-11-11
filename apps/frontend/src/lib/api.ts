@@ -445,3 +445,44 @@ export async function removeProjectHashtag(projectId: string, linkId: number): P
     throw new Error(detail || `HTTP ${response.status}: Failed to remove hashtag`);
   }
 }
+
+export interface ProjectPost {
+  id: string;
+  author?: string;
+  caption?: string;
+  media_url?: string;
+  permalink?: string;
+  posted_at?: string;
+  platform?: string;
+  like_count?: number;
+  comment_count?: number;
+  score_trend?: number;
+}
+
+export async function getProjectPosts(projectId: string): Promise<ProjectPost[]> {
+  const token = localStorage.getItem('token');
+  const apiBase = getApiBase();
+  const url = apiBase ? `${apiBase}/api/v1/projects/${projectId}/posts` : `/api/v1/projects/${projectId}/posts`;
+
+  const response = await fetch(url, {
+    mode: 'cors',
+    credentials: 'same-origin',
+    headers: {
+      'Authorization': `Bearer ${token || ''}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let detail = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      detail = parsed.detail || errorText;
+    } catch (err) {
+      /* ignore */
+    }
+    throw new Error(detail || `HTTP ${response.status}: Failed to load project posts`);
+  }
+
+  return response.json();
+}
