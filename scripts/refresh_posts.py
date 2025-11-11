@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -35,14 +36,6 @@ _MANDATORY_ENV = {
 for key, value in _MANDATORY_ENV.items():
     os.environ.setdefault(key, value)
 
-try:
-    from jobs.post_refresh import refresh_posts  # type: ignore
-except ModuleNotFoundError as exc:  # pragma: no cover
-    raise SystemExit(
-        "Impossible d'importer jobs.post_refresh. Vérifie que tu exécutes le script "
-        "depuis la racine du projet (veyl.io)."
-    ) from exc
-
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Rafraîchir les posts via le job backend.")
@@ -57,7 +50,20 @@ def main() -> None:
             "Exportez-les avant de lancer le script."
         )
 
-    refresh_posts(project_id=args.project, limit=args.limit)
+    cmd = [
+        sys.executable,
+        "-m",
+        "jobs.post_refresh",
+        "--limit",
+        str(args.limit),
+    ]
+    if args.project:
+        cmd.extend(["--project", args.project])
+
+    try:
+        subprocess.run(cmd, cwd=str(BACKEND_DIR), check=True, env=os.environ)
+    except subprocess.CalledProcessError as exc:  # pragma: no cover
+        raise SystemExit(f"Le job post_refresh a échoué (code {exc.returncode}).") from exc
 
 
 if __name__ == "__main__":
