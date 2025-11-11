@@ -220,9 +220,9 @@ export async function getMe(token: string) {
 
 // Projects API
 export interface ProjectCreate {
-  name: string;
+  name?: string;
   description?: string;
-  platforms: string[];
+  platforms?: string[];
   scope_type?: string;
   scope_query?: string;
   hashtag_names?: string[];
