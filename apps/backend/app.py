@@ -137,6 +137,7 @@ def ping():
     """Health check simple - pas de rate limit"""
     return {"pong": True, "timestamp": int(time.time())}
 
+@app.get("/health")
 @app.get("/healthz")
 @app.get("/api/healthz")
 def healthz():
