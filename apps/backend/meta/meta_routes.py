@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from auth_unified.auth_endpoints import get_current_user
 from core.config import settings
 from db.base import get_db
-from db.models import Post, Platform, User
+from db.models import Post, Platform, User, Hashtag, PostHashtag
 from services.meta_client import call_meta
 
 router = APIRouter(prefix="/api/v1/meta", tags=["meta"])
@@ -299,4 +299,80 @@ async def get_insights(
 
     db.commit()
     return insights
+
+
+@router.post("/link-posts-to-hashtag")
+def link_posts_to_hashtag(
+    hashtag_name: str = Query(..., description="Nom du hashtag (sans #)"),
+    limit: int = Query(9, ge=1, le=50, description="Nombre de posts à lier"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    🔗 Lie les N derniers posts au hashtag spécifié.
+    Utile pour préparer la démo App Review.
+    """
+    # 1. Trouver ou créer le hashtag
+    platform = db.query(Platform).filter(Platform.name == "instagram").first()
+    if not platform:
+        raise HTTPException(status_code=404, detail="Platform 'instagram' not found")
+    
+    hashtag = db.query(Hashtag).filter(
+        Hashtag.name == hashtag_name,
+        Hashtag.platform_id == platform.id
+    ).first()
+    
+    if not hashtag:
+        hashtag = Hashtag(
+            name=hashtag_name,
+            platform_id=platform.id,
+            created_at=datetime.utcnow()
+        )
+        db.add(hashtag)
+        db.commit()
+        db.refresh(hashtag)
+        logger.info(f"✅ Created hashtag #{hashtag_name} (ID: {hashtag.id})")
+    else:
+        logger.info(f"✅ Found hashtag #{hashtag_name} (ID: {hashtag.id})")
+    
+    # 2. Récupérer les N derniers posts
+    posts = db.query(Post).order_by(Post.fetched_at.desc()).limit(limit).all()
+    
+    if not posts:
+        return {
+            "status": "no_posts",
+            "message": "No posts found in database",
+            "linked_count": 0
+        }
+    
+    # 3. Lier chaque post au hashtag
+    linked_count = 0
+    for post in posts:
+        # Vérifier si le lien existe déjà
+        existing_link = db.query(PostHashtag).filter(
+            PostHashtag.post_id == post.id,
+            PostHashtag.hashtag_id == hashtag.id
+        ).first()
+        
+        if not existing_link:
+            post_hashtag = PostHashtag(
+                post_id=post.id,
+                hashtag_id=hashtag.id,
+                added_at=datetime.utcnow()
+            )
+            db.add(post_hashtag)
+            linked_count += 1
+            logger.info(f"🔗 Linked post {post.id} (@{post.author}) to #{hashtag_name}")
+    
+    db.commit()
+    
+    return {
+        "status": "success",
+        "message": f"Linked {linked_count} posts to #{hashtag_name}",
+        "hashtag_id": hashtag.id,
+        "hashtag_name": hashtag_name,
+        "total_posts": len(posts),
+        "linked_count": linked_count,
+        "already_linked": len(posts) - linked_count
+    }
 
