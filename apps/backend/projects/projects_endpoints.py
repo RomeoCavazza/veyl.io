@@ -246,17 +246,46 @@ def _attach_hashtag(
     project_hashtag = ProjectHashtag(project_id=project.id, hashtag_id=hashtag.id)
     db.add(project_hashtag)
     
-    # 🔥 AUTO-LINK: Les posts sont déjà liés au hashtag dans post_hashtags
-    # Pas besoin de créer de nouveaux liens, ils existent déjà !
-    # Le endpoint /projects/{id}/posts va automatiquement les remonter via _collect_project_posts
+    # 🔥 AUTO-LINK: Chercher les posts qui contiennent ce hashtag et les lier
+    logger.info(f"🔍 Searching posts with #{normalized_name} in caption...")
     
-    # Log pour debug
-    existing_posts_count = (
-        db.query(PostHashtag)
-        .filter(PostHashtag.hashtag_id == hashtag.id)
-        .count()
+    # Chercher les posts qui contiennent ce hashtag dans leur caption
+    posts_with_hashtag = (
+        db.query(Post)
+        .filter(
+            Post.platform_id == platform.id,
+            Post.caption.ilike(f'%#{normalized_name}%')
+        )
+        .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
+        .limit(50)
+        .all()
     )
-    logger.info(f"✅ Hashtag #{normalized_name} linked to project. {existing_posts_count} posts already linked to this hashtag in DB.")
+    
+    linked_count = 0
+    for post in posts_with_hashtag:
+        # Vérifier si le lien existe déjà
+        existing_link = (
+            db.query(PostHashtag)
+            .filter(
+                PostHashtag.post_id == post.id,
+                PostHashtag.hashtag_id == hashtag.id
+            )
+            .first()
+        )
+        
+        if not existing_link:
+            post_hashtag_link = PostHashtag(
+                post_id=post.id,
+                hashtag_id=hashtag.id
+            )
+            db.add(post_hashtag_link)
+            linked_count += 1
+    
+    if linked_count > 0:
+        logger.info(f"✅ Auto-linked {linked_count} posts to #{normalized_name}")
+        db.flush()  # Commit les liens immédiatement
+    else:
+        logger.warning(f"⚠️ No posts found with #{normalized_name} in caption")
     
     return project_hashtag
 
