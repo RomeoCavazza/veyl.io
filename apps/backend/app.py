@@ -20,8 +20,6 @@ from auth_unified.oauth_endpoints import oauth_router
 from posts.posts_endpoints import posts_router
 from hashtags.hashtags_endpoints import hashtags_router
 from platforms.platforms_endpoints import platforms_router
-from analytics.analytics_endpoints import analytics_router
-from jobs.jobs_endpoints import jobs_router
 from projects.projects_endpoints import projects_router
 from meta.meta_routes import router as meta_router
 
@@ -111,8 +109,6 @@ app.include_router(oauth_router)
 app.include_router(posts_router)
 app.include_router(hashtags_router)
 app.include_router(platforms_router)
-app.include_router(analytics_router)
-app.include_router(jobs_router)
 app.include_router(projects_router)
 app.include_router(meta_router)
 from auth_unified.oauth_accounts_endpoints import oauth_accounts_router
@@ -169,88 +165,6 @@ def test_meilisearch():
         return {
             "status": "error",
             "message": f"Erreur connexion Meilisearch: {str(e)}"
-        }
-
-@app.get("/api/v1/tiktok/test")
-async def test_tiktok():
-    """Test de connexion TikTok API"""
-    from services.tiktok_service import tiktok_service
-    
-    if not tiktok_service.client_id or not tiktok_service.client_secret:
-        return {
-            "status": "error",
-            "message": "TikTok credentials manquants",
-            "check": "Vérifier TIKTOK_CLIENT_KEY et TIKTOK_CLIENT_SECRET"
-        }
-    
-    try:
-        token = await tiktok_service.get_access_token()
-        if token:
-            return {
-                "status": "ok",
-                "message": "TikTok API connecté avec succès",
-                "has_token": True,
-                "client_id": tiktok_service.client_id[:8] + "..."  # Masquer partiellement
-            }
-        else:
-            return {
-                "status": "error",
-                "message": "Impossible d'obtenir le token TikTok",
-                "check": "Vérifier les credentials ou statut de l'application TikTok"
-            }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Erreur connexion TikTok: {str(e)}"
-        }
-
-@app.get("/api/v1/oauth/debug/tiktok")
-def debug_tiktok_oauth():
-    """Debug: voir l'URL OAuth TikTok générée et la configuration"""
-    import os
-    from auth_unified.oauth_service import OAuthService
-    from core.config import settings
-    oauth_service = OAuthService()
-    
-    try:
-        auth_data = oauth_service.start_tiktok_auth()
-        
-        # Récupérer les valeurs réelles des settings
-        client_key = settings.TIKTOK_CLIENT_KEY
-        client_secret = settings.TIKTOK_CLIENT_SECRET
-        redirect_uri = settings.TIKTOK_REDIRECT_URI
-        
-        return {
-            "status": "ok",
-            "auth_url": auth_data["auth_url"],
-            "state": auth_data["state"],
-            "config": {
-                "has_client_key": bool(client_key),
-                "client_key_length": len(client_key) if client_key else 0,
-                "client_key_preview": client_key[:10] + "..." if client_key and len(client_key) > 10 else (client_key if client_key else None),
-                "has_client_secret": bool(client_secret),
-                "client_secret_length": len(client_secret) if client_secret else 0,
-                "redirect_uri": redirect_uri,
-                "redirect_uri_matches": redirect_uri == "https://veyl.io/api/v1/auth/tiktok/callback" or redirect_uri == "https://api.veyl.io/api/v1/auth/tiktok/callback"
-            },
-            "recommendations": {
-                "check_tiktok_portal": "Vérifier que le redirect_uri dans TikTok Developer Portal correspond EXACTEMENT à: " + redirect_uri,
-                "check_app_status": "Vérifier que l'application TikTok est approuvée/en production dans TikTok Developer Portal",
-                "check_client_key": "Vérifier que TIKTOK_CLIENT_KEY dans Railway correspond au Client Key dans TikTok Developer Portal"
-            }
-        }
-    except Exception as e:
-        import traceback
-        return {
-            "status": "error",
-            "error": str(e),
-            "error_type": type(e).__name__,
-            "traceback": traceback.format_exc(),
-            "config_check": {
-                "TIKTOK_CLIENT_KEY_set": bool(os.getenv("TIKTOK_CLIENT_KEY")),
-                "TIKTOK_CLIENT_SECRET_set": bool(os.getenv("TIKTOK_CLIENT_SECRET")),
-                "TIKTOK_REDIRECT_URI_set": bool(os.getenv("TIKTOK_REDIRECT_URI")),
-            }
         }
 
 @app.get("/api/v1/oauth/debug/google")

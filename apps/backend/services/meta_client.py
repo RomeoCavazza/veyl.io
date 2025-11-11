@@ -80,17 +80,6 @@ async def call_meta(
         ) from exc
 
     duration = time.perf_counter() - start
-    snippet = response.text[:150].replace("\n", " ") if response.text else ""
-
-    logger.info(
-        "Meta %s %s status=%s duration=%.2fs params=%s response_snippet=%s",
-        method_upper,
-        url,
-        response.status_code,
-        duration,
-        safe_params,
-        snippet,
-    )
 
     if response.status_code >= 400:
         detail: Union[str, Dict[str, Any]]
@@ -98,6 +87,14 @@ async def call_meta(
             detail = response.json()
         except ValueError:
             detail = {"error": response.text}
+
+        logger.error(
+            "❌ META API ERROR | %s %s | Status: %d | Duration: %.2fs",
+            method_upper,
+            url,
+            response.status_code,
+            duration,
+        )
 
         raise MetaAPIError(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -107,6 +104,16 @@ async def call_meta(
                 "detail": detail,
             },
         )
+
+    # Log succès seulement si HTTP 200-399
+    logger.info(
+        "✅ META API SUCCESS | %s %s | Status: %d | Duration: %.2fs | Params: %s",
+        method_upper,
+        url,
+        response.status_code,
+        duration,
+        safe_params,
+    )
 
     try:
         return response.json()
