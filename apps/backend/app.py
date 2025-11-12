@@ -1,6 +1,7 @@
 # app.py - REFACTORISÉ - SABOTAGE ÉLIMINÉ - SÉCURISÉ - REDIS INTÉGRÉ !
 from fastapi import FastAPI  # type: ignore
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
+from fastapi.openapi.utils import get_openapi  # type: ignore
 import time
 import logging
 
@@ -38,6 +39,38 @@ app = FastAPI(
     root_path="",  # Laisser vide pour Railway (pas de sous-chemin)
     redirect_slashes=False,  # Désactiver pour éviter les redirections 307
 )
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    components = openapi_schema.setdefault("components", {})
+    security_schemes = components.setdefault("securitySchemes", {})
+    security_schemes["BearerAuth"] = {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+    }
+
+    paths = openapi_schema.get("paths", {})
+    http_methods = {"get", "post", "put", "patch", "delete", "options", "head"}
+    for path_item in paths.values():
+        for method_name, operation in path_item.items():
+            if method_name.lower() in http_methods and isinstance(operation, dict):
+                operation.setdefault("security", [{"BearerAuth": []}])
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 # Configuration du rate limiting avec Redis
 setup_rate_limit(app)
