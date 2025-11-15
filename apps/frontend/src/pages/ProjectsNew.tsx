@@ -18,13 +18,13 @@ export default function ProjectsNew() {
     try {
       const project = await createProject({});
       if (options?.cancelled?.()) {
-        return;
-      }
+      return;
+    }
       navigate(`/projects/${project.id}`, { replace: true });
     } catch (err: any) {
       if (options?.cancelled?.()) {
-        return;
-      }
+      return;
+    }
       console.error('Error auto-creating project:', err);
       const message = err?.message || 'Unable to create a new project';
       toast({

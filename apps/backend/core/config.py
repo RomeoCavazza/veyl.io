@@ -32,6 +32,7 @@ class Settings:
         
         # Configuration Instagram Business API - OBLIGATOIRE
         self.IG_ACCESS_TOKEN: Optional[str] = os.getenv("IG_ACCESS_TOKEN")
+        self.META_LONG_TOKEN: Optional[str] = os.getenv("META_LONG_TOKEN")
         self.IG_USER_ID: Optional[str] = os.getenv("IG_USER_ID")
         self.IG_APP_ID: Optional[str] = os.getenv("IG_APP_ID")
         self.IG_APP_SECRET: Optional[str] = os.getenv("IG_APP_SECRET")

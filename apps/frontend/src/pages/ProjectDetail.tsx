@@ -163,28 +163,28 @@ export default function ProjectDetail() {
 
   const fetchProject = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/auth');
-        return;
-      }
-
-      const response = await fetch(`/api/v1/projects/${id}`, {
-        mode: 'cors',
-        credentials: 'same-origin',
-        headers: {
-          'Authorization': `Bearer ${token}`
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/auth');
+          return;
         }
-      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to load project: ${response.status}`);
-      }
+        const response = await fetch(`/api/v1/projects/${id}`, {
+          mode: 'cors',
+          credentials: 'same-origin',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-      const projectData = await response.json();
-      console.log('Project loaded:', projectData);
+        if (!response.ok) {
+          throw new Error(`Failed to load project: ${response.status}`);
+        }
+
+        const projectData = await response.json();
+        console.log('Project loaded:', projectData);
       applyProjectData(projectData);
     } catch (error: any) {
       console.error('Error loading project:', error);
@@ -237,17 +237,17 @@ export default function ProjectDetail() {
       setAddCreatorOpen(false);
       setNewCreatorUsername('');
       toast({ title: 'Creator added', description: `@${username} linked to the project.` });
-    } catch (error: any) {
+      } catch (error: any) {
       console.error('Error adding creator:', error);
-      toast({
-        title: 'Error',
+        toast({
+          title: 'Error',
         description: error?.message || 'Unable to add creator',
-        variant: 'destructive',
-      });
-    } finally {
+          variant: 'destructive',
+        });
+      } finally {
       setIsSavingCreator(false);
-    }
-  };
+      }
+    };
 
   const handleRemoveCreatorLink = async (linkId: number) => {
     if (!id) return;
@@ -258,7 +258,7 @@ export default function ProjectDetail() {
       toast({ title: 'Creator removed' });
     } catch (error: any) {
       console.error('Error removing creator:', error);
-      toast({
+    toast({
         title: 'Error',
         description: error?.message || 'Unable to remove creator',
         variant: 'destructive',
@@ -287,7 +287,7 @@ export default function ProjectDetail() {
       toast({ title: 'Hashtag added', description: `#${hashtag} linked to the project.` });
     } catch (error: any) {
       console.error('Error adding hashtag:', error);
-      toast({
+    toast({
         title: 'Error',
         description: error?.message || 'Unable to add hashtag',
         variant: 'destructive',
@@ -434,20 +434,20 @@ export default function ProjectDetail() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 mb-6">
-          <ProjectPanel
-            project={project}
-            onEdit={() => {
-              setEditName(project.name || '');
-              setEditDescription(project.description || '');
-              setEditDialogOpen(true);
-            }}
-            onDelete={() => setDeleteDialogOpen(true)}
-          />
+              <ProjectPanel
+                project={project}
+                onEdit={() => {
+                  setEditName(project.name || '');
+                  setEditDescription(project.description || '');
+                  setEditDialogOpen(true);
+                }}
+                onDelete={() => setDeleteDialogOpen(true)}
+              />
           <div className="space-y-4">
             <Card>
               <CardHeader className="py-3">
                 <CardTitle className="text-base">Tracking</CardTitle>
-              </CardHeader>
+                  </CardHeader>
               <CardContent className="space-y-5">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Hashtags</p>
@@ -526,9 +526,9 @@ export default function ProjectDetail() {
                           >
                             <X className="h-3 w-3" />
                           </Button>
-                        </div>
+                              </div>
                       ))}
-                    </div>
+                            </div>
                   )}
                   <Button
                     variant="ghost"
@@ -539,12 +539,12 @@ export default function ProjectDetail() {
                     <Plus className="h-3 w-3 mr-1" />
                     Add creator
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
+                    </div>
+                  </CardContent>
+                </Card>
 
           </div>
-        </div>
+            </div>
 
         {/* Tabs */}
         <Tabs defaultValue="watchlist" className="space-y-4">
@@ -597,8 +597,8 @@ export default function ProjectDetail() {
                       >
                         <div className="aspect-square relative overflow-hidden bg-muted">
                           {post.media_url && isImage ? (
-                            <img
-                              src={post.media_url}
+                          <img
+                            src={post.media_url}
                               alt={post.caption || post.author}
                               className="object-cover w-full h-full"
                             />
@@ -608,7 +608,7 @@ export default function ProjectDetail() {
                               title={post.id}
                               className="w-full h-full"
                               allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
-                            />
+                          />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-muted/50">
                               <span className="text-muted-foreground text-sm">No media</span>
@@ -616,8 +616,8 @@ export default function ProjectDetail() {
                           )}
                           <Badge className="absolute top-2 right-2 bg-accent">
                             {post.platform?.toUpperCase() || 'INSTAGRAM'}
-                          </Badge>
-                        </div>
+                            </Badge>
+                          </div>
                         
                         <CardContent className="p-4 space-y-3">
                           <div className="flex items-center gap-2">
@@ -758,30 +758,30 @@ export default function ProjectDetail() {
                     <TableBody>
                       {sortedPosts.length > 0 ? (
                         sortedPosts.map((post: any) => (
-                          <TableRow
-                            key={post.id}
-                            className="cursor-pointer hover:bg-muted/50"
-                            onClick={() => {
-                              setSelectedPost(post);
-                              setPostDialogOpen(true);
-                            }}
-                          >
-                            <TableCell>
+                            <TableRow
+                              key={post.id}
+                              className="cursor-pointer hover:bg-muted/50"
+                              onClick={() => {
+                                setSelectedPost(post);
+                                setPostDialogOpen(true);
+                              }}
+                            >
+                              <TableCell>
                               {post.permalink ? (
                                 <div className="w-12 h-12 rounded overflow-hidden">
                                   <iframe
                                     src={`${post.permalink.replace(/\/$/, '')}/embed`}
                                     className="w-full h-full border-0 pointer-events-none"
                                     scrolling="no"
-                                  />
+                                />
                                 </div>
                               ) : (
                                 <div className="w-12 h-12 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground">
                                   No img
                                 </div>
                               )}
-                            </TableCell>
-                            <TableCell>
+                              </TableCell>
+                              <TableCell>
                               {post.permalink ? (
                                 <Button
                                   variant="ghost"
@@ -797,40 +797,40 @@ export default function ProjectDetail() {
                               ) : (
                                 <span className="text-muted-foreground text-xs">-</span>
                               )}
-                            </TableCell>
-                            <TableCell>
-                              <p className="max-w-md line-clamp-2 text-sm">
-                                {post.caption || '-'}
-                              </p>
-                            </TableCell>
-                            <TableCell>
+                              </TableCell>
+                              <TableCell>
+                                <p className="max-w-md line-clamp-2 text-sm">
+                                  {post.caption || '-'}
+                                </p>
+                              </TableCell>
+                              <TableCell>
                               {post.posted_at || post.fetched_at ? (
-                                <div className="text-sm">
+                                  <div className="text-sm">
                                   <div>{new Date(post.posted_at || post.fetched_at).toLocaleDateString('en-US')}</div>
-                                  <div className="text-xs text-muted-foreground">
+                                    <div className="text-xs text-muted-foreground">
                                     {formatDistanceToNow(new Date(post.posted_at || post.fetched_at), { addSuffix: true })}
+                                    </div>
                                   </div>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Heart className="h-4 w-4" />
+                                  <span>{post.like_count?.toLocaleString() || 0}</span>
                                 </div>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Heart className="h-4 w-4" />
-                                <span>{post.like_count?.toLocaleString() || 0}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <MessageCircle className="h-4 w-4" />
-                                <span>{post.comment_count?.toLocaleString() || 0}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Badge variant="outline">{post.platform || 'instagram'}</Badge>
-                            </TableCell>
-                          </TableRow>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <MessageCircle className="h-4 w-4" />
+                                  <span>{post.comment_count?.toLocaleString() || 0}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant="outline">{post.platform || 'instagram'}</Badge>
+                              </TableCell>
+                            </TableRow>
                         ))
                       ) : (
                         <TableRow>
@@ -974,16 +974,16 @@ export default function ProjectDetail() {
                       <div className="flex items-center justify-between p-4 border-b border-border">
                         <div className="flex items-center gap-3">
                           <img
-                          src={profilePic}
-                          alt={selectedPost.username}
+                            src={profilePic}
+                            alt={selectedPost.username}
                           className="w-10 h-10 rounded-full cursor-pointer hover:opacity-80 object-cover bg-muted"
                           onError={(event) => {
                             (event.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${handle}`;
                           }}
-                          onClick={() => {
-                            setPostDialogOpen(false);
+                            onClick={() => {
+                              setPostDialogOpen(false);
                               navigate(`/projects/${id}/creator/${handleSlug}`);
-                          }}
+                            }}
                           />
                           <div>
                             <div 

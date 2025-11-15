@@ -51,8 +51,15 @@ async def call_meta(
         query.setdefault("access_token", access_token)
 
     # Token de fallback depuis la config si disponible
-    if "access_token" not in query and settings.IG_ACCESS_TOKEN:
-        query["access_token"] = settings.IG_ACCESS_TOKEN
+    if "access_token" not in query:
+        fallback_tokens = [
+            settings.META_LONG_TOKEN,
+            settings.IG_ACCESS_TOKEN,
+        ]
+        for token in fallback_tokens:
+            if token:
+                query["access_token"] = token
+                break
 
     safe_params = {key: _sanitize(str(value)) for key, value in query.items()}
 

@@ -504,6 +504,6 @@ export async function getProjectPosts(projectId: string): Promise<ProjectPost[]>
     }
     throw new Error(detail || `HTTP ${response.status}: Failed to load project posts`);
   }
-
+  
   return response.json();
 }
