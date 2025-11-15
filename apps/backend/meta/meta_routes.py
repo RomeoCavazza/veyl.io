@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from auth_unified.auth_endpoints import get_current_user
+from auth_unified.auth_endpoints import get_optional_user
 from core.config import settings
 from db.base import get_db
 from db.models import Post, Platform, User, Hashtag, PostHashtag
@@ -78,7 +78,7 @@ def _upsert_post(
 async def get_oembed(
     url: str = Query(..., description="URL publique IG/FB à embarquer"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     """
     Récupère les données oEmbed pour un post Instagram.
@@ -136,7 +136,7 @@ async def get_instagram_public_content(
     user_id: Optional[str] = Query(None),
     limit: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     """
     Récupère du contenu public Instagram via hashtag.
@@ -217,7 +217,7 @@ async def get_instagram_hashtag_media(
     user_id: Optional[str] = Query(None),
     limit: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     """Alias pour /ig-public (backward compatibility)"""
     return await get_instagram_public_content(tag, user_id, limit, db, current_user)
@@ -228,7 +228,7 @@ async def get_page_public_posts(
     page_id: str = Query(..., min_length=1),
     limit: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     posts = await call_meta(
         method="GET",
@@ -271,7 +271,7 @@ async def get_insights(
     platform: str = Query("instagram", pattern="^(instagram|facebook)$"),
     metrics: str = Query(..., description="Liste metrics Graph API"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     endpoint = f"v21.0/{resource_id}/insights"
     params = {"metric": metrics}
@@ -306,7 +306,7 @@ def link_posts_to_hashtag(
     hashtag_name: str = Query(..., description="Nom du hashtag (sans #)"),
     limit: int = Query(9, ge=1, le=50, description="Nombre de posts à lier"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     """
     🔗 Lie les N derniers posts au hashtag spécifié.

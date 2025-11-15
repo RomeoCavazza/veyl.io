@@ -1,4 +1,6 @@
 # auth/auth_endpoints.py
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -47,6 +49,22 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     if user is None:
         raise HTTPException(status_code=401, detail="Utilisateur introuvable")
     return user
+
+
+def get_optional_user(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """
+    Variante douce de get_current_user : retourne None si aucun token valide.
+    Utile pour exposer certains endpoints en lecture publique.
+    """
+    try:
+        return get_current_user(request, db)
+    except HTTPException as exc:
+        if exc.status_code == 401:
+            return None
+        raise
 
 @auth_router.post("/register", response_model=TokenResponse)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):

@@ -19,6 +19,13 @@ export default function Search() {
 
   // Charger posts depuis PostgreSQL - cherche dans tous les projets qui matchent la query
   const loadPostsFromDatabase = async (query: string): Promise<PostHit[]> => {
+    if (typeof window === 'undefined') return [];
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('💾 [DB] Skipping DB fallback - no auth token');
+      return [];
+    }
+
     try {
       const projects = await getProjects();
       

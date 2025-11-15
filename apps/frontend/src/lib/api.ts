@@ -31,6 +31,28 @@ if (import.meta.env.DEV) {
   console.log('🔧 API_BASE (dev):', API_BASE || '(using Vite proxy to Railway)');
 }
 
+const isBrowser = typeof window !== 'undefined';
+
+const getStoredToken = (): string | null => {
+  if (!isBrowser) return null;
+  try {
+    return localStorage.getItem('token');
+  } catch {
+    return null;
+  }
+};
+
+const withAuthHeaders = (headers: Record<string, string> = {}) => {
+  const token = getStoredToken();
+  if (token) {
+    return {
+      ...headers,
+      Authorization: `Bearer ${token}`,
+    };
+  }
+  return headers;
+};
+
 export interface SearchParams {
   q?: string;
   hashtags?: string;
@@ -74,9 +96,7 @@ export async function searchPosts(params: SearchParams): Promise<SearchResponse>
   const url = apiBase ? `${apiBase}/api/v1/meta/ig-hashtag?${searchParams.toString()}` : `/api/v1/meta/ig-hashtag?${searchParams.toString()}`;
 
   const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-    }
+    headers: withAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -95,9 +115,7 @@ export async function fetchMetaIGPublic(tag: string, limit: number = 12): Promis
   const url = apiBase ? `${apiBase}/api/v1/meta/ig-public?${searchParams.toString()}` : `/api/v1/meta/ig-public?${searchParams.toString()}`;
 
   const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-    }
+    headers: withAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -112,9 +130,7 @@ export async function fetchMetaOEmbed(permalink: string): Promise<any> {
   const url = apiBase ? `${apiBase}/api/v1/meta/oembed?url=${encodeURIComponent(permalink)}` : `/api/v1/meta/oembed?url=${encodeURIComponent(permalink)}`;
 
   const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-    }
+    headers: withAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -134,9 +150,7 @@ export async function fetchPagePublicPosts(pageId: string, limit = 10): Promise<
   const url = apiBase ? `${apiBase}/api/v1/meta/page-public?${params.toString()}` : `/api/v1/meta/page-public?${params.toString()}`;
   
   const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-    }
+    headers: withAuthHeaders(),
   });
   
   if (!response.ok) {
@@ -157,9 +171,7 @@ export async function fetchMetaInsights(resourceId: string, platform: 'instagram
   const url = apiBase ? `${apiBase}/api/v1/meta/insights?${params.toString()}` : `/api/v1/meta/insights?${params.toString()}`;
 
   const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-    }
+    headers: withAuthHeaders(),
   });
 
   if (!response.ok) {

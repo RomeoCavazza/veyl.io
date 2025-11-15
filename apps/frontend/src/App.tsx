@@ -45,9 +45,9 @@ const App = () => (
               <Route path="/projects/:id/creator/:username" element={<ProtectedRoute><CreatorDetail /></ProtectedRoute>} />
               <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
               {/* Other Routes */}
-                    <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-                    <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-                    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
