@@ -124,6 +124,7 @@ def _collect_project_posts(
     hashtag_ids = [link.hashtag_id for link in hashtag_links]
     logger.info(f"🔍 [COLLECT] Found {len(hashtag_links)} hashtag links, {len(hashtag_ids)} hashtag_ids")
     if hashtag_ids:
+        # 1️⃣ Essayer d'abord via PostHashtag (liens explicites)
         hashtag_query = (
             db.query(Post)
             .join(PostHashtag, PostHashtag.post_id == Post.id)
@@ -136,10 +137,101 @@ def _collect_project_posts(
         if limit:
             hashtag_query = hashtag_query.limit(limit)
         posts_from_hashtags = hashtag_query.all()
-        logger.info(f"🔍 [COLLECT] Found {len(posts_from_hashtags)} posts from hashtags (platform_filter: {platform_filter})")
+        logger.info(f"🔍 [COLLECT] Found {len(posts_from_hashtags)} posts from hashtags via PostHashtag (platform_filter: {platform_filter})")
         for post in posts_from_hashtags:
             post_map[post.id] = post
             logger.debug(f"  - Post {post.id}: platform={post.platform.name if post.platform else 'None'}, caption={post.caption[:50] if post.caption else 'None'}")
+        
+        # 2️⃣ FALLBACK: Si aucun post trouvé via PostHashtag, chercher directement dans caption/hashtags
+        # (comme dans Search page - fallback DB direct)
+        if len(posts_from_hashtags) == 0:
+            logger.warning(f"⚠️ [COLLECT] No posts found via PostHashtag, trying direct search in caption/hashtags...")
+            
+            # Récupérer les noms des hashtags
+            hashtags = db.query(Hashtag).filter(Hashtag.id.in_(hashtag_ids)).all()
+            hashtag_names = [h.name for h in hashtags]
+            logger.info(f"🔍 [COLLECT] Searching for posts with hashtags: {hashtag_names}")
+            
+            for hashtag_name in hashtag_names:
+                # Recherche flexible dans caption et hashtags array (comme _attach_hashtag)
+                search_patterns = [
+                    f'%#{hashtag_name}%',
+                    f'%#{hashtag_name.lower()}%',
+                    f'%#{hashtag_name.upper()}%',
+                    f'%{hashtag_name}%',
+                ]
+                
+                caption_filter = or_(*[Post.caption.ilike(pattern) for pattern in search_patterns])
+                
+                hashtag_variants = [
+                    hashtag_name,
+                    hashtag_name.lower(),
+                    hashtag_name.upper(),
+                    f'#{hashtag_name}',
+                    f'#{hashtag_name.lower()}',
+                    f'#{hashtag_name.upper()}',
+                ]
+                
+                hashtags_filters = []
+                for variant in hashtag_variants:
+                    hashtags_filters.append(
+                        and_(
+                            Post.hashtags.isnot(None),
+                            func.array_to_string(Post.hashtags, ',').ilike(f'%{variant}%')
+                        )
+                    )
+                
+                if hashtags_filters:
+                    hashtags_filter = or_(*hashtags_filters)
+                    combined_filter = or_(caption_filter, hashtags_filter)
+                else:
+                    combined_filter = caption_filter
+                
+                fallback_query = (
+                    db.query(Post)
+                    .filter(combined_filter)
+                )
+                if platform_ids:
+                    fallback_query = fallback_query.filter(Post.platform_id.in_(platform_ids))
+                
+                fallback_query = fallback_query.order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
+                if limit:
+                    fallback_query = fallback_query.limit(limit)
+                
+                fallback_posts = fallback_query.all()
+                logger.info(f"🔍 [COLLECT] Found {len(fallback_posts)} posts via direct search for #{hashtag_name} (platform_filter: {platform_filter})")
+                
+                for post in fallback_posts:
+                    post_map[post.id] = post
+                    logger.debug(f"  - Post {post.id}: platform={post.platform.name if post.platform else 'None'}, caption={post.caption[:50] if post.caption else 'None'}")
+                    
+                    # 🔗 AUTO-LINK: Créer le lien PostHashtag si il n'existe pas
+                    hashtag = next((h for h in hashtags if h.name == hashtag_name), None)
+                    if hashtag:
+                        existing_link = (
+                            db.query(PostHashtag)
+                            .filter(
+                                PostHashtag.post_id == post.id,
+                                PostHashtag.hashtag_id == hashtag.id
+                            )
+                            .first()
+                        )
+                        if not existing_link:
+                            post_hashtag_link = PostHashtag(
+                                post_id=post.id,
+                                hashtag_id=hashtag.id
+                            )
+                            db.add(post_hashtag_link)
+                            logger.debug(f"  🔗 Auto-linked post {post.id} to hashtag {hashtag.name}")
+            
+            # Commit les auto-links
+            if len(post_map) > len(posts_from_hashtags):
+                try:
+                    db.commit()
+                    logger.info(f"✅ [COLLECT] Auto-linked {len(post_map) - len(posts_from_hashtags)} posts to hashtags")
+                except Exception as e:
+                    logger.exception(f"❌ [COLLECT] Error auto-linking posts: {e}")
+                    db.rollback()
 
     posts = list(post_map.values())
 
