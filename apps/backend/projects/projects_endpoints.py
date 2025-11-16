@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
-from sqlalchemy import text, or_
+from sqlalchemy import text, or_, and_
 from sqlalchemy.orm import Session
 from typing import Dict, List, Optional, Set
 from uuid import UUID
@@ -295,15 +295,18 @@ def _attach_hashtag(
     
     # Construire le filtre pour la colonne hashtags (ArrayType = Text en réalité)
     # Si hashtags est stocké comme JSON array ou texte, chercher dedans aussi
+    # IMPORTANT: Vérifier que hashtags n'est pas None avant d'utiliser .ilike()
     hashtags_filters = []
     for variant in hashtag_variants:
         # Chercher dans la colonne hashtags comme texte (si c'est du JSON array ou texte)
-        hashtags_filters.append(Post.hashtags.ilike(f'%{variant}%'))
-    
-    hashtags_filter = or_(*hashtags_filters) if hashtags_filters else None
+        # Vérifier que hashtags n'est pas None
+        hashtags_filters.append(
+            and_(Post.hashtags.isnot(None), Post.hashtags.ilike(f'%{variant}%'))
+        )
     
     # Combiner les deux recherches (caption + hashtags column)
-    if hashtags_filter:
+    if hashtags_filters:
+        hashtags_filter = or_(*hashtags_filters)
         combined_filter = or_(caption_filter, hashtags_filter)
     else:
         combined_filter = caption_filter
@@ -861,11 +864,14 @@ def link_posts_to_project_hashtag(
     hashtags_filters = []
     for variant in hashtag_variants:
         # Chercher dans la colonne hashtags comme texte
-        hashtags_filters.append(Post.hashtags.ilike(f'%{variant}%'))
+        # Vérifier que hashtags n'est pas None
+        hashtags_filters.append(
+            and_(Post.hashtags.isnot(None), Post.hashtags.ilike(f'%{variant}%'))
+        )
     
-    hashtags_filter = or_(*hashtags_filters) if hashtags_filters else None
-    
-    if hashtags_filter:
+    # Combiner les deux recherches (caption + hashtags column)
+    if hashtags_filters:
+        hashtags_filter = or_(*hashtags_filters)
         combined_filter = or_(caption_filter, hashtags_filter)
     else:
         combined_filter = caption_filter
