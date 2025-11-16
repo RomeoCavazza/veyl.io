@@ -146,6 +146,8 @@ app.include_router(platforms_router)
 app.include_router(analytics_router)
 app.include_router(projects_router)
 app.include_router(meta_router)
+from tiktok.tiktok_routes import router as tiktok_router
+app.include_router(tiktok_router)
 from auth_unified.oauth_accounts_endpoints import oauth_accounts_router
 app.include_router(oauth_accounts_router)
 from webhooks.webhooks_endpoints import webhooks_router

@@ -181,6 +181,78 @@ export async function fetchMetaInsights(resourceId: string, platform: 'instagram
   return response.json();
 }
 
+// TikTok API functions
+export async function fetchTikTokProfile(userId?: string): Promise<any> {
+  const apiBase = getApiBase();
+  const params = new URLSearchParams();
+  if (userId) {
+    params.set('user_id', userId);
+  }
+
+  const url = apiBase 
+    ? `${apiBase}/api/v1/tiktok/profile?${params.toString()}` 
+    : `/api/v1/tiktok/profile?${params.toString()}`;
+
+  const response = await fetch(url, {
+    headers: withAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP_${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchTikTokStats(userId?: string): Promise<any> {
+  const apiBase = getApiBase();
+  const params = new URLSearchParams();
+  if (userId) {
+    params.set('user_id', userId);
+  }
+
+  const url = apiBase 
+    ? `${apiBase}/api/v1/tiktok/stats?${params.toString()}` 
+    : `/api/v1/tiktok/stats?${params.toString()}`;
+
+  const response = await fetch(url, {
+    headers: withAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP_${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchTikTokVideos(query?: string, limit: number = 10, cursor?: string): Promise<any> {
+  const apiBase = getApiBase();
+  const params = new URLSearchParams({
+    limit: String(limit),
+  });
+  if (query) {
+    params.set('query', query);
+  }
+  if (cursor) {
+    params.set('cursor', cursor);
+  }
+
+  const url = apiBase 
+    ? `${apiBase}/api/v1/tiktok/videos?${params.toString()}` 
+    : `/api/v1/tiktok/videos?${params.toString()}`;
+
+  const response = await fetch(url, {
+    headers: withAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP_${response.status}`);
+  }
+
+  return response.json();
+}
+
 export async function searchHashtags(q: string, platform: string = 'instagram'): Promise<any[]> {
   const apiBase = getApiBase();
   const url = apiBase ? `${apiBase}/v1/search/hashtags?q=${q}&platform=${platform}` : `/v1/search/hashtags?q=${q}&platform=${platform}`;

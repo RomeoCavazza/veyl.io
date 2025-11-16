@@ -3,9 +3,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Heart, MessageCircle, ExternalLink, RefreshCcw, Sparkles } from 'lucide-react';
-import { fetchMetaIGPublic, getProjects, getProjectPosts, type PostHit } from '@/lib/api';
+import { fetchMetaIGPublic, fetchTikTokVideos, getProjects, getProjectPosts, type PostHit } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { AISearchBar } from '@/components/AISearchBar';
+import { AISearchBar, type SearchMode } from '@/components/AISearchBar';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 
@@ -15,6 +15,7 @@ export default function Search() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [isTestingMetaAPI, setIsTestingMetaAPI] = useState(false);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const { toast } = useToast();
 
   // Charger posts depuis PostgreSQL - cherche dans tous les projets qui matchent la query
@@ -66,68 +67,130 @@ export default function Search() {
     }
   };
 
-  // 🔥 STRATÉGIE: 1. Meta API → 2. DB Fallback
-  const handleSearch = async (query: string) => {
+  // 🔥 STRATÉGIE: 1. API (Meta/TikTok selon platforms) → 2. DB Fallback
+  const handleSearch = async (
+    query: string, 
+    platforms?: string[], 
+    modes?: SearchMode[]
+  ) => {
     if (!query.trim()) return;
     
     setIsLoading(true);
     setHasSearched(true);
     setSearchQuery(query);
+    
+    // Si platforms est fourni, l'utiliser, sinon utiliser selectedPlatforms, sinon vide (toutes)
+    const activePlatforms = platforms || selectedPlatforms;
+    setSelectedPlatforms(activePlatforms);
+    
+    // Déterminer quelles plateformes utiliser
+    const useInstagram = activePlatforms.length === 0 || activePlatforms.includes('instagram');
+    const useTikTok = activePlatforms.includes('tiktok');
 
     try {
-      console.log(`🔍 [SEARCH] Searching for: ${query}`);
+      console.log(`🔍 [SEARCH] Searching for: ${query} on platforms: ${activePlatforms.join(', ') || 'all'}`);
       
-      // 1️⃣ ESSAYER META API D'ABORD
-      console.log('📡 [SEARCH] Step 1: Trying Meta API...');
-      try {
-        const metaResponse = await fetchMetaIGPublic(query, 20);
-        
-        if (metaResponse.status === 'success' && metaResponse.data && metaResponse.data.length > 0) {
-          console.log(`✅ [SEARCH] Meta API success: ${metaResponse.data.length} posts`);
-          const metaPosts: PostHit[] = metaResponse.data.map((item: any) => ({
-            id: item.id,
-            platform: 'instagram',
-            username: item.username || 'unknown',
-            caption: item.caption,
-            media_type: item.media_type,
-            media_url: item.media_url,
-            permalink: item.permalink,
-            posted_at: item.timestamp,
-            like_count: item.like_count,
-            comment_count: item.comments_count,
-            score_trend: item.like_count ?? 0,
-          }));
-          setPosts(metaPosts);
-          toast({
-            title: `Found ${metaPosts.length} posts`,
-            description: '✨ Live data from Meta API',
-          });
-          setIsLoading(false);
-          return;
+      const allPosts: PostHit[] = [];
+      
+      // 1️⃣ ESSAYER META API (Instagram) SI DEMANDÉ
+      if (useInstagram) {
+        console.log('📡 [SEARCH] Step 1: Trying Meta API (Instagram)...');
+        try {
+          const metaResponse = await fetchMetaIGPublic(query, 20);
+          
+          if (metaResponse.status === 'success' && metaResponse.data && metaResponse.data.length > 0) {
+            console.log(`✅ [SEARCH] Meta API success: ${metaResponse.data.length} posts`);
+            const metaPosts: PostHit[] = metaResponse.data.map((item: any) => ({
+              id: item.id,
+              platform: 'instagram',
+              username: item.username || 'unknown',
+              caption: item.caption,
+              media_type: item.media_type,
+              media_url: item.media_url,
+              permalink: item.permalink,
+              posted_at: item.timestamp,
+              like_count: item.like_count,
+              comment_count: item.comments_count,
+              score_trend: item.like_count ?? 0,
+            }));
+            allPosts.push(...metaPosts);
+          } else {
+            console.log('⚠️ [SEARCH] Meta API returned 0 results');
+          }
+        } catch (metaError: any) {
+          console.log(`⚠️ [SEARCH] Meta API failed: ${metaError.message}`);
         }
-        
-        console.log('⚠️ [SEARCH] Meta API returned 0 results, trying DB fallback...');
-      } catch (metaError: any) {
-        console.log(`⚠️ [SEARCH] Meta API failed: ${metaError.message}, trying DB fallback...`);
       }
       
-      // 2️⃣ FALLBACK: CHARGER DEPUIS DB
-      console.log('💾 [SEARCH] Step 2: Loading from database...');
-      const dbPosts = await loadPostsFromDatabase(query);
+      // 2️⃣ ESSAYER TIKTOK API SI DEMANDÉ
+      if (useTikTok) {
+        console.log('📡 [SEARCH] Step 2: Trying TikTok API...');
+        try {
+          const tiktokResponse = await fetchTikTokVideos(query, 20);
+          
+          if (tiktokResponse.status === 'success' && tiktokResponse.data && tiktokResponse.data.length > 0) {
+            console.log(`✅ [SEARCH] TikTok API success: ${tiktokResponse.data.length} videos`);
+            const tiktokPosts: PostHit[] = tiktokResponse.data.map((item: any) => ({
+              id: item.id,
+              platform: 'tiktok',
+              username: item.creator_username || item.creator_display_name || 'unknown',
+              caption: item.title || item.video_description,
+              media_type: 'video',
+              media_url: item.cover_image_url || item.thumbnail_url,
+              permalink: item.share_url || `https://www.tiktok.com/@${item.creator_username || 'user'}/video/${item.id}`,
+              posted_at: item.create_time,
+              like_count: item.like_count || 0,
+              comment_count: item.comment_count || 0,
+              view_count: item.view_count || 0,
+              score_trend: item.like_count ?? 0,
+            }));
+            allPosts.push(...tiktokPosts);
+          } else {
+            console.log('⚠️ [SEARCH] TikTok API returned 0 results');
+          }
+        } catch (tiktokError: any) {
+          console.log(`⚠️ [SEARCH] TikTok API failed: ${tiktokError.message}`);
+        }
+      }
       
-      if (dbPosts.length > 0) {
-        console.log(`✅ [SEARCH] DB success: ${dbPosts.length} posts`);
-        setPosts(dbPosts);
+      // 3️⃣ FALLBACK: CHARGER DEPUIS DB SI AUCUN RÉSULTAT API
+      if (allPosts.length === 0) {
+        console.log('💾 [SEARCH] Step 3: Loading from database (fallback)...');
+        const dbPosts = await loadPostsFromDatabase(query);
+        
+        if (dbPosts.length > 0) {
+          console.log(`✅ [SEARCH] DB success: ${dbPosts.length} posts`);
+          allPosts.push(...dbPosts);
+        }
+      }
+      
+      // Trier par date (plus récent en premier)
+      allPosts.sort((a, b) => {
+        const dateA = a.posted_at ? new Date(a.posted_at).getTime() : 0;
+        const dateB = b.posted_at ? new Date(b.posted_at).getTime() : 0;
+        return dateB - dateA;
+      });
+      
+      if (allPosts.length > 0) {
+        console.log(`✅ [SEARCH] Total results: ${allPosts.length} posts`);
+        setPosts(allPosts);
+        const sources = [];
+        if (useInstagram) sources.push('Instagram');
+        if (useTikTok) sources.push('TikTok');
         toast({
-          title: `Found ${dbPosts.length} posts`,
-          description: '💾 Loaded from database (Meta API unavailable)',
+          title: `Found ${allPosts.length} posts`,
+          description: allPosts.length > 0 && allPosts[0].platform === 'instagram' && useInstagram
+            ? '✨ Live data from Meta API'
+            : allPosts.length > 0 && allPosts[0].platform === 'tiktok' && useTikTok
+            ? '✨ Live data from TikTok API'
+            : `💾 Loaded from ${sources.join(' + ')} (${allPosts.length > 0 ? 'API + ' : ''}database)`,
         });
       } else {
-        console.log('❌ [SEARCH] No posts in DB either');
+        console.log('❌ [SEARCH] No posts found');
         setPosts([]);
         toast({
           title: 'No results found',
-          description: 'Neither Meta API nor database returned results.',
+          description: 'Neither API nor database returned results.',
           variant: 'destructive',
         });
       }
@@ -206,7 +269,7 @@ export default function Search() {
           </h1>
 
           <div className="w-full">
-            <AISearchBar onSearch={handleSearch} />
+            <AISearchBar onSearch={(query, platforms, modes) => handleSearch(query, platforms, modes)} />
           </div>
 
           {/* Popular Tags */}
@@ -224,8 +287,8 @@ export default function Search() {
             ))}
           </div>
 
-          {/* Test Meta API Button */}
-          {hasSearched && posts.length > 0 && (
+          {/* Test Meta API Button - Only show if Instagram is selected or no platform selected */}
+          {hasSearched && posts.length > 0 && (selectedPlatforms.length === 0 || selectedPlatforms.includes('instagram')) && (
             <div className="flex gap-3 items-center">
               <Button
                 onClick={testMetaAPI}
@@ -266,8 +329,8 @@ export default function Search() {
               {posts.map((post) => (
                 <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <CardContent className="p-0">
-                    {/* Instagram Embed */}
-                    {post.permalink && (
+                    {/* Media Display - Instagram Embed or TikTok Thumbnail */}
+                    {post.platform === 'instagram' && post.permalink && (
                       <div className="aspect-square bg-muted relative">
                         <iframe
                           src={`https://www.instagram.com/p/${post.permalink.split('/p/')[1]?.replace('/', '')}/embed`}
@@ -275,6 +338,28 @@ export default function Search() {
                           scrolling="no"
                           allowTransparency
                         />
+                      </div>
+                    )}
+                    {post.platform === 'tiktok' && post.media_url && (
+                      <div className="aspect-square bg-muted relative overflow-hidden">
+                        <img
+                          src={post.media_url}
+                          alt={post.caption || 'TikTok video'}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x400?text=TikTok';
+                          }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                          <Badge variant="secondary" className="absolute top-2 right-2">
+                            TikTok
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
+                    {!post.permalink && !post.media_url && (
+                      <div className="aspect-square bg-muted flex items-center justify-center">
+                        <span className="text-muted-foreground text-sm">No media</span>
                       </div>
                     )}
 
