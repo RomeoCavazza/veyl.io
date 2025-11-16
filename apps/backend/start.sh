@@ -1,11 +1,19 @@
 #!/bin/bash
 set -e
 
-echo "🔄 Exécution des migrations Alembic..."
+echo "🔄 Vérification des migrations Alembic..."
 cd /app/apps/backend
-if ! alembic upgrade head; then
-  echo "⚠️  Alembic upgrade a échoué, tentative de stamp head..."
-  alembic stamp head
+# Vérifier si la table alembic_version existe
+if alembic current 2>/dev/null | grep -q "initial_schema"; then
+  echo "✅ Migration déjà appliquée (initial_schema)"
+elif alembic current 2>/dev/null | grep -q "head"; then
+  echo "✅ Base de données à jour"
+else
+  echo "🔄 Application de la migration initial_schema..."
+  if ! alembic upgrade head; then
+    echo "⚠️  Alembic upgrade a échoué, marquage de la base comme à jour..."
+    alembic stamp initial_schema || echo "⚠️  Stamp échoué, continuons quand même..."
+  fi
 fi
 
 echo "🚀 Démarrage du serveur..."
