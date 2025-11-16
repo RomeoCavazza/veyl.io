@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
-from sqlalchemy import text
+from sqlalchemy import text, or_
 from sqlalchemy.orm import Session
 from typing import Dict, List, Optional, Set
 from uuid import UUID
@@ -271,13 +271,23 @@ def _attach_hashtag(
     logger.info(f"🔍 Searching posts with #{normalized_name} in caption (all platforms)...")
     
     # Chercher les posts qui contiennent ce hashtag dans leur caption, toutes plateformes
+    # Recherche flexible : #fashion, fashion, #Fashion, etc.
+    search_patterns = [
+        f'%#{normalized_name}%',  # #fashion
+        f'%#{normalized_name.lower()}%',  # #fashion (lowercase)
+        f'%#{normalized_name.upper()}%',  # #FASHION (uppercase)
+        f'%{normalized_name}%',  # fashion (sans #)
+    ]
+    
     posts_with_hashtag = (
         db.query(Post)
-        .filter(Post.caption.ilike(f'%#{normalized_name}%'))
+        .filter(or_(*[Post.caption.ilike(pattern) for pattern in search_patterns]))
         .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
         .limit(100)  # Augmenter la limite pour trouver plus de posts
         .all()
     )
+    
+    logger.info(f"🔍 Found {len(posts_with_hashtag)} posts with #{normalized_name} in caption")
     
     linked_count = 0
     platform_counts = {}
@@ -751,33 +761,12 @@ def add_project_hashtag(
         db.commit()
         db.refresh(project)
         
-        # 🔥 OPTIONNEL: Fetch live posts from Meta API
+        # 🔥 OPTIONNEL: Fetch live posts from API (Meta ou TikTok selon platform)
+        # Note: Le paramètre fetch_live est conservé pour compatibilité, mais le vrai fetch
+        # se fait via le bouton "Fetch" dans l'UI qui appelle directement les endpoints API
         if fetch_live:
-            logger.info(f"🌐 Fetching live posts for #{payload.hashtag} from Meta API...")
-            try:
-                from services.meta_client import call_meta
-                
-                # Récupérer le token Instagram de l'utilisateur
-                oauth_account = (
-                    db.query(OAuthAccount)
-                    .filter(
-                        OAuthAccount.user_id == current_user.id,
-                        OAuthAccount.provider == "instagram"
-                    )
-                    .first()
-                )
-                
-                if oauth_account and oauth_account.access_token:
-                    # Appeler Meta API pour récupérer des posts
-                    # Note: Ceci nécessite les permissions instagram_basic, instagram_content_publish
-                    # Pour l'instant, on log juste qu'on a essayé
-                    logger.info(f"✅ User has Instagram token, could fetch live posts (not implemented yet)")
-                else:
-                    logger.info(f"⚠️ User has no Instagram token, skipping live fetch")
-                    
-            except Exception as fetch_error:
-                logger.warning(f"⚠️ Failed to fetch live posts: {fetch_error}")
-                # Continue anyway, les posts en DB seront utilisés
+            logger.info(f"🌐 fetch_live=true for #{payload.hashtag} (platform: {payload.platform})")
+            logger.info(f"💡 Use 'Fetch' button in UI to get live posts from API")
         
         return serialize_project(project)
     except HTTPException:

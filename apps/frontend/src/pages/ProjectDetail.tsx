@@ -205,10 +205,17 @@ export default function ProjectDetail() {
           for (const hashtag of metaHashtags.slice(0, 3)) {
             try {
               console.log(`📡 [FETCH] Calling Meta API for #${hashtag.name}...`);
-              await fetchMetaIGPublic(hashtag.name, 10);
-              fetchedCount++;
-            } catch (error) {
-              console.error(`Error fetching Meta posts for #${hashtag.name}:`, error);
+              const response = await fetchMetaIGPublic(hashtag.name, 10);
+              const source = response.meta?.source || 'unknown';
+              if (source === 'instagram_public_content_api') {
+                console.log(`✅ [FETCH] Meta API SUCCESS for #${hashtag.name} (${response.data?.length || 0} posts from API)`);
+                fetchedCount++;
+              } else {
+                console.log(`⚠️ [FETCH] Meta returned DB fallback for #${hashtag.name} (source: ${source})`);
+              }
+            } catch (error: any) {
+              console.error(`❌ [FETCH] Meta API FAILED for #${hashtag.name}:`, error.message);
+              // Continue avec les autres hashtags
             }
           }
         }
@@ -224,10 +231,17 @@ export default function ProjectDetail() {
           for (const hashtag of tiktokHashtags.slice(0, 3)) {
             try {
               console.log(`📡 [FETCH] Calling TikTok API for #${hashtag.name}...`);
-              await fetchTikTokVideos(hashtag.name, 10);
-              fetchedCount++;
-            } catch (error) {
-              console.error(`Error fetching TikTok videos for #${hashtag.name}:`, error);
+              const response = await fetchTikTokVideos(hashtag.name, 10);
+              const source = response.meta?.source || 'unknown';
+              if (source === 'tiktok_video_list_api') {
+                console.log(`✅ [FETCH] TikTok API SUCCESS for #${hashtag.name} (${response.data?.length || 0} videos from API)`);
+                fetchedCount++;
+              } else {
+                console.log(`⚠️ [FETCH] TikTok returned DB fallback for #${hashtag.name} (source: ${source})`);
+              }
+            } catch (error: any) {
+              console.error(`❌ [FETCH] TikTok API FAILED for #${hashtag.name}:`, error.message);
+              // Continue avec les autres hashtags
             }
           }
         }
@@ -585,7 +599,6 @@ export default function ProjectDetail() {
                         >
                           <div className="flex items-center gap-2 text-sm">
                             <span className="font-medium">#{link.name}</span>
-                            <span className="text-xs text-muted-foreground">· {formatPlatformLabel(link.platform || 'instagram')}</span>
                           </div>
                           <Button
                             variant="ghost"

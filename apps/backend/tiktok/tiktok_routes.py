@@ -281,45 +281,39 @@ async def get_tiktok_videos(
     tiktok_platform = _ensure_platform(db, "tiktok")
     
     # 1️⃣ ESSAYER L'API TIKTOK D'ABORD (comme Meta)
+    # Même avec query, on essaie l'API d'abord (peut retourner des vidéos de l'utilisateur)
     try:
         access_token = _get_tiktok_token(db, current_user)
         
-        # Si query est fourni, on ne peut pas chercher via API TikTok (pas de search endpoint public)
-        # On va directement en DB pour les recherches par hashtag/keyword
+        # TOUJOURS essayer l'API d'abord, même avec query
+        # TikTok API n'a pas d'endpoint de recherche publique, mais on peut récupérer les vidéos de l'utilisateur
+        logger.info(f"📡 [TikTok] Trying TikTok API first (video/list)...")
+        params: dict = {
+            "max_count": limit,
+        }
+        if cursor:
+            params["cursor"] = cursor
+        
+        response = await call_tiktok(
+            method="GET",
+            endpoint="video/list/",
+            params=params,
+            access_token=access_token,
+        )
+        
+        videos = response.get("data", {}).get("videos", [])
+        
+        # Si query fourni, filtrer les vidéos par query dans leur caption
         if query:
-            logger.info(f"🔍 [TikTok] Query provided, searching DB for: {query}")
-            # TikTok API n'a pas d'endpoint de recherche publique, fallback DB
-            posts = (
-                db.query(Post)
-                .filter(
-                    Post.platform_id == tiktok_platform.id,
-                    or_(
-                        Post.caption.ilike(f'%{query}%'),
-                        Post.caption.ilike(f'%#{query}%'),
-                    )
-                )
-                .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
-                .limit(limit)
-                .all()
-            )
-        else:
-            # Pas de query, essayer l'API TikTok pour récupérer les vidéos de l'utilisateur
-            logger.info("📡 [TikTok] Trying TikTok API (video/list)...")
-            params: dict = {
-                "max_count": limit,
-            }
-            if cursor:
-                params["cursor"] = cursor
-            
-            response = await call_tiktok(
-                method="GET",
-                endpoint="video/list/",
-                params=params,
-                access_token=access_token,
-            )
-            
-            videos = response.get("data", {}).get("videos", [])
-            
+            query_lower = query.lower().replace('#', '')
+            videos = [
+                v for v in videos
+                if query_lower in (v.get("title") or "").lower() 
+                or query_lower in (v.get("video_description") or "").lower()
+            ]
+            logger.info(f"🔍 [TikTok] Filtered {len(videos)} videos matching query: {query}")
+        
+        if videos:
             # Stocker chaque vidéo dans Post
             stored_posts = []
             for video in videos:
@@ -368,15 +362,25 @@ async def get_tiktok_videos(
                     "source": "tiktok_video_list_api",
                 },
             }
-    
+        else:
+            # API a répondu mais 0 résultats (ou filtré à 0)
+            if query:
+                logger.info(f"⚠️ [TikTok] API returned 0 videos matching query '{query}', falling back to DB")
+            else:
+                logger.info(f"⚠️ [TikTok] API returned 0 videos, falling back to DB")
+            raise HTTPException(status_code=404, detail="No videos found")
+        
     except HTTPException as e:
         # Pas de token ou erreur auth, fallback DB
         if e.status_code in (401, 403):
             logger.warning(f"⚠️ [TikTok] API auth failed ({e.status_code}), falling back to DB")
+        elif e.status_code == 404:
+            # 0 résultats, fallback DB
+            logger.info(f"⚠️ [TikTok] API returned 0 results, falling back to DB")
         else:
-            logger.warning(f"⚠️ [TikTok] API error, falling back to DB: {e.detail}")
+            logger.warning(f"⚠️ [TikTok] API error ({e.status_code}), falling back to DB: {e.detail}")
     except Exception as e:
-        logger.exception("⚠️ [TikTok] API error, falling back to DB")
+        logger.exception(f"⚠️ [TikTok] API error, falling back to DB: {e}")
     
     # 2️⃣ FALLBACK: CHARGER DEPUIS DB
     logger.info("💾 [TikTok] Loading from database (fallback)...")

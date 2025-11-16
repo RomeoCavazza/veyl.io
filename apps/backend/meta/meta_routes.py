@@ -144,58 +144,16 @@ async def get_instagram_public_content(
     
     STRATÉGIE: 1. Essayer Meta API d'abord → 2. Fallback DB si échec
     """
-    ig_user_id = user_id or settings.IG_USER_ID
-    if not ig_user_id:
-        logger.warning("⚠️ [Meta] IG_USER_ID not found, falling back to DB")
-        # Fallback DB si pas de credentials
-        instagram_platform = _ensure_platform(db, "instagram")
-        posts_from_db = (
-            db.query(Post)
-            .filter(
-                Post.platform_id == instagram_platform.id,
-                or_(
-                    Post.caption.ilike(f'%{tag}%'),
-                    Post.caption.ilike(f'%#{tag}%'),
-                )
-            )
-            .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
-            .limit(limit)
-            .all()
-        )
-        
-        results = []
-        for post in posts_from_db:
-            try:
-                metrics = json.loads(post.metrics) if post.metrics else {}
-            except (TypeError, ValueError):
-                metrics = {}
-            
-            results.append({
-                "id": post.id,
-                "caption": post.caption,
-                "media_type": "IMAGE",
-                "media_url": post.media_url,
-                "permalink": post.external_id if post.external_id.startswith('http') else f"https://www.instagram.com/p/{post.external_id}/",
-                "timestamp": post.posted_at.isoformat() if post.posted_at else None,
-                "like_count": metrics.get("like_count", 0),
-                "comments_count": metrics.get("comment_count", 0),
-            })
-        
-        return {
-            "status": "success",
-            "http_status": 200,
-            "data": results,
-            "meta": {
-                "tag": tag,
-                "count": len(results),
-                "fetched_at": datetime.utcnow().isoformat(),
-                "source": "database_fallback"
-            }
-        }
-
-    # 1️⃣ ESSAYER META API D'ABORD
+    # 1️⃣ ESSAYER META API D'ABORD (même si IG_USER_ID manquant, on essaie)
+    # Le token peut contenir l'info nécessaire
     try:
-        logger.info(f"📡 [Meta] Trying Meta API for hashtag: #{tag}")
+        ig_user_id = user_id or settings.IG_USER_ID
+        if not ig_user_id:
+            logger.warning("⚠️ [Meta] IG_USER_ID not found, but trying API anyway (token may contain info)")
+            # Essayer quand même avec "me" ou le user_id du token
+            ig_user_id = "me"
+        
+        logger.info(f"📡 [Meta] Trying Meta API for hashtag: #{tag} (user_id: {ig_user_id})")
         search = await call_meta(
             method="GET",
             endpoint="v21.0/ig_hashtag_search",
