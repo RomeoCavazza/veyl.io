@@ -11,6 +11,7 @@ DO $$
 DECLARE
     tiktok_platform_id INTEGER;
     fashion_hashtag_id INTEGER;
+    existing_fashion_id INTEGER;
     post_id TEXT;
     video_id TEXT;
     creator_username TEXT;
@@ -30,24 +31,25 @@ BEGIN
     FROM hashtags 
     WHERE name = 'fashion' AND platform_id = tiktok_platform_id;
     
-    -- Si le hashtag n'existe pas pour TikTok, le créer
+    -- Si le hashtag n'existe pas pour TikTok, le créer ou mettre à jour
     IF fashion_hashtag_id IS NULL THEN
-        -- Vérifier si un hashtag "fashion" existe déjà pour une autre plateforme
-        -- Si oui, on doit le renommer ou créer un nouveau hashtag avec un nom différent
-        -- Pour l'instant, on crée directement (la contrainte unique sur name peut poser problème)
-        -- Solution: utiliser un nom unique comme "fashion_tiktok" ou modifier la contrainte
-        -- Ici, on assume qu'il n'y a pas de conflit ou qu'on peut le gérer
-        INSERT INTO hashtags (name, platform_id, last_scraped, updated_at)
-        VALUES ('fashion', tiktok_platform_id, NOW(), NOW())
-        ON CONFLICT (name) DO UPDATE 
-        SET platform_id = tiktok_platform_id, updated_at = NOW()
-        RETURNING id INTO fashion_hashtag_id;
+        -- Vérifier si un hashtag "fashion" existe déjà (peu importe la plateforme)
+        SELECT id INTO existing_fashion_id 
+        FROM hashtags 
+        WHERE name = 'fashion' 
+        LIMIT 1;
         
-        -- Si toujours NULL après INSERT, récupérer l'ID
-        IF fashion_hashtag_id IS NULL THEN
-            SELECT id INTO fashion_hashtag_id 
-            FROM hashtags 
-            WHERE name = 'fashion' AND platform_id = tiktok_platform_id;
+        -- Si un hashtag "fashion" existe déjà, le mettre à jour pour TikTok
+        IF existing_fashion_id IS NOT NULL THEN
+            UPDATE hashtags 
+            SET platform_id = tiktok_platform_id, updated_at = NOW()
+            WHERE id = existing_fashion_id;
+            fashion_hashtag_id := existing_fashion_id;
+        ELSE
+            -- Créer un nouveau hashtag "fashion" pour TikTok
+            INSERT INTO hashtags (name, platform_id, last_scraped, updated_at)
+            VALUES ('fashion', tiktok_platform_id, NOW(), NOW())
+            RETURNING id INTO fashion_hashtag_id;
         END IF;
     END IF;
     
