@@ -446,6 +446,42 @@ export default function ProjectDetail() {
       // Attendre que tous les fetches soient terminés (en parallèle)
       await Promise.allSettled(fetchPromises);
       
+      // 🔗 RE-LINK: Après le fetch, re-linker les posts au hashtag (car les nouveaux posts ne sont pas auto-linkés)
+      // Trouver le hashtag qu'on vient d'ajouter pour le re-linker
+      const updatedHashtagLinks = updatedProject?.hashtags || [];
+      const addedHashtagLink = updatedHashtagLinks.find((h: any) => 
+        h.name?.toLowerCase() === hashtag.toLowerCase() || 
+        h.name?.toLowerCase() === `#${hashtag.toLowerCase()}`
+      );
+      
+      if (addedHashtagLink?.id) {
+        try {
+          console.log(`🔗 [RE-LINK] Re-linking posts to hashtag #${hashtag} (link_id: ${addedHashtagLink.id})...`);
+          const token = localStorage.getItem('token');
+          const apiBase = getApiBase();
+          const url = apiBase 
+            ? `${apiBase}/api/v1/projects/${id}/hashtags/${addedHashtagLink.id}/link-posts?limit=100`
+            : `/api/v1/projects/${id}/hashtags/${addedHashtagLink.id}/link-posts?limit=100`;
+          
+          const linkResponse = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token || ''}`,
+            },
+          });
+          
+          if (linkResponse.ok) {
+            const linkResult = await linkResponse.json();
+            console.log(`✅ [RE-LINK] Re-linked ${linkResult.newly_linked || 0} posts to #${hashtag}`);
+          } else {
+            console.warn(`⚠️ [RE-LINK] Failed to re-link posts: ${linkResponse.status}`);
+          }
+        } catch (error: any) {
+          console.error(`❌ [RE-LINK] Error re-linking posts:`, error.message);
+          // Continue même si le re-link échoue
+        }
+      }
+      
       // Recharger avec le filtre actuel
       const platformFilter = selectedPlatformFilter === 'all' ? undefined : selectedPlatformFilter;
       await fetchProjectPosts(platformFilter);
