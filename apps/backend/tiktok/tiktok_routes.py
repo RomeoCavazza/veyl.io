@@ -276,14 +276,112 @@ async def get_tiktok_videos(
     Récupère les vidéos TikTok publiques d'un utilisateur ou par recherche.
     Utilise le scope: video.list
     
-    Si l'API TikTok échoue ou si query est fourni, fait un fallback vers la DB.
+    STRATÉGIE: 1. Essayer API TikTok d'abord → 2. Fallback DB si échec
     """
     tiktok_platform = _ensure_platform(db, "tiktok")
     
-    # Si query est fourni, chercher dans la DB (fallback)
+    # 1️⃣ ESSAYER L'API TIKTOK D'ABORD (comme Meta)
+    try:
+        access_token = _get_tiktok_token(db, current_user)
+        
+        # Si query est fourni, on ne peut pas chercher via API TikTok (pas de search endpoint public)
+        # On va directement en DB pour les recherches par hashtag/keyword
+        if query:
+            logger.info(f"🔍 [TikTok] Query provided, searching DB for: {query}")
+            # TikTok API n'a pas d'endpoint de recherche publique, fallback DB
+            posts = (
+                db.query(Post)
+                .filter(
+                    Post.platform_id == tiktok_platform.id,
+                    or_(
+                        Post.caption.ilike(f'%{query}%'),
+                        Post.caption.ilike(f'%#{query}%'),
+                    )
+                )
+                .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
+                .limit(limit)
+                .all()
+            )
+        else:
+            # Pas de query, essayer l'API TikTok pour récupérer les vidéos de l'utilisateur
+            logger.info("📡 [TikTok] Trying TikTok API (video/list)...")
+            params: dict = {
+                "max_count": limit,
+            }
+            if cursor:
+                params["cursor"] = cursor
+            
+            response = await call_tiktok(
+                method="GET",
+                endpoint="video/list/",
+                params=params,
+                access_token=access_token,
+            )
+            
+            videos = response.get("data", {}).get("videos", [])
+            
+            # Stocker chaque vidéo dans Post
+            stored_posts = []
+            for video in videos:
+                video_id = video.get("id")
+                if not video_id:
+                    continue
+                
+                metrics = {
+                    "like_count": video.get("like_count"),
+                    "comment_count": video.get("comment_count"),
+                    "share_count": video.get("share_count"),
+                    "view_count": video.get("view_count"),
+                }
+                
+                defaults = {
+                    "author": video.get("creator_username") or video.get("creator_display_name"),
+                    "caption": video.get("title") or video.get("video_description"),
+                    "media_url": video.get("cover_image_url") or video.get("thumbnail_url"),
+                    "permalink": video.get("share_url") or f"https://www.tiktok.com/@{(video.get('creator_username') or 'user')}/video/{video_id}",
+                    "posted_at": _parse_timestamp(video.get("create_time")),
+                    "metrics": json.dumps(metrics),
+                    "fetched_at": datetime.utcnow(),
+                }
+                
+                post = _upsert_post(
+                    db=db,
+                    platform_name="tiktok",
+                    external_id=str(video_id),
+                    payload=video,
+                    source="tiktok_video_list_api",
+                    defaults=defaults,
+                )
+                stored_posts.append(post)
+            
+            db.commit()
+            
+            return {
+                "status": "success",
+                "http_status": 200,
+                "data": videos,
+                "meta": {
+                    "count": len(videos),
+                    "cursor": response.get("data", {}).get("cursor"),
+                    "has_more": response.get("data", {}).get("has_more", False),
+                    "fetched_at": datetime.utcnow().isoformat(),
+                    "source": "tiktok_video_list_api",
+                },
+            }
+    
+    except HTTPException as e:
+        # Pas de token ou erreur auth, fallback DB
+        if e.status_code in (401, 403):
+            logger.warning(f"⚠️ [TikTok] API auth failed ({e.status_code}), falling back to DB")
+        else:
+            logger.warning(f"⚠️ [TikTok] API error, falling back to DB: {e.detail}")
+    except Exception as e:
+        logger.exception("⚠️ [TikTok] API error, falling back to DB")
+    
+    # 2️⃣ FALLBACK: CHARGER DEPUIS DB
+    logger.info("💾 [TikTok] Loading from database (fallback)...")
     if query:
-        logger.info(f"🔍 [TikTok] Searching DB for query: {query}")
-        # Chercher les posts TikTok qui contiennent la query dans caption ou hashtags
+        # Chercher les posts TikTok qui contiennent la query
         posts = (
             db.query(Post)
             .filter(
@@ -297,57 +395,8 @@ async def get_tiktok_videos(
             .limit(limit)
             .all()
         )
-        
-        # Convertir Post en format API
-        videos = []
-        for post in posts:
-            try:
-                metrics = json.loads(post.metrics) if post.metrics else {}
-            except (TypeError, ValueError):
-                metrics = {}
-            
-            api_payload = {}
-            if post.api_payload:
-                try:
-                    api_payload = json.loads(post.api_payload)
-                except (TypeError, ValueError):
-                    pass
-            
-            videos.append({
-                "id": post.id,
-                "creator_username": post.author,
-                "title": post.caption,
-                "video_description": post.caption,
-                "cover_image_url": post.media_url or api_payload.get("cover_image_url"),
-                "thumbnail_url": post.media_url or api_payload.get("thumbnail_url"),
-                "share_url": _get_post_share_url(post, api_payload),
-                "create_time": post.posted_at.isoformat() if post.posted_at else None,
-                "like_count": metrics.get("like_count", 0),
-                "comment_count": metrics.get("comment_count", 0),
-                "share_count": metrics.get("share_count", 0),
-                "view_count": metrics.get("view_count", 0),
-            })
-        
-        return {
-            "status": "success",
-            "http_status": 200,
-            "data": videos,
-            "meta": {
-                "count": len(videos),
-                "cursor": None,
-                "has_more": False,
-                "fetched_at": datetime.utcnow().isoformat(),
-                "source": "database_fallback",
-            },
-        }
-    
-    # Sinon, essayer l'API TikTok (nécessite un token)
-    # Mais d'abord, vérifier si on a un token, sinon fallback direct vers DB
-    try:
-        access_token = _get_tiktok_token(db, current_user)
-    except HTTPException:
-        # Pas de token, fallback direct vers DB
-        logger.info("🔍 [TikTok] No token found, using DB fallback")
+    else:
+        # Pas de query, récupérer les posts TikTok récents
         posts = (
             db.query(Post)
             .filter(Post.platform_id == tiktok_platform.id)
@@ -355,196 +404,55 @@ async def get_tiktok_videos(
             .limit(limit)
             .all()
         )
-        
-        videos = []
-        for post in posts:
-            try:
-                metrics = json.loads(post.metrics) if post.metrics else {}
-            except (TypeError, ValueError):
-                metrics = {}
-            
-            api_payload = {}
-            if post.api_payload:
-                try:
-                    api_payload = json.loads(post.api_payload)
-                except (TypeError, ValueError):
-                    pass
-            
-            videos.append({
-                "id": post.id,
-                "creator_username": post.author,
-                "title": post.caption,
-                "cover_image_url": post.media_url or api_payload.get("cover_image_url"),
-                "share_url": _get_post_share_url(post, api_payload),
-                "like_count": metrics.get("like_count", 0),
-                "comment_count": metrics.get("comment_count", 0),
-            })
-        
-        return {
-            "status": "success",
-            "http_status": 200,
-            "data": videos,
-            "meta": {
-                "count": len(videos),
-                "source": "database_fallback",
-            },
-        }
     
-    # Essayer l'API TikTok avec le token
-    try:
-        params: dict = {
-            "max_count": limit,
-        }
-        if cursor:
-            params["cursor"] = cursor
+    # Convertir Post en format API
+    videos = []
+    for post in posts:
+        try:
+            metrics = json.loads(post.metrics) if post.metrics else {}
+        except (TypeError, ValueError):
+            metrics = {}
         
-        response = await call_tiktok(
-            method="GET",
-            endpoint="video/list/",
-            params=params,
-            access_token=access_token,
-        )
-        
-        videos = response.get("data", {}).get("videos", [])
-        
-        # Stocker chaque vidéo dans Post
-        stored_posts = []
-        for video in videos:
-            video_id = video.get("id")
-            if not video_id:
-                continue
-            
-            metrics = {
-                "like_count": video.get("like_count"),
-                "comment_count": video.get("comment_count"),
-                "share_count": video.get("share_count"),
-                "view_count": video.get("view_count"),
-            }
-            
-            defaults = {
-                "author": video.get("creator_username") or video.get("creator_display_name"),
-                "caption": video.get("title") or video.get("video_description"),
-                "media_url": video.get("cover_image_url") or video.get("thumbnail_url"),
-                "permalink": video.get("share_url") or f"https://www.tiktok.com/@{(video.get('creator_username') or 'user')}/video/{video_id}",
-                "posted_at": _parse_timestamp(video.get("create_time")),
-                "metrics": json.dumps(metrics),
-                "fetched_at": datetime.utcnow(),
-            }
-            
-            post = _upsert_post(
-                db=db,
-                platform_name="tiktok",
-                external_id=str(video_id),
-                payload=video,
-                source="tiktok_videos",
-                defaults=defaults,
-            )
-            stored_posts.append(post)
-        
-        db.commit()
-        
-        return {
-            "status": "success",
-            "http_status": 200,
-            "data": videos,
-            "meta": {
-                "count": len(videos),
-                "cursor": response.get("data", {}).get("cursor"),
-                "has_more": response.get("data", {}).get("has_more", False),
-                "fetched_at": datetime.utcnow().isoformat(),
-                "source": "tiktok_video_list_api",
-            },
-        }
-    except HTTPException as e:
-        # Si erreur 401/403 (pas de token), fallback vers DB
-        if e.status_code in (401, 403):
-            logger.warning(f"⚠️ [TikTok] API auth failed, falling back to DB")
-            # Retourner les derniers posts TikTok de la DB
-            posts = (
-                db.query(Post)
-                .filter(Post.platform_id == tiktok_platform.id)
-                .order_by(Post.fetched_at.desc().nullslast())
-                .limit(limit)
-                .all()
-            )
-            
-            videos = []
-            for post in posts:
-                try:
-                    metrics = json.loads(post.metrics) if post.metrics else {}
-                except (TypeError, ValueError):
-                    metrics = {}
-                
-                api_payload = {}
-                if post.api_payload:
-                    try:
-                        api_payload = json.loads(post.api_payload)
-                    except (TypeError, ValueError):
-                        pass
-                
-                videos.append({
-                    "id": post.id,
-                    "creator_username": post.author,
-                    "title": post.caption,
-                    "cover_image_url": post.media_url or api_payload.get("cover_image_url"),
-                    "share_url": api_payload.get("share_url") or post.permalink,
-                    "like_count": metrics.get("like_count", 0),
-                    "comment_count": metrics.get("comment_count", 0),
-                })
-            
-            return {
-                "status": "success",
-                "http_status": 200,
-                "data": videos,
-                "meta": {
-                    "count": len(videos),
-                    "source": "database_fallback",
-                },
-            }
-        raise
-    except Exception as e:
-        logger.exception("Error fetching TikTok videos, falling back to DB")
-        # Fallback vers DB en cas d'erreur
-        posts = (
-            db.query(Post)
-            .filter(Post.platform_id == tiktok_platform.id)
-            .order_by(Post.fetched_at.desc().nullslast())
-            .limit(limit)
-            .all()
-        )
-        
-        videos = []
-        for post in posts:
+        api_payload = {}
+        if post.api_payload:
             try:
-                metrics = json.loads(post.metrics) if post.metrics else {}
+                api_payload = json.loads(post.api_payload)
             except (TypeError, ValueError):
-                metrics = {}
-            
-            api_payload = {}
-            if post.api_payload:
-                try:
-                    api_payload = json.loads(post.api_payload)
-                except (TypeError, ValueError):
-                    pass
-            
-            videos.append({
-                "id": post.id,
-                "creator_username": post.author,
-                "title": post.caption,
-                "cover_image_url": post.media_url or api_payload.get("cover_image_url"),
-                "share_url": _get_post_share_url(post, api_payload),
-                "like_count": metrics.get("like_count", 0),
-                "comment_count": metrics.get("comment_count", 0),
-            })
+                pass
         
-        return {
-            "status": "success",
-            "http_status": 200,
-            "data": videos,
-            "meta": {
-                "count": len(videos),
-                "source": "database_fallback",
-            },
-        }
+        # Extraire les vraies thumbnails depuis api_payload si disponible
+        cover_image = (
+            post.media_url 
+            or api_payload.get("cover_image_url") 
+            or api_payload.get("thumbnail_url")
+        )
+        
+        videos.append({
+            "id": post.id,
+            "creator_username": post.author,
+            "title": post.caption,
+            "video_description": post.caption,
+            "cover_image_url": cover_image,
+            "thumbnail_url": cover_image,
+            "share_url": _get_post_share_url(post, api_payload),
+            "create_time": post.posted_at.isoformat() if post.posted_at else None,
+            "like_count": metrics.get("like_count", 0),
+            "comment_count": metrics.get("comment_count", 0),
+            "share_count": metrics.get("share_count", 0),
+            "view_count": metrics.get("view_count", 0),
+        })
+    
+    return {
+        "status": "success",
+        "http_status": 200,
+        "data": videos,
+        "meta": {
+            "count": len(videos),
+            "cursor": None,
+            "has_more": False,
+            "fetched_at": datetime.utcnow().isoformat(),
+            "source": "database_fallback",
+        },
+    }
 
 

@@ -564,10 +564,16 @@ export interface ProjectPost {
   score_trend?: number;
 }
 
-export async function getProjectPosts(projectId: string): Promise<ProjectPost[]> {
+export async function getProjectPosts(projectId: string, platform?: string): Promise<ProjectPost[]> {
   const token = localStorage.getItem('token');
   const apiBase = getApiBase();
-  const url = apiBase ? `${apiBase}/api/v1/projects/${projectId}/posts` : `/api/v1/projects/${projectId}/posts`;
+  const params = new URLSearchParams();
+  if (platform) {
+    params.set('platform', platform);
+  }
+  const url = apiBase 
+    ? `${apiBase}/api/v1/projects/${projectId}/posts${params.toString() ? '?' + params.toString() : ''}` 
+    : `/api/v1/projects/${projectId}/posts${params.toString() ? '?' + params.toString() : ''}`;
 
   const response = await fetch(url, {
     mode: 'cors',

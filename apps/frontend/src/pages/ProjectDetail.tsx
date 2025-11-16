@@ -154,10 +154,23 @@ export default function ProjectDetail() {
     setEditDescription(projectData.description || '');
   }, []);
 
-  const fetchProjectPosts = useCallback(async () => {
+  const fetchProjectPosts = useCallback(async (platformFilter?: string) => {
     if (!id) return;
     try {
-      const postsData = await getProjectPosts(id);
+      // Convertir le filtre frontend en filtre backend
+      let backendPlatform: string | undefined = undefined;
+      if (platformFilter === 'meta') {
+        backendPlatform = 'meta'; // Backend gère 'meta' = instagram + facebook
+      } else if (platformFilter === 'tiktok') {
+        backendPlatform = 'tiktok';
+      } else if (platformFilter === 'instagram') {
+        backendPlatform = 'instagram';
+      } else if (platformFilter === 'facebook') {
+        backendPlatform = 'facebook';
+      }
+      // Si 'all', backendPlatform reste undefined (pas de filtre)
+      
+      const postsData = await getProjectPosts(id, backendPlatform);
       setPosts(postsData);
     } catch (error) {
       console.error('Error loading project posts:', error);
@@ -300,8 +313,10 @@ export default function ProjectDetail() {
   }, [fetchProject]);
 
   useEffect(() => {
-    fetchProjectPosts();
-  }, [fetchProjectPosts]);
+    // Recharger les posts quand le filtre change
+    const platformFilter = selectedPlatformFilter === 'all' ? undefined : selectedPlatformFilter;
+    fetchProjectPosts(platformFilter);
+  }, [fetchProjectPosts, selectedPlatformFilter]);
 
   const handleAddCreator = () => {
     setNewCreatorUsername('');

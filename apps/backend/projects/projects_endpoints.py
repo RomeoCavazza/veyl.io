@@ -74,8 +74,24 @@ def _collect_project_posts(
     db: Session,
     project: Project,
     limit: Optional[int] = None,
+    platform_filter: Optional[str] = None,  # 'instagram', 'tiktok', 'facebook', None (all)
 ) -> List[Post]:
+    """
+    Collecte les posts d'un projet.
+    Si platform_filter est fourni, filtre par plateforme.
+    """
     post_map: Dict[str, Post] = {}
+    
+    # Déterminer les platform_ids à filtrer
+    platform_ids = None
+    if platform_filter:
+        platform = db.query(Platform).filter(Platform.name == platform_filter).first()
+        if platform:
+            platform_ids = [platform.id]
+        elif platform_filter == 'meta':
+            # Meta = Instagram + Facebook
+            meta_platforms = db.query(Platform).filter(Platform.name.in_(['instagram', 'facebook'])).all()
+            platform_ids = [p.id for p in meta_platforms]
 
     creator_links = (
         db.query(ProjectCreator)
@@ -87,8 +103,10 @@ def _collect_project_posts(
         query = (
             db.query(Post)
             .filter(Post.author.in_(usernames))
-            .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
         )
+        if platform_ids:
+            query = query.filter(Post.platform_id.in_(platform_ids))
+        query = query.order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
         if limit:
             query = query.limit(limit)
         for post in query.all():
@@ -105,8 +123,10 @@ def _collect_project_posts(
             db.query(Post)
             .join(PostHashtag, PostHashtag.post_id == Post.id)
             .filter(PostHashtag.hashtag_id.in_(hashtag_ids))
-            .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
         )
+        if platform_ids:
+            hashtag_query = hashtag_query.filter(Post.platform_id.in_(platform_ids))
+        hashtag_query = hashtag_query.order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
         if limit:
             hashtag_query = hashtag_query.limit(limit)
         for post in hashtag_query.all():
@@ -370,13 +390,14 @@ def get_project(
 @projects_router.get("/{project_id}/posts", response_model=List[ProjectPostResponse])
 def list_project_posts(
     project_id: str,
+    platform: Optional[str] = Query(None, description="Filter by platform: 'instagram', 'tiktok', 'facebook', 'meta'"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Retourne les posts associés au projet (via ses créateurs)."""
     project = _get_project_or_404(db, current_user, project_id)
 
-    posts = _collect_project_posts(db, project, limit=60)
+    posts = _collect_project_posts(db, project, limit=60, platform_filter=platform)
     if not posts:
         return []
 
