@@ -68,7 +68,6 @@ export default function ProjectDetail() {
   const [creatorSuggestions, setCreatorSuggestions] = useState<string[]>([]);
   const [addHashtagOpen, setAddHashtagOpen] = useState(false);
   const [newHashtagName, setNewHashtagName] = useState('');
-  const [newHashtagPlatform, setNewHashtagPlatform] = useState('instagram');
   const [isSavingHashtag, setIsSavingHashtag] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<any>(null);
@@ -341,7 +340,6 @@ export default function ProjectDetail() {
 
   const handleAddNiche = () => {
     setNewHashtagName('');
-    setNewHashtagPlatform('instagram');
     setAddHashtagOpen(true);
   };
 
