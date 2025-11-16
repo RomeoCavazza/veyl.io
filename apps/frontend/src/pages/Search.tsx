@@ -15,11 +15,13 @@ export default function Search() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [isTestingMetaAPI, setIsTestingMetaAPI] = useState(false);
+  const [isTestingTikTokAPI, setIsTestingTikTokAPI] = useState(false);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const { toast } = useToast();
 
   // Charger posts depuis PostgreSQL - cherche dans tous les projets qui matchent la query
-  const loadPostsFromDatabase = async (query: string): Promise<PostHit[]> => {
+  // Filtre par plateforme si spécifiée
+  const loadPostsFromDatabase = async (query: string, platforms?: string[]): Promise<PostHit[]> => {
     if (typeof window === 'undefined') return [];
     const token = localStorage.getItem('token');
     if (!token) {
@@ -43,8 +45,8 @@ export default function Search() {
         console.log(`💾 [DB] Found matching project: ${matchingProject.name}`);
         const dbPosts = await getProjectPosts(matchingProject.id);
         
-        // Convertir ProjectPost[] en PostHit[]
-        return dbPosts.map((post: any) => ({
+        // Convertir ProjectPost[] en PostHit[] et filtrer par plateforme
+        let filteredPosts = dbPosts.map((post: any) => ({
           id: post.id || post.external_id,
           platform: post.platform || 'instagram',
           username: post.author || 'unknown',
@@ -57,6 +59,27 @@ export default function Search() {
           comment_count: post.comment_count || 0,
           score_trend: post.score_trend || 0,
         }));
+        
+        // Filtrer par plateforme si spécifiée
+        if (platforms && platforms.length > 0) {
+          filteredPosts = filteredPosts.filter((post) => {
+            // Mapper les noms de plateformes
+            const platformMap: Record<string, string[]> = {
+              'instagram': ['instagram'],
+              'facebook': ['facebook'],
+              'tiktok': ['tiktok'],
+            };
+            
+            // Vérifier si la plateforme du post correspond à une des plateformes demandées
+            return platforms.some((reqPlatform) => {
+              const mappedPlatforms = platformMap[reqPlatform] || [reqPlatform];
+              return mappedPlatforms.includes(post.platform);
+            });
+          });
+          console.log(`💾 [DB] Filtered by platforms [${platforms.join(', ')}]: ${filteredPosts.length} posts`);
+        }
+        
+        return filteredPosts;
       }
       
       console.log('💾 [DB] No matching project found');
@@ -156,7 +179,7 @@ export default function Search() {
       // 3️⃣ FALLBACK: CHARGER DEPUIS DB SI AUCUN RÉSULTAT API
       if (allPosts.length === 0) {
         console.log('💾 [SEARCH] Step 3: Loading from database (fallback)...');
-        const dbPosts = await loadPostsFromDatabase(query);
+        const dbPosts = await loadPostsFromDatabase(query, activePlatforms);
         
         if (dbPosts.length > 0) {
           console.log(`✅ [SEARCH] DB success: ${dbPosts.length} posts`);
@@ -257,6 +280,56 @@ export default function Search() {
     }
   };
 
+  // Tester TikTok API en live
+  const testTikTokAPI = async () => {
+    if (!searchQuery) {
+      toast({
+        title: 'Enter a search query first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsTestingTikTokAPI(true);
+    try {
+      console.log('[TIKTOK API] Testing:', searchQuery);
+      const response = await fetchTikTokVideos(searchQuery, 10);
+      console.log('[TIKTOK API] Response:', response);
+
+      toast({
+        title: 'TikTok API call completed',
+        description: `Status: ${response.status}, Check Network tab for details.`,
+      });
+
+      if (response.status === 'success' && response.data?.length > 0) {
+        const tiktokPosts: PostHit[] = response.data.map((item: any) => ({
+          id: item.id,
+          platform: 'tiktok',
+          username: item.creator_username || item.creator_display_name || 'unknown',
+          caption: item.title || item.video_description,
+          media_type: 'video',
+          media_url: item.cover_image_url || item.thumbnail_url,
+          permalink: item.share_url || `https://www.tiktok.com/@${item.creator_username || 'user'}/video/${item.id}`,
+          posted_at: item.create_time,
+          like_count: item.like_count || 0,
+          comment_count: item.comment_count || 0,
+          view_count: item.view_count || 0,
+          score_trend: item.like_count ?? 0,
+        }));
+        setPosts(tiktokPosts);
+      }
+    } catch (error: any) {
+      console.error('[TIKTOK API] Error:', error);
+      toast({
+        title: 'TikTok API error',
+        description: 'Check Network tab - should show HTTP call attempt',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTestingTikTokAPI(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -287,31 +360,51 @@ export default function Search() {
             ))}
           </div>
 
-          {/* Test Meta API Button - Only show if Instagram is selected or no platform selected */}
-          {hasSearched && posts.length > 0 && (selectedPlatforms.length === 0 || selectedPlatforms.includes('instagram')) && (
-            <div className="flex gap-3 items-center">
-              <Button
-                onClick={testMetaAPI}
-                disabled={isTestingMetaAPI}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
-                {isTestingMetaAPI ? (
-                  <>
-                    <RefreshCcw className="h-4 w-4 animate-spin" />
-                    Testing...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    Test Live Meta API
-                  </>
-                )}
-              </Button>
-              <span className="text-xs text-muted-foreground">
-                (For App Review demo - check Network tab)
-              </span>
+          {/* Test API Buttons - Show based on selected platforms */}
+          {hasSearched && (
+            <div className="flex gap-2 items-center flex-wrap justify-center">
+              {(selectedPlatforms.length === 0 || selectedPlatforms.includes('instagram')) && (
+                <Button
+                  onClick={testMetaAPI}
+                  disabled={isTestingMetaAPI}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-8 text-xs"
+                >
+                  {isTestingMetaAPI ? (
+                    <>
+                      <RefreshCcw className="h-3 w-3 animate-spin" />
+                      Testing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3 w-3" />
+                      Test Meta API
+                    </>
+                  )}
+                </Button>
+              )}
+              {selectedPlatforms.includes('tiktok') && (
+                <Button
+                  onClick={testTikTokAPI}
+                  disabled={isTestingTikTokAPI}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-8 text-xs"
+                >
+                  {isTestingTikTokAPI ? (
+                    <>
+                      <RefreshCcw className="h-3 w-3 animate-spin" />
+                      Testing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3 w-3" />
+                      Test TikTok API
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           )}
         </div>

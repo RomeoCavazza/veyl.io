@@ -27,6 +27,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { getProjectPosts } from '@/lib/api';
 
 export default function CreatorDetail() {
   const engagementTrendData: Array<{ date: string; engagement: number }> = [];
@@ -40,10 +41,28 @@ export default function CreatorDetail() {
   const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [creator, setCreator] = useState<any>(null);
   const [creatorPosts, setCreatorPosts] = useState<any[]>([]);
+  const [selectedPlatformFilter, setSelectedPlatformFilter] = useState<string | 'all'>('all');
+
+  // Filter posts by platform
+  const filteredPosts = useMemo(() => {
+    let filtered = creatorPosts;
+    
+    if (selectedPlatformFilter !== 'all') {
+      filtered = creatorPosts.filter((post: any) => {
+        const postPlatform = post.platform || creator?.platform || 'instagram';
+        if (selectedPlatformFilter === 'meta') {
+          return postPlatform === 'instagram' || postPlatform === 'facebook';
+        }
+        return postPlatform === selectedPlatformFilter;
+      });
+    }
+    
+    return filtered;
+  }, [creatorPosts, selectedPlatformFilter, creator]);
 
   // Function to sort posts
   const sortedPosts = useMemo(() => {
-    const sorted = [...creatorPosts];
+    const sorted = [...filteredPosts];
     sorted.sort((a: any, b: any) => {
       let aVal: any = a[sortColumn];
       let bVal: any = b[sortColumn];
@@ -75,7 +94,7 @@ export default function CreatorDetail() {
       return 0;
     });
     return sorted;
-  }, [creatorPosts, sortColumn, sortDirection]);
+  }, [filteredPosts, sortColumn, sortDirection]);
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -175,6 +194,35 @@ export default function CreatorDetail() {
     fetchCreator();
   }, [id, username, navigate, toast]);
 
+  // Load creator posts
+  useEffect(() => {
+    const fetchCreatorPosts = async () => {
+      if (!id || !creator?.handle) return;
+
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const allPosts = await getProjectPosts(id);
+        
+        // Filter posts by creator username
+        const creatorPostsFiltered = allPosts.filter((post: any) => {
+          const postAuthor = (post.author || post.username || '').toLowerCase();
+          const creatorHandle = creator.handle.toLowerCase();
+          return postAuthor === creatorHandle;
+        });
+
+        setCreatorPosts(creatorPostsFiltered);
+      } catch (error) {
+        console.error('Error loading creator posts:', error);
+      }
+    };
+
+    if (creator) {
+      fetchCreatorPosts();
+    }
+  }, [id, creator]);
+
   if (!creator) {
     return (
       <div className="min-h-screen bg-background">
@@ -243,7 +291,7 @@ export default function CreatorDetail() {
                         <p className="text-xs text-muted-foreground">Following</p>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-primary">{creatorPosts.length}</p>
+                        <p className="text-2xl font-bold text-primary">{filteredPosts.length}</p>
                         <p className="text-xs text-muted-foreground">Posts</p>
                       </div>
                       <div>
@@ -252,13 +300,13 @@ export default function CreatorDetail() {
                       </div>
                       <div>
                         <p className="text-2xl font-bold text-primary">
-                          {creatorPosts.reduce((sum, p) => sum + (p.like_count || 0), 0).toLocaleString()}
+                          {filteredPosts.reduce((sum, p) => sum + (p.like_count || 0), 0).toLocaleString()}
                         </p>
                         <p className="text-xs text-muted-foreground">Total Likes</p>
                       </div>
                       <div>
                         <p className="text-2xl font-bold text-primary">
-                          {creatorPosts.reduce((sum, p) => sum + (p.comment_count || 0), 0).toLocaleString()}
+                          {filteredPosts.reduce((sum, p) => sum + (p.comment_count || 0), 0).toLocaleString()}
                         </p>
                         <p className="text-xs text-muted-foreground">Total Comments</p>
                       </div>
@@ -280,17 +328,47 @@ export default function CreatorDetail() {
 
         {/* Tabs: Feed / Grid / Analytics */}
         <Tabs defaultValue="feed" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="feed">Feed</TabsTrigger>
-            <TabsTrigger value="grid">Grid</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between mb-4">
+            <TabsList>
+              <TabsTrigger value="feed">Feed</TabsTrigger>
+              <TabsTrigger value="grid">Grid</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            </TabsList>
+            
+            {/* Platform Filter */}
+            <div className="flex gap-1 border rounded-md p-0.5">
+              <Button
+                variant={selectedPlatformFilter === 'all' ? 'default' : 'ghost'}
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setSelectedPlatformFilter('all')}
+              >
+                All
+              </Button>
+              <Button
+                variant={selectedPlatformFilter === 'meta' ? 'default' : 'ghost'}
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setSelectedPlatformFilter('meta')}
+              >
+                Meta
+              </Button>
+              <Button
+                variant={selectedPlatformFilter === 'tiktok' ? 'default' : 'ghost'}
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setSelectedPlatformFilter('tiktok')}
+              >
+                TikTok
+              </Button>
+            </div>
+          </div>
 
           {/* Tab 1: Feed */}
           <TabsContent value="feed" className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {creatorPosts.length > 0 ? (
-                creatorPosts.map((post) => (
+              {sortedPosts.length > 0 ? (
+                sortedPosts.map((post) => (
                   <Card 
                     key={post.id} 
                     className="overflow-hidden cursor-pointer hover:border-primary transition-colors"
@@ -338,7 +416,9 @@ export default function CreatorDetail() {
                 ))
               ) : (
                 <div className="col-span-full text-center py-12 text-muted-foreground">
-                  No posts found
+                  {selectedPlatformFilter !== 'all' 
+                    ? `No ${selectedPlatformFilter === 'meta' ? 'Meta' : 'TikTok'} posts found for this creator.`
+                    : 'No posts found for this creator.'}
                 </div>
               )}
             </div>
@@ -467,7 +547,9 @@ export default function CreatorDetail() {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                            No posts found
+                            {selectedPlatformFilter !== 'all' 
+                              ? `No ${selectedPlatformFilter === 'meta' ? 'Meta' : 'TikTok'} posts found for this creator.`
+                              : 'No posts found for this creator.'}
                           </TableCell>
                         </TableRow>
                       )}
@@ -526,7 +608,7 @@ export default function CreatorDetail() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={creatorPosts.slice(0, 5).map(p => ({
+                    <BarChart data={filteredPosts.slice(0, 5).map(p => ({
                       date: p.posted_at ? new Date(p.posted_at).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }) : 'N/A',
                       engagement: ((p.like_count || 0) + (p.comment_count || 0)) / (creator.followers || 1) * 100,
                     }))}>
@@ -553,7 +635,7 @@ export default function CreatorDetail() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={creatorPosts.slice(0, 7).map(p => ({
+                    <AreaChart data={filteredPosts.slice(0, 7).map(p => ({
                       date: p.posted_at ? new Date(p.posted_at).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }) : 'N/A',
                       likes: p.like_count || 0,
                     }))}>
@@ -587,7 +669,7 @@ export default function CreatorDetail() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={creatorPosts.slice(0, 7).map(p => ({
+                    <AreaChart data={filteredPosts.slice(0, 7).map(p => ({
                       date: p.posted_at ? new Date(p.posted_at).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }) : 'N/A',
                       comments: p.comment_count || 0,
                     }))}>

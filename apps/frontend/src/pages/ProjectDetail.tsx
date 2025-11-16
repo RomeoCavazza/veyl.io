@@ -25,7 +25,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Bell, AtSign, Trash2, ExternalLink, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, RefreshCcw, Code2 } from 'lucide-react';
+import { Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Bell, AtSign, Trash2, ExternalLink, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, RefreshCcw, Code2, Sparkles } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -46,7 +46,7 @@ import {
 } from 'recharts';
 
 // Import getApiBase from api.ts
-import { getApiBase, addProjectCreator, removeProjectCreator, addProjectHashtag, removeProjectHashtag, getProjectPosts } from '@/lib/api';
+import { getApiBase, addProjectCreator, removeProjectCreator, addProjectHashtag, removeProjectHashtag, getProjectPosts, fetchMetaIGPublic, fetchTikTokVideos } from '@/lib/api';
 
 const PLATFORM_OPTIONS = ['instagram', 'facebook', 'tiktok'] as const;
 const formatPlatformLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
@@ -82,6 +82,9 @@ export default function ProjectDetail() {
   const [refreshTrigger, setRefreshTrigger] = useState(Date.now());
   const [fetchingPostId, setFetchingPostId] = useState<string | null>(null);
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
+  const [selectedPlatformFilter, setSelectedPlatformFilter] = useState<string | 'all'>('all');
+  const [isFetchingMeta, setIsFetchingMeta] = useState(false);
+  const [isFetchingTikTok, setIsFetchingTikTok] = useState(false);
 
   const pieData: Array<{ name: string; value: number; color: string }> = [];
   const reachData: Array<{ date: string; organic: number; paid: number }> = [];
@@ -160,6 +163,100 @@ export default function ProjectDetail() {
       console.error('Error loading project posts:', error);
     }
   }, [id]);
+
+  // Fetch Meta posts from API
+  const handleFetchMeta = async () => {
+    if (!project || !id) return;
+    setIsFetchingMeta(true);
+    try {
+      // Récupérer les hashtags du projet pour Meta
+      const projectHashtags = project?.hashtags || hashtagLinks || [];
+      const hashtags = projectHashtags.filter((h: any) => 
+        (h.platform === 'instagram' || h.platform === 'facebook') && h.name
+      );
+      
+      if (hashtags.length === 0) {
+        toast({
+          title: 'No Meta hashtags',
+          description: 'Add Instagram or Facebook hashtags to fetch posts',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Fetch pour chaque hashtag
+      for (const hashtag of hashtags.slice(0, 3)) { // Limiter à 3 hashtags
+        try {
+          await fetchMetaIGPublic(hashtag.name, 10);
+        } catch (error) {
+          console.error(`Error fetching Meta posts for #${hashtag.name}:`, error);
+        }
+      }
+
+      // Recharger les posts du projet
+      await fetchProjectPosts();
+      setRefreshTrigger(Date.now());
+      toast({
+        title: 'Meta posts fetched',
+        description: 'Posts from Meta API have been added to the project',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error fetching Meta posts',
+        description: error.message || 'Failed to fetch posts from Meta API',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsFetchingMeta(false);
+    }
+  };
+
+  // Fetch TikTok posts from API
+  const handleFetchTikTok = async () => {
+    if (!project || !id) return;
+    setIsFetchingTikTok(true);
+    try {
+      // Récupérer les hashtags TikTok du projet
+      const projectHashtags = project?.hashtags || hashtagLinks || [];
+      const hashtags = projectHashtags.filter((h: any) => 
+        h.platform === 'tiktok' && h.name
+      );
+      
+      if (hashtags.length === 0) {
+        toast({
+          title: 'No TikTok hashtags',
+          description: 'Add TikTok hashtags to fetch videos',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Fetch pour chaque hashtag TikTok
+      for (const hashtag of hashtags.slice(0, 3)) { // Limiter à 3 hashtags
+        try {
+          await fetchTikTokVideos(hashtag.name, 10);
+        } catch (error) {
+          console.error(`Error fetching TikTok videos for #${hashtag.name}:`, error);
+        }
+      }
+
+      // Recharger les posts du projet
+      await fetchProjectPosts();
+      setRefreshTrigger(Date.now());
+      toast({
+        title: 'TikTok videos fetched',
+        description: 'Videos from TikTok API have been added to the project',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error fetching TikTok videos',
+        description: error.message || 'Failed to fetch videos from TikTok API',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsFetchingTikTok(false);
+    }
+  };
 
   const fetchProject = useCallback(async () => {
     if (!id) return;
@@ -314,9 +411,23 @@ export default function ProjectDetail() {
     }
   };
 
+  // Filter posts by platform
+  const filteredPosts = useMemo(() => {
+    if (selectedPlatformFilter === 'all') {
+      return posts;
+    }
+    return posts.filter((post: any) => {
+      const postPlatform = post.platform || 'instagram';
+      if (selectedPlatformFilter === 'meta') {
+        return postPlatform === 'instagram' || postPlatform === 'facebook';
+      }
+      return postPlatform === selectedPlatformFilter;
+    });
+  }, [posts, selectedPlatformFilter]);
+
   // Function to sort posts
   const sortedPosts = useMemo(() => {
-    const sorted = [...posts];
+    const sorted = [...filteredPosts];
     sorted.sort((a: any, b: any) => {
       let aVal: any = a[sortColumn];
       let bVal: any = b[sortColumn];
@@ -561,19 +672,90 @@ export default function ProjectDetail() {
               </TabsTrigger>
             </TabsList>
             
-            <Button
-              onClick={() => {
-                fetchProjectPosts();
-                setRefreshTrigger(Date.now());
-                toast({ title: 'Refreshing...', description: 'Updating project data and insights' });
-              }}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              Refresh All
-            </Button>
+            <div className="flex gap-2 items-center">
+              {/* Platform Filter */}
+              <div className="flex gap-1 border rounded-md p-0.5">
+                <Button
+                  variant={selectedPlatformFilter === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setSelectedPlatformFilter('all')}
+                >
+                  All
+                </Button>
+                <Button
+                  variant={selectedPlatformFilter === 'meta' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setSelectedPlatformFilter('meta')}
+                >
+                  Meta
+                </Button>
+                <Button
+                  variant={selectedPlatformFilter === 'tiktok' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setSelectedPlatformFilter('tiktok')}
+                >
+                  TikTok
+                </Button>
+              </div>
+
+              {/* Fetch Buttons */}
+              <Button
+                onClick={handleFetchMeta}
+                disabled={isFetchingMeta}
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8 text-xs"
+              >
+                {isFetchingMeta ? (
+                  <>
+                    <RefreshCcw className="h-3 w-3 animate-spin" />
+                    Fetching...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3 w-3" />
+                    Fetch Meta
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={handleFetchTikTok}
+                disabled={isFetchingTikTok}
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8 text-xs"
+              >
+                {isFetchingTikTok ? (
+                  <>
+                    <RefreshCcw className="h-3 w-3 animate-spin" />
+                    Fetching...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3 w-3" />
+                    Fetch TikTok
+                  </>
+                )}
+              </Button>
+              
+              {/* Refresh All */}
+              <Button
+                onClick={() => {
+                  fetchProjectPosts();
+                  setRefreshTrigger(Date.now());
+                  toast({ title: 'Refreshing...', description: 'Updating project data and insights' });
+                }}
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8 text-xs"
+              >
+                <RefreshCcw className="h-3 w-3" />
+                Refresh All
+              </Button>
+            </div>
           </div>
 
           {/* Tab 1: Watchlist - Feed + Creators + Hashtags/Commentaires/Mentions */}
@@ -581,8 +763,8 @@ export default function ProjectDetail() {
             {/* Section: Feed Posts */}
             <div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {posts.length > 0 ? (
-                  posts.map((post) => {
+                {sortedPosts.length > 0 ? (
+                  sortedPosts.map((post) => {
                     const creator = creators.find(c => c.handle === post.author || c.handle === post.username);
                     const isImage = post.media_url ? /\.(jpg|jpeg|png|gif|webp)$/i.test(post.media_url.split('?')[0]) : false;
                     const embedUrl = post.permalink ? `${post.permalink.replace(/\/$/, '')}/embed` : undefined;
@@ -691,7 +873,9 @@ export default function ProjectDetail() {
                 ) : (
                   <Card className="col-span-full">
                     <CardContent className="p-10 text-center text-muted-foreground">
-                      No posts yet. Add creators or hashtags to start tracking content.
+                      {selectedPlatformFilter !== 'all' 
+                        ? `No ${selectedPlatformFilter === 'meta' ? 'Meta' : 'TikTok'} posts yet. Add ${selectedPlatformFilter === 'meta' ? 'Instagram/Facebook' : 'TikTok'} creators or hashtags to start tracking content.`
+                        : 'No posts yet. Add creators or hashtags to start tracking content.'}
                     </CardContent>
                   </Card>
                 )}
@@ -835,7 +1019,9 @@ export default function ProjectDetail() {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                            No posts yet. Add creators or hashtags first.
+                            {selectedPlatformFilter !== 'all' 
+                              ? `No ${selectedPlatformFilter === 'meta' ? 'Meta' : 'TikTok'} posts yet. Add ${selectedPlatformFilter === 'meta' ? 'Instagram/Facebook' : 'TikTok'} creators or hashtags first.`
+                              : 'No posts yet. Add creators or hashtags first.'}
                           </TableCell>
                         </TableRow>
                       )}
