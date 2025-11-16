@@ -177,96 +177,89 @@ export default function ProjectDetail() {
     }
   }, [id]);
 
-  // Fetch Meta posts from API
-  const handleFetchMeta = async () => {
+  // Fetch posts from API - adaptatif selon la vue
+  const handleFetch = async () => {
     if (!project || !id) return;
-    setIsFetchingMeta(true);
+    
+    const isFetching = isFetchingMeta || isFetchingTikTok;
+    if (isFetching) return; // Éviter les appels multiples
+    
+    // Déterminer quelles plateformes fetcher selon la vue
+    const shouldFetchMeta = selectedPlatformFilter === 'all' || selectedPlatformFilter === 'meta';
+    const shouldFetchTikTok = selectedPlatformFilter === 'all' || selectedPlatformFilter === 'tiktok';
+    
+    if (shouldFetchMeta) setIsFetchingMeta(true);
+    if (shouldFetchTikTok) setIsFetchingTikTok(true);
+    
     try {
-      // Récupérer les hashtags du projet pour Meta
       const projectHashtags = project?.hashtags || hashtagLinks || [];
-      const hashtags = projectHashtags.filter((h: any) => 
-        (h.platform === 'instagram' || h.platform === 'facebook') && h.name
-      );
+      let fetchedCount = 0;
       
-      if (hashtags.length === 0) {
+      // Fetch Meta si nécessaire
+      if (shouldFetchMeta) {
+        const metaHashtags = projectHashtags.filter((h: any) => 
+          (h.platform === 'instagram' || h.platform === 'facebook') && h.name
+        );
+        
+        if (metaHashtags.length > 0) {
+          for (const hashtag of metaHashtags.slice(0, 3)) {
+            try {
+              console.log(`📡 [FETCH] Calling Meta API for #${hashtag.name}...`);
+              await fetchMetaIGPublic(hashtag.name, 10);
+              fetchedCount++;
+            } catch (error) {
+              console.error(`Error fetching Meta posts for #${hashtag.name}:`, error);
+            }
+          }
+        }
+      }
+      
+      // Fetch TikTok si nécessaire
+      if (shouldFetchTikTok) {
+        const tiktokHashtags = projectHashtags.filter((h: any) => 
+          h.platform === 'tiktok' && h.name
+        );
+        
+        if (tiktokHashtags.length > 0) {
+          for (const hashtag of tiktokHashtags.slice(0, 3)) {
+            try {
+              console.log(`📡 [FETCH] Calling TikTok API for #${hashtag.name}...`);
+              await fetchTikTokVideos(hashtag.name, 10);
+              fetchedCount++;
+            } catch (error) {
+              console.error(`Error fetching TikTok videos for #${hashtag.name}:`, error);
+            }
+          }
+        }
+      }
+      
+      if (fetchedCount === 0) {
         toast({
-          title: 'No Meta hashtags',
-          description: 'Add Instagram or Facebook hashtags to fetch posts',
+          title: 'No hashtags found',
+          description: `Add ${shouldFetchMeta && shouldFetchTikTok ? 'Meta or TikTok' : shouldFetchMeta ? 'Meta' : 'TikTok'} hashtags to fetch posts`,
           variant: 'destructive',
         });
         return;
       }
 
-      // Fetch pour chaque hashtag
-      for (const hashtag of hashtags.slice(0, 3)) { // Limiter à 3 hashtags
-        try {
-          await fetchMetaIGPublic(hashtag.name, 10);
-        } catch (error) {
-          console.error(`Error fetching Meta posts for #${hashtag.name}:`, error);
-        }
-      }
-
-      // Recharger les posts du projet
-      await fetchProjectPosts();
+      // Recharger les posts du projet avec le filtre actuel
+      const platformFilter = selectedPlatformFilter === 'all' ? undefined : selectedPlatformFilter;
+      await fetchProjectPosts(platformFilter);
       setRefreshTrigger(Date.now());
+      
+      const platformText = shouldFetchMeta && shouldFetchTikTok ? 'Meta and TikTok' : shouldFetchMeta ? 'Meta' : 'TikTok';
       toast({
-        title: 'Meta posts fetched',
-        description: 'Posts from Meta API have been added to the project',
+        title: 'Posts fetched',
+        description: `Posts from ${platformText} API have been added to the project`,
       });
     } catch (error: any) {
       toast({
-        title: 'Error fetching Meta posts',
-        description: error.message || 'Failed to fetch posts from Meta API',
+        title: 'Error fetching posts',
+        description: error.message || 'Failed to fetch posts from API',
         variant: 'destructive',
       });
     } finally {
       setIsFetchingMeta(false);
-    }
-  };
-
-  // Fetch TikTok posts from API
-  const handleFetchTikTok = async () => {
-    if (!project || !id) return;
-    setIsFetchingTikTok(true);
-    try {
-      // Récupérer les hashtags TikTok du projet
-      const projectHashtags = project?.hashtags || hashtagLinks || [];
-      const hashtags = projectHashtags.filter((h: any) => 
-        h.platform === 'tiktok' && h.name
-      );
-      
-      if (hashtags.length === 0) {
-        toast({
-          title: 'No TikTok hashtags',
-          description: 'Add TikTok hashtags to fetch videos',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Fetch pour chaque hashtag TikTok
-      for (const hashtag of hashtags.slice(0, 3)) { // Limiter à 3 hashtags
-        try {
-          await fetchTikTokVideos(hashtag.name, 10);
-        } catch (error) {
-          console.error(`Error fetching TikTok videos for #${hashtag.name}:`, error);
-        }
-      }
-
-      // Recharger les posts du projet
-      await fetchProjectPosts();
-      setRefreshTrigger(Date.now());
-      toast({
-        title: 'TikTok videos fetched',
-        description: 'Videos from TikTok API have been added to the project',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error fetching TikTok videos',
-        description: error.message || 'Failed to fetch videos from TikTok API',
-        variant: 'destructive',
-      });
-    } finally {
       setIsFetchingTikTok(false);
     }
   };
@@ -387,12 +380,16 @@ export default function ProjectDetail() {
     }
     setIsSavingHashtag(true);
     try {
+      // Ne pas spécifier de plateforme - le backend déterminera automatiquement
+      // ou utiliser 'instagram' par défaut (le backend peut gérer plusieurs plateformes)
       const updatedProject = await addProjectHashtag(id, {
         hashtag,
-        platform: newHashtagPlatform,
+        platform: 'instagram', // Valeur par défaut, le filtre frontend gérera l'affichage
       });
       applyProjectData(updatedProject);
-      await fetchProjectPosts();
+      // Recharger avec le filtre actuel
+      const platformFilter = selectedPlatformFilter === 'all' ? undefined : selectedPlatformFilter;
+      await fetchProjectPosts(platformFilter);
       await fetchProject();
       setAddHashtagOpen(false);
       setNewHashtagName('');
@@ -716,15 +713,15 @@ export default function ProjectDetail() {
                 </Button>
               </div>
 
-              {/* Fetch Buttons */}
+              {/* Fetch Button - adaptatif selon la vue */}
               <Button
-                onClick={handleFetchMeta}
-                disabled={isFetchingMeta}
+                onClick={handleFetch}
+                disabled={isFetchingMeta || isFetchingTikTok}
                 variant="outline"
                 size="sm"
                 className="gap-1.5 h-8 text-xs"
               >
-                {isFetchingMeta ? (
+                {(isFetchingMeta || isFetchingTikTok) ? (
                   <>
                     <RefreshCcw className="h-3 w-3 animate-spin" />
                     Fetching...
@@ -732,43 +729,9 @@ export default function ProjectDetail() {
                 ) : (
                   <>
                     <Sparkles className="h-3 w-3" />
-                    Fetch Meta
+                    Fetch {selectedPlatformFilter === 'all' ? 'All' : selectedPlatformFilter === 'meta' ? 'Meta' : 'TikTok'}
                   </>
                 )}
-              </Button>
-              <Button
-                onClick={handleFetchTikTok}
-                disabled={isFetchingTikTok}
-                variant="outline"
-                size="sm"
-                className="gap-1.5 h-8 text-xs"
-              >
-                {isFetchingTikTok ? (
-                  <>
-                    <RefreshCcw className="h-3 w-3 animate-spin" />
-                    Fetching...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-3 w-3" />
-                    Fetch TikTok
-                  </>
-                )}
-              </Button>
-              
-              {/* Refresh All */}
-              <Button
-                onClick={() => {
-                  fetchProjectPosts();
-                  setRefreshTrigger(Date.now());
-                  toast({ title: 'Refreshing...', description: 'Updating project data and insights' });
-                }}
-                variant="outline"
-                size="sm"
-                className="gap-1.5 h-8 text-xs"
-              >
-                <RefreshCcw className="h-3 w-3" />
-                Refresh All
               </Button>
             </div>
           </div>
@@ -1143,22 +1106,7 @@ export default function ProjectDetail() {
                     onChange={(e) => setNewHashtagName(e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <span className="text-xs font-medium text-muted-foreground">Platform</span>
-                  <div className="flex gap-2">
-                    {PLATFORM_OPTIONS.map((option) => (
-                      <Button
-                        key={option}
-                        type="button"
-                        variant={newHashtagPlatform === option ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setNewHashtagPlatform(option)}
-                      >
-                        {formatPlatformLabel(option)}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+                {/* Supprimé: choix de plateforme - le filtre frontend gère l'affichage */}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setAddHashtagOpen(false)}>Cancel</Button>
