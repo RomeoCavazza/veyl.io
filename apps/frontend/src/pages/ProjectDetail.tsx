@@ -401,11 +401,27 @@ export default function ProjectDetail() {
     setIsSavingHashtag(true);
     try {
       // Utiliser 'instagram' par défaut - le backend cherche sur TOUTES les plateformes de toute façon
-      const updatedProject = await addProjectHashtag(id, {
-        hashtag,
-        platform: 'instagram', // Le backend auto-link sur toutes les plateformes
-      });
-      applyProjectData(updatedProject);
+      let updatedProject;
+      let hashtagAlreadyExists = false;
+      
+      try {
+        updatedProject = await addProjectHashtag(id, {
+          hashtag,
+          platform: 'instagram', // Le backend auto-link sur toutes les plateformes
+        });
+        applyProjectData(updatedProject);
+      } catch (error: any) {
+        // Si le hashtag existe déjà (409), on continue quand même pour faire le fetch + re-link
+        if (error.message?.includes('409') || error.message?.includes('already linked')) {
+          hashtagAlreadyExists = true;
+          console.log(`ℹ️ [HASHTAG] Hashtag #${hashtag} already exists, will fetch and re-link anyway`);
+          // Recharger le projet pour avoir les hashtags à jour
+          await fetchProject();
+          updatedProject = project;
+        } else {
+          throw error; // Re-lancer les autres erreurs
+        }
+      }
       
       // 🔥 AUTO-FETCH: Appeler TOUTES les APIs (Meta + TikTok) après l'ajout du hashtag
       // Le backend cherche déjà sur toutes les plateformes, donc on fetch aussi toutes les APIs
@@ -447,8 +463,9 @@ export default function ProjectDetail() {
       await Promise.allSettled(fetchPromises);
       
       // 🔗 RE-LINK: Après le fetch, re-linker les posts au hashtag (car les nouveaux posts ne sont pas auto-linkés)
-      // Trouver le hashtag qu'on vient d'ajouter pour le re-linker
-      const updatedHashtagLinks = updatedProject?.hashtags || [];
+      // Trouver le hashtag (qu'on vient d'ajouter ou qui existait déjà) pour le re-linker
+      await fetchProject(); // Recharger pour avoir les hashtags à jour
+      const updatedHashtagLinks = project?.hashtags || hashtagLinks || [];
       const addedHashtagLink = updatedHashtagLinks.find((h: any) => 
         h.name?.toLowerCase() === hashtag.toLowerCase() || 
         h.name?.toLowerCase() === `#${hashtag.toLowerCase()}`
