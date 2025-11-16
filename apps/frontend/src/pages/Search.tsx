@@ -433,24 +433,32 @@ export default function Search() {
                         />
                       </div>
                     )}
-                    {post.platform === 'tiktok' && post.media_url && (
-                      <div className="aspect-square bg-muted relative overflow-hidden">
-                        <img
-                          src={post.media_url}
-                          alt={post.caption || 'TikTok video'}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x400?text=TikTok';
-                          }}
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                          <Badge variant="secondary" className="absolute top-2 right-2">
-                            TikTok
-                          </Badge>
-                        </div>
+                    {post.platform === 'tiktok' && (
+                      <div className="aspect-square bg-gradient-to-br from-pink-500 via-red-500 to-blue-500 relative overflow-hidden cursor-pointer group">
+                        {post.media_url ? (
+                          <img
+                            src={post.media_url}
+                            alt={post.caption || 'TikTok video'}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-white">
+                            <svg className="w-16 h-16 mb-2" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                            </svg>
+                            <span className="text-sm font-medium">TikTok Video</span>
+                          </div>
+                        )}
+                        <Badge variant="secondary" className="absolute top-2 right-2 bg-black/50 text-white">
+                          <Sparkles className="w-3 h-3 mr-1" />
+                          TikTok
+                        </Badge>
                       </div>
                     )}
-                    {!post.permalink && !post.media_url && (
+                    {!post.platform && !post.permalink && !post.media_url && (
                       <div className="aspect-square bg-muted flex items-center justify-center">
                         <span className="text-muted-foreground text-sm">No media</span>
                       </div>
