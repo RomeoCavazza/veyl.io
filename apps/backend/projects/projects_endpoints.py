@@ -485,11 +485,24 @@ def list_project_posts(
             except (TypeError, ValueError):
                 pass
 
+        # Pour TikTok, extraire cover_image_url ou thumbnail_url depuis api_payload si media_url manquant
+        media_url = post.media_url
+        if platform_name == 'tiktok' and not media_url and post.api_payload:
+            try:
+                payload_data = json.loads(post.api_payload)
+                media_url = (
+                    payload_data.get('cover_image_url')
+                    or payload_data.get('thumbnail_url')
+                    or payload_data.get('media_url')
+                )
+            except (TypeError, ValueError):
+                pass
+        
         results.append(ProjectPostResponse(
             id=post.id,
             author=post.author,
             caption=post.caption,
-            media_url=post.media_url,
+            media_url=media_url,
             permalink=permalink,
             posted_at=post.posted_at,
             platform=post.platform.name if post.platform else None,

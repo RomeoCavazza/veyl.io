@@ -402,43 +402,51 @@ export default function ProjectDetail() {
     }
     setIsSavingHashtag(true);
     try {
-      const platform = newHashtagPlatform || 'instagram'; // Utiliser la plateforme sélectionnée
+      // Utiliser 'instagram' par défaut - le backend cherche sur TOUTES les plateformes de toute façon
       const updatedProject = await addProjectHashtag(id, {
         hashtag,
-        platform: platform, // Utiliser la plateforme sélectionnée (instagram, facebook, tiktok)
+        platform: 'instagram', // Le backend auto-link sur toutes les plateformes
       });
       applyProjectData(updatedProject);
       
-      // 🔥 AUTO-FETCH: Appeler l'API après l'ajout du hashtag (comme Meta)
-      if (platform === 'tiktok') {
-        try {
-          console.log(`📡 [AUTO-FETCH] Calling TikTok API for #${hashtag} after adding hashtag...`);
-          const response = await fetchTikTokVideos(hashtag, 10);
-          const source = response.meta?.source || 'unknown';
-          if (source === 'tiktok_video_list_api') {
-            console.log(`✅ [AUTO-FETCH] TikTok API SUCCESS: ${response.data?.length || 0} videos from API`);
-          } else {
-            console.log(`⚠️ [AUTO-FETCH] TikTok returned DB fallback: ${response.data?.length || 0} videos (source: ${source})`);
-          }
-        } catch (error: any) {
-          console.error(`❌ [AUTO-FETCH] TikTok API FAILED for #${hashtag}:`, error.message);
-          // Continue même si l'API échoue, les posts de la DB seront affichés
-        }
-      } else if (platform === 'instagram' || platform === 'facebook') {
-        try {
-          console.log(`📡 [AUTO-FETCH] Calling Meta API for #${hashtag} after adding hashtag...`);
-          const response = await fetchMetaIGPublic(hashtag, 10);
-          const source = response.meta?.source || 'unknown';
-          if (source === 'instagram_public_content_api') {
-            console.log(`✅ [AUTO-FETCH] Meta API SUCCESS: ${response.data?.length || 0} posts from API`);
-          } else {
-            console.log(`⚠️ [AUTO-FETCH] Meta returned DB fallback: ${response.data?.length || 0} posts (source: ${source})`);
-          }
-        } catch (error: any) {
-          console.error(`❌ [AUTO-FETCH] Meta API FAILED for #${hashtag}:`, error.message);
-          // Continue même si l'API échoue, les posts de la DB seront affichés
-        }
-      }
+      // 🔥 AUTO-FETCH: Appeler TOUTES les APIs (Meta + TikTok) après l'ajout du hashtag
+      // Le backend cherche déjà sur toutes les plateformes, donc on fetch aussi toutes les APIs
+      const fetchPromises = [];
+      
+      // Fetch Meta API
+      fetchPromises.push(
+        fetchMetaIGPublic(hashtag, 10)
+          .then((response) => {
+            const source = response.meta?.source || 'unknown';
+            if (source === 'instagram_public_content_api') {
+              console.log(`✅ [AUTO-FETCH] Meta API SUCCESS: ${response.data?.length || 0} posts from API`);
+            } else {
+              console.log(`⚠️ [AUTO-FETCH] Meta returned DB fallback: ${response.data?.length || 0} posts (source: ${source})`);
+            }
+          })
+          .catch((error: any) => {
+            console.error(`❌ [AUTO-FETCH] Meta API FAILED for #${hashtag}:`, error.message);
+          })
+      );
+      
+      // Fetch TikTok API
+      fetchPromises.push(
+        fetchTikTokVideos(hashtag, 10)
+          .then((response) => {
+            const source = response.meta?.source || 'unknown';
+            if (source === 'tiktok_video_list_api') {
+              console.log(`✅ [AUTO-FETCH] TikTok API SUCCESS: ${response.data?.length || 0} videos from API`);
+            } else {
+              console.log(`⚠️ [AUTO-FETCH] TikTok returned DB fallback: ${response.data?.length || 0} videos (source: ${source})`);
+            }
+          })
+          .catch((error: any) => {
+            console.error(`❌ [AUTO-FETCH] TikTok API FAILED for #${hashtag}:`, error.message);
+          })
+      );
+      
+      // Attendre que tous les fetches soient terminés (en parallèle)
+      await Promise.allSettled(fetchPromises);
       
       // Recharger avec le filtre actuel
       const platformFilter = selectedPlatformFilter === 'all' ? undefined : selectedPlatformFilter;
@@ -448,7 +456,7 @@ export default function ProjectDetail() {
       setNewHashtagName('');
       toast({ 
         title: 'Hashtag added', 
-        description: `#${hashtag} linked to the project. ${platform === 'tiktok' ? 'Fetching TikTok posts...' : 'Fetching posts...'}` 
+        description: `#${hashtag} linked to the project. Fetching posts from all platforms...` 
       });
     } catch (error: any) {
       console.error('Error adding hashtag:', error);
@@ -812,15 +820,18 @@ export default function ProjectDetail() {
                       >
                         <div className="aspect-square relative overflow-hidden bg-muted">
                           {post.platform === 'tiktok' ? (
-                            // TikTok: Afficher thumbnail ou placeholder avec gradient
+                            // TikTok: Afficher thumbnail ou placeholder avec gradient (comme Search)
                             post.media_url ? (
                               <img
                                 src={post.media_url}
-                                alt={post.caption || post.author}
-                                className="object-cover w-full h-full"
+                                alt={post.caption || post.author || 'TikTok video'}
+                                className="w-full h-full object-cover"
                                 onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                  // Si l'image échoue, afficher le placeholder
+                                  const img = e.target as HTMLImageElement;
+                                  img.style.display = 'none';
+                                  const placeholder = img.parentElement?.querySelector('.tiktok-placeholder') as HTMLElement;
+                                  if (placeholder) placeholder.style.display = 'flex';
                                 }}
                               />
                             ) : null
@@ -838,9 +849,9 @@ export default function ProjectDetail() {
                               allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
                             />
                           ) : null}
-                          {/* Placeholder TikTok si pas de media_url */}
-                          {post.platform === 'tiktok' && !post.media_url && (
-                            <div className="w-full h-full bg-gradient-to-br from-pink-500 via-red-500 to-blue-500 flex flex-col items-center justify-center text-white">
+                          {/* Placeholder TikTok si pas de media_url ou si image échoue (comme Search) */}
+                          {post.platform === 'tiktok' && (
+                            <div className={`tiktok-placeholder w-full h-full bg-gradient-to-br from-pink-500 via-red-500 to-blue-500 flex flex-col items-center justify-center text-white ${post.media_url ? 'hidden' : ''}`}>
                               <svg className="w-16 h-16 mb-2" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
                               </svg>
@@ -1160,22 +1171,9 @@ export default function ProjectDetail() {
                     value={newHashtagName}
                     onChange={(e) => setNewHashtagName(e.target.value)}
                   />
-                </div>
-                <div className="space-y-2">
-                  <span className="text-xs font-medium text-muted-foreground">Platform</span>
-                  <div className="flex gap-2">
-                    {PLATFORM_OPTIONS.map((option) => (
-                      <Button
-                        key={option}
-                        type="button"
-                        variant={newHashtagPlatform === option ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setNewHashtagPlatform(option)}
-                      >
-                        {formatPlatformLabel(option)}
-                      </Button>
-                    ))}
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Posts will be fetched from all platforms (Meta & TikTok). Filter by platform in the view.
+                  </p>
                 </div>
               </div>
               <DialogFooter>
