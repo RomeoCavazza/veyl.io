@@ -268,9 +268,9 @@ def _attach_hashtag(
     
     # 🔥 AUTO-LINK: Chercher les posts qui contiennent ce hashtag sur TOUTES les plateformes
     # (pas seulement celle spécifiée, car un hashtag peut exister sur plusieurs plateformes)
-    logger.info(f"🔍 Searching posts with #{normalized_name} in caption (all platforms)...")
+    logger.info(f"🔍 Searching posts with #{normalized_name} (all platforms, caption + hashtags array)...")
     
-    # Chercher les posts qui contiennent ce hashtag dans leur caption, toutes plateformes
+    # Chercher les posts qui contiennent ce hashtag dans leur caption OU dans la colonne hashtags (ArrayType)
     # Recherche flexible : #fashion, fashion, #Fashion, etc.
     search_patterns = [
         f'%#{normalized_name}%',  # #fashion
@@ -279,15 +279,44 @@ def _attach_hashtag(
         f'%{normalized_name}%',  # fashion (sans #)
     ]
     
+    # Recherche dans caption
+    caption_filter = or_(*[Post.caption.ilike(pattern) for pattern in search_patterns])
+    
+    # Recherche dans la colonne hashtags (ArrayType) si elle existe
+    # PostgreSQL: hashtags @> ARRAY['fashion'] ou hashtags @> ARRAY['#fashion']
+    hashtag_variants = [
+        normalized_name,
+        normalized_name.lower(),
+        normalized_name.upper(),
+        f'#{normalized_name}',
+        f'#{normalized_name.lower()}',
+        f'#{normalized_name.upper()}',
+    ]
+    
+    # Construire le filtre pour la colonne hashtags (ArrayType = Text en réalité)
+    # Si hashtags est stocké comme JSON array ou texte, chercher dedans aussi
+    hashtags_filters = []
+    for variant in hashtag_variants:
+        # Chercher dans la colonne hashtags comme texte (si c'est du JSON array ou texte)
+        hashtags_filters.append(Post.hashtags.ilike(f'%{variant}%'))
+    
+    hashtags_filter = or_(*hashtags_filters) if hashtags_filters else None
+    
+    # Combiner les deux recherches (caption + hashtags column)
+    if hashtags_filter:
+        combined_filter = or_(caption_filter, hashtags_filter)
+    else:
+        combined_filter = caption_filter
+    
     posts_with_hashtag = (
         db.query(Post)
-        .filter(or_(*[Post.caption.ilike(pattern) for pattern in search_patterns]))
+        .filter(combined_filter)
         .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
         .limit(100)  # Augmenter la limite pour trouver plus de posts
         .all()
     )
     
-    logger.info(f"🔍 Found {len(posts_with_hashtag)} posts with #{normalized_name} in caption")
+    logger.info(f"🔍 Found {len(posts_with_hashtag)} posts with #{normalized_name} (caption or hashtags array)")
     
     linked_count = 0
     platform_counts = {}
@@ -776,6 +805,118 @@ def add_project_hashtag(
         db.rollback()
         logger.exception("Erreur lors de l'ajout d'un hashtag au projet %s", project_id)
         raise HTTPException(status_code=500, detail=f"Ajout du hashtag impossible: {exc}") from exc
+
+
+@projects_router.post("/{project_id}/hashtags/{link_id}/link-posts", response_model=dict)
+def link_posts_to_project_hashtag(
+    project_id: str,
+    link_id: int,
+    limit: int = Query(50, ge=1, le=200, description="Max posts to link"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    🔗 Force le re-linking des posts au hashtag du projet.
+    Utile si l'auto-link n'a pas fonctionné ou pour re-lier après ajout de posts.
+    """
+    project = _get_project_or_404(db, current_user, project_id)
+    
+    # Trouver le ProjectHashtag
+    project_hashtag = (
+        db.query(ProjectHashtag)
+        .filter(
+            ProjectHashtag.project_id == project.id,
+            ProjectHashtag.id == link_id
+        )
+        .first()
+    )
+    if not project_hashtag:
+        raise HTTPException(status_code=404, detail="Hashtag link not found")
+    
+    hashtag = db.query(Hashtag).filter(Hashtag.id == project_hashtag.hashtag_id).first()
+    if not hashtag:
+        raise HTTPException(status_code=404, detail="Hashtag not found")
+    
+    normalized_name = hashtag.name
+    
+    # Rechercher les posts (même logique que _attach_hashtag)
+    search_patterns = [
+        f'%#{normalized_name}%',
+        f'%#{normalized_name.lower()}%',
+        f'%#{normalized_name.upper()}%',
+        f'%{normalized_name}%',
+    ]
+    
+    caption_filter = or_(*[Post.caption.ilike(pattern) for pattern in search_patterns])
+    
+    hashtag_variants = [
+        normalized_name,
+        normalized_name.lower(),
+        normalized_name.upper(),
+        f'#{normalized_name}',
+        f'#{normalized_name.lower()}',
+        f'#{normalized_name.upper()}',
+    ]
+    
+    hashtags_filters = []
+    for variant in hashtag_variants:
+        # Chercher dans la colonne hashtags comme texte
+        hashtags_filters.append(Post.hashtags.ilike(f'%{variant}%'))
+    
+    hashtags_filter = or_(*hashtags_filters) if hashtags_filters else None
+    
+    if hashtags_filter:
+        combined_filter = or_(caption_filter, hashtags_filter)
+    else:
+        combined_filter = caption_filter
+    
+    posts_with_hashtag = (
+        db.query(Post)
+        .filter(combined_filter)
+        .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
+        .limit(limit)
+        .all()
+    )
+    
+    linked_count = 0
+    already_linked = 0
+    platform_counts = {}
+    
+    for post in posts_with_hashtag:
+        existing_link = (
+            db.query(PostHashtag)
+            .filter(
+                PostHashtag.post_id == post.id,
+                PostHashtag.hashtag_id == hashtag.id
+            )
+            .first()
+        )
+        
+        if not existing_link:
+            post_hashtag_link = PostHashtag(
+                post_id=post.id,
+                hashtag_id=hashtag.id
+            )
+            db.add(post_hashtag_link)
+            linked_count += 1
+            
+            platform_name = post.platform.name if post.platform else 'unknown'
+            platform_counts[platform_name] = platform_counts.get(platform_name, 0) + 1
+        else:
+            already_linked += 1
+    
+    db.commit()
+    
+    platform_summary = ", ".join([f"{count} {platform}" for platform, count in platform_counts.items()]) if platform_counts else "none"
+    
+    return {
+        "status": "success",
+        "hashtag": normalized_name,
+        "total_posts_found": len(posts_with_hashtag),
+        "newly_linked": linked_count,
+        "already_linked": already_linked,
+        "platforms": platform_summary,
+    }
 
 
 @projects_router.delete("/{project_id}/hashtags/{link_id}", status_code=status.HTTP_204_NO_CONTENT)
