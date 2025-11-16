@@ -88,10 +88,14 @@ def _collect_project_posts(
         platform = db.query(Platform).filter(Platform.name == platform_filter).first()
         if platform:
             platform_ids = [platform.id]
+            logger.info(f"🔍 [COLLECT] Filtering by platform: {platform_filter} (platform_id: {platform.id})")
         elif platform_filter == 'meta':
             # Meta = Instagram + Facebook
             meta_platforms = db.query(Platform).filter(Platform.name.in_(['instagram', 'facebook'])).all()
             platform_ids = [p.id for p in meta_platforms]
+            logger.info(f"🔍 [COLLECT] Filtering by meta platforms: {[p.name for p in meta_platforms]}")
+        else:
+            logger.warning(f"⚠️ [COLLECT] Platform '{platform_filter}' not found in database")
 
     creator_links = (
         db.query(ProjectCreator)
@@ -118,6 +122,7 @@ def _collect_project_posts(
         .all()
     )
     hashtag_ids = [link.hashtag_id for link in hashtag_links]
+    logger.info(f"🔍 [COLLECT] Found {len(hashtag_links)} hashtag links, {len(hashtag_ids)} hashtag_ids")
     if hashtag_ids:
         hashtag_query = (
             db.query(Post)
@@ -126,11 +131,15 @@ def _collect_project_posts(
         )
         if platform_ids:
             hashtag_query = hashtag_query.filter(Post.platform_id.in_(platform_ids))
+            logger.info(f"🔍 [COLLECT] Filtering posts by platform_ids: {platform_ids}")
         hashtag_query = hashtag_query.order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
         if limit:
             hashtag_query = hashtag_query.limit(limit)
-        for post in hashtag_query.all():
+        posts_from_hashtags = hashtag_query.all()
+        logger.info(f"🔍 [COLLECT] Found {len(posts_from_hashtags)} posts from hashtags (platform_filter: {platform_filter})")
+        for post in posts_from_hashtags:
             post_map[post.id] = post
+            logger.debug(f"  - Post {post.id}: platform={post.platform.name if post.platform else 'None'}, caption={post.caption[:50] if post.caption else 'None'}")
 
     posts = list(post_map.values())
 
@@ -901,11 +910,15 @@ def link_posts_to_project_hashtag(
         .all()
     )
     
+    logger.info(f"🔗 [LINK-POSTS] Found {len(posts_with_hashtag)} posts matching #{normalized_name}")
+    
     linked_count = 0
     already_linked = 0
     platform_counts = {}
     
     for post in posts_with_hashtag:
+        platform_name = post.platform.name if post.platform else 'unknown'
+        logger.debug(f"  - Post {post.id}: platform={platform_name}, caption={post.caption[:50] if post.caption else 'None'}")
         existing_link = (
             db.query(PostHashtag)
             .filter(
