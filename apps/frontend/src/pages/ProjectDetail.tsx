@@ -233,17 +233,25 @@ export default function ProjectDetail() {
               console.log(`📡 [FETCH] Calling TikTok API for #${hashtag.name}...`);
               const response = await fetchTikTokVideos(hashtag.name, 10);
               const source = response.meta?.source || 'unknown';
+              const videoCount = response.data?.length || 0;
+              
               if (source === 'tiktok_video_list_api') {
-                console.log(`✅ [FETCH] TikTok API SUCCESS for #${hashtag.name} (${response.data?.length || 0} videos from API)`);
+                console.log(`✅ [FETCH] TikTok API SUCCESS for #${hashtag.name} (${videoCount} videos from API)`);
                 fetchedCount++;
+              } else if (source === 'database_fallback' && videoCount > 0) {
+                console.log(`⚠️ [FETCH] TikTok returned DB fallback for #${hashtag.name} (${videoCount} videos from DB)`);
+                fetchedCount++; // Compter aussi les résultats DB fallback
               } else {
-                console.log(`⚠️ [FETCH] TikTok returned DB fallback for #${hashtag.name} (source: ${source})`);
+                console.log(`⚠️ [FETCH] TikTok returned 0 results for #${hashtag.name} (source: ${source})`);
               }
             } catch (error: any) {
               console.error(`❌ [FETCH] TikTok API FAILED for #${hashtag.name}:`, error.message);
               // Continue avec les autres hashtags
             }
           }
+        } else {
+          // Pas de hashtags TikTok trouvés
+          console.log(`⚠️ [FETCH] No TikTok hashtags found in project`);
         }
       }
       
@@ -394,20 +402,54 @@ export default function ProjectDetail() {
     }
     setIsSavingHashtag(true);
     try {
-      // Ne pas spécifier de plateforme - le backend déterminera automatiquement
-      // ou utiliser 'instagram' par défaut (le backend peut gérer plusieurs plateformes)
+      const platform = newHashtagPlatform || 'instagram'; // Utiliser la plateforme sélectionnée
       const updatedProject = await addProjectHashtag(id, {
         hashtag,
-        platform: 'instagram', // Valeur par défaut, le filtre frontend gérera l'affichage
+        platform: platform, // Utiliser la plateforme sélectionnée (instagram, facebook, tiktok)
       });
       applyProjectData(updatedProject);
+      
+      // 🔥 AUTO-FETCH: Appeler l'API après l'ajout du hashtag (comme Meta)
+      if (platform === 'tiktok') {
+        try {
+          console.log(`📡 [AUTO-FETCH] Calling TikTok API for #${hashtag} after adding hashtag...`);
+          const response = await fetchTikTokVideos(hashtag, 10);
+          const source = response.meta?.source || 'unknown';
+          if (source === 'tiktok_video_list_api') {
+            console.log(`✅ [AUTO-FETCH] TikTok API SUCCESS: ${response.data?.length || 0} videos from API`);
+          } else {
+            console.log(`⚠️ [AUTO-FETCH] TikTok returned DB fallback: ${response.data?.length || 0} videos (source: ${source})`);
+          }
+        } catch (error: any) {
+          console.error(`❌ [AUTO-FETCH] TikTok API FAILED for #${hashtag}:`, error.message);
+          // Continue même si l'API échoue, les posts de la DB seront affichés
+        }
+      } else if (platform === 'instagram' || platform === 'facebook') {
+        try {
+          console.log(`📡 [AUTO-FETCH] Calling Meta API for #${hashtag} after adding hashtag...`);
+          const response = await fetchMetaIGPublic(hashtag, 10);
+          const source = response.meta?.source || 'unknown';
+          if (source === 'instagram_public_content_api') {
+            console.log(`✅ [AUTO-FETCH] Meta API SUCCESS: ${response.data?.length || 0} posts from API`);
+          } else {
+            console.log(`⚠️ [AUTO-FETCH] Meta returned DB fallback: ${response.data?.length || 0} posts (source: ${source})`);
+          }
+        } catch (error: any) {
+          console.error(`❌ [AUTO-FETCH] Meta API FAILED for #${hashtag}:`, error.message);
+          // Continue même si l'API échoue, les posts de la DB seront affichés
+        }
+      }
+      
       // Recharger avec le filtre actuel
       const platformFilter = selectedPlatformFilter === 'all' ? undefined : selectedPlatformFilter;
       await fetchProjectPosts(platformFilter);
       await fetchProject();
       setAddHashtagOpen(false);
       setNewHashtagName('');
-      toast({ title: 'Hashtag added', description: `#${hashtag} linked to the project.` });
+      toast({ 
+        title: 'Hashtag added', 
+        description: `#${hashtag} linked to the project. ${platform === 'tiktok' ? 'Fetching TikTok posts...' : 'Fetching posts...'}` 
+      });
     } catch (error: any) {
       console.error('Error adding hashtag:', error);
     toast({
@@ -1119,7 +1161,22 @@ export default function ProjectDetail() {
                     onChange={(e) => setNewHashtagName(e.target.value)}
                   />
                 </div>
-                {/* Supprimé: choix de plateforme - le filtre frontend gère l'affichage */}
+                <div className="space-y-2">
+                  <span className="text-xs font-medium text-muted-foreground">Platform</span>
+                  <div className="flex gap-2">
+                    {PLATFORM_OPTIONS.map((option) => (
+                      <Button
+                        key={option}
+                        type="button"
+                        variant={newHashtagPlatform === option ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setNewHashtagPlatform(option)}
+                      >
+                        {formatPlatformLabel(option)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setAddHashtagOpen(false)}>Cancel</Button>
