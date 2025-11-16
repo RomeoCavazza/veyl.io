@@ -194,14 +194,14 @@ export default function ProjectDetail() {
       const projectHashtags = project?.hashtags || hashtagLinks || [];
       let fetchedCount = 0;
       
-      // Fetch Meta si nécessaire
+      // Fetch Meta si nécessaire - NE PAS FILTRER PAR PLATFORM (comme Search)
+      // Le hashtag peut être créé avec n'importe quelle platform mais on veut fetcher Meta
       if (shouldFetchMeta) {
-        const metaHashtags = projectHashtags.filter((h: any) => 
-          (h.platform === 'instagram' || h.platform === 'facebook') && h.name
-        );
+        // Prendre TOUS les hashtags (pas de filtre par platform), comme dans Search
+        const allHashtags = projectHashtags.filter((h: any) => h.name);
         
-        if (metaHashtags.length > 0) {
-          for (const hashtag of metaHashtags.slice(0, 3)) {
+        if (allHashtags.length > 0) {
+          for (const hashtag of allHashtags.slice(0, 3)) {
             try {
               console.log(`📡 [FETCH] Calling Meta API for #${hashtag.name}...`);
               const response = await fetchMetaIGPublic(hashtag.name, 10);
@@ -220,14 +220,14 @@ export default function ProjectDetail() {
         }
       }
       
-      // Fetch TikTok si nécessaire
+      // Fetch TikTok si nécessaire - NE PAS FILTRER PAR PLATFORM (comme Search)
+      // Le hashtag peut être créé avec platform='instagram' mais on veut quand même fetcher TikTok
       if (shouldFetchTikTok) {
-        const tiktokHashtags = projectHashtags.filter((h: any) => 
-          h.platform === 'tiktok' && h.name
-        );
+        // Prendre TOUS les hashtags (pas de filtre par platform), comme dans Search
+        const allHashtags = projectHashtags.filter((h: any) => h.name);
         
-        if (tiktokHashtags.length > 0) {
-          for (const hashtag of tiktokHashtags.slice(0, 3)) {
+        if (allHashtags.length > 0) {
+          for (const hashtag of allHashtags.slice(0, 3)) {
             try {
               console.log(`📡 [FETCH] Calling TikTok API for #${hashtag.name}...`);
               const response = await fetchTikTokVideos(hashtag.name, 10);
@@ -249,8 +249,8 @@ export default function ProjectDetail() {
             }
           }
         } else {
-          // Pas de hashtags TikTok trouvés
-          console.log(`⚠️ [FETCH] No TikTok hashtags found in project`);
+          // Pas de hashtags trouvés
+          console.log(`⚠️ [FETCH] No hashtags found in project`);
         }
       }
       
@@ -471,14 +471,16 @@ export default function ProjectDetail() {
         h.name?.toLowerCase() === `#${hashtag.toLowerCase()}`
       );
       
-      if (addedHashtagLink?.id) {
+      // Utiliser link_id (ID du ProjectHashtag) et non id (ID du Hashtag)
+      const linkId = addedHashtagLink?.link_id || addedHashtagLink?.id;
+      if (linkId) {
         try {
-          console.log(`🔗 [RE-LINK] Re-linking posts to hashtag #${hashtag} (link_id: ${addedHashtagLink.id})...`);
+          console.log(`🔗 [RE-LINK] Re-linking posts to hashtag #${hashtag} (link_id: ${linkId})...`);
           const token = localStorage.getItem('token');
           const apiBase = getApiBase();
           const url = apiBase 
-            ? `${apiBase}/api/v1/projects/${id}/hashtags/${addedHashtagLink.id}/link-posts?limit=100`
-            : `/api/v1/projects/${id}/hashtags/${addedHashtagLink.id}/link-posts?limit=100`;
+            ? `${apiBase}/api/v1/projects/${id}/hashtags/${linkId}/link-posts?limit=100`
+            : `/api/v1/projects/${id}/hashtags/${linkId}/link-posts?limit=100`;
           
           const linkResponse = await fetch(url, {
             method: 'POST',
@@ -1222,9 +1224,6 @@ export default function ProjectDetail() {
                     value={newHashtagName}
                     onChange={(e) => setNewHashtagName(e.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Posts will be fetched from all platforms (Meta & TikTok). Filter by platform in the view.
-                  </p>
                 </div>
               </div>
               <DialogFooter>
