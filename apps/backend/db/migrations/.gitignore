@@ -1,0 +1,6 @@
+# Ignore Alembic template
+script.py.mako
+
+# Ignore seed scripts (should be run manually in pgAdmin)
+seed_*.sql
+
