@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
-from sqlalchemy import text, or_, and_
+from sqlalchemy import text, or_, and_, func, cast, String
 from sqlalchemy.orm import Session
 from typing import Dict, List, Optional, Set
 from uuid import UUID
@@ -293,15 +293,17 @@ def _attach_hashtag(
         f'#{normalized_name.upper()}',
     ]
     
-    # Construire le filtre pour la colonne hashtags (ArrayType = Text en réalité)
-    # Si hashtags est stocké comme JSON array ou texte, chercher dedans aussi
-    # IMPORTANT: Vérifier que hashtags n'est pas None avant d'utiliser .ilike()
+    # Construire le filtre pour la colonne hashtags
+    # En PostgreSQL, hashtags est un text[] (array), donc on doit caster en text avant .ilike()
+    # Utiliser func.array_to_string() pour convertir l'array en texte séparé par virgules
     hashtags_filters = []
     for variant in hashtag_variants:
-        # Chercher dans la colonne hashtags comme texte (si c'est du JSON array ou texte)
-        # Vérifier que hashtags n'est pas None
+        # Caster l'array en text avec array_to_string() pour permettre .ilike()
         hashtags_filters.append(
-            and_(Post.hashtags.isnot(None), Post.hashtags.ilike(f'%{variant}%'))
+            and_(
+                Post.hashtags.isnot(None),
+                func.array_to_string(Post.hashtags, ',').ilike(f'%{variant}%')
+            )
         )
     
     # Combiner les deux recherches (caption + hashtags column)
@@ -863,10 +865,12 @@ def link_posts_to_project_hashtag(
     
     hashtags_filters = []
     for variant in hashtag_variants:
-        # Chercher dans la colonne hashtags comme texte
-        # Vérifier que hashtags n'est pas None
+        # Caster l'array en text avec array_to_string() pour permettre .ilike()
         hashtags_filters.append(
-            and_(Post.hashtags.isnot(None), Post.hashtags.ilike(f'%{variant}%'))
+            and_(
+                Post.hashtags.isnot(None),
+                func.array_to_string(Post.hashtags, ',').ilike(f'%{variant}%')
+            )
         )
     
     # Combiner les deux recherches (caption + hashtags column)

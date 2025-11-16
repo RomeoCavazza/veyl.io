@@ -140,18 +140,24 @@ async def get_tiktok_profile(
     """
     Récupère le profil TikTok d'un utilisateur.
     Utilise les scopes: user.info.basic, user.info.profile
+    
+    STRATÉGIE: 1. Essayer API TikTok d'abord → 2. Fallback DB si échec
     """
-    access_token = _get_tiktok_token(db, current_user)
+    tiktok_platform = _ensure_platform(db, "tiktok")
     
-    # Si user_id n'est pas fourni, récupérer le profil de l'utilisateur connecté
-    if not user_id:
-        # TikTok API nécessite un user_id, on doit le récupérer depuis le token
-        # Pour l'instant, on utilise "me" si disponible, sinon on doit passer user_id
-        user_id = "me"
-    
-    fields = "open_id,union_id,avatar_url,display_name,profile_web_link,profile_deep_link,bio_description,is_verified"
-    
+    # 1️⃣ ESSAYER L'API TIKTOK D'ABORD
     try:
+        access_token = _get_tiktok_token(db, current_user)
+        
+        # Si user_id n'est pas fourni, récupérer le profil de l'utilisateur connecté
+        if not user_id:
+            # TikTok API nécessite un user_id, on doit le récupérer depuis le token
+            # Pour l'instant, on utilise "me" si disponible, sinon on doit passer user_id
+            user_id = "me"
+        
+        fields = "open_id,union_id,avatar_url,display_name,profile_web_link,profile_deep_link,bio_description,is_verified"
+        
+        logger.info(f"📡 [TikTok] Trying TikTok API first (user/info)...")
         response = await call_tiktok(
             method="GET",
             endpoint="user/info/",
@@ -161,24 +167,96 @@ async def get_tiktok_profile(
         
         user_data = response.get("data", {}).get("user", {})
         
-        # Stocker le profil dans Post pour traçabilité (optionnel)
-        if user_data.get("open_id") or user_data.get("union_id"):
-            external_id = user_data.get("open_id") or user_data.get("union_id")
-            defaults = {
-                "author": user_data.get("display_name"),
-                "caption": f"TikTok profile: {user_data.get('bio_description', '')}",
-                "media_url": user_data.get("avatar_url"),
-                "fetched_at": datetime.utcnow(),
+        if user_data:
+            # Stocker le profil dans Post pour traçabilité
+            if user_data.get("open_id") or user_data.get("union_id"):
+                external_id = user_data.get("open_id") or user_data.get("union_id")
+                defaults = {
+                    "author": user_data.get("display_name"),
+                    "caption": f"TikTok profile: {user_data.get('bio_description', '')}",
+                    "media_url": user_data.get("avatar_url"),
+                    "fetched_at": datetime.utcnow(),
+                }
+                _upsert_post(
+                    db=db,
+                    platform_name="tiktok",
+                    external_id=f"profile:{external_id}",
+                    payload=user_data,
+                    source="tiktok_profile_api",
+                    defaults=defaults,
+                )
+                db.commit()
+            
+            return {
+                "status": "success",
+                "http_status": 200,
+                "data": user_data,
+                "meta": {
+                    "fetched_at": datetime.utcnow().isoformat(),
+                    "source": "tiktok_profile_api",
+                },
             }
-            _upsert_post(
-                db=db,
-                platform_name="tiktok",
-                external_id=f"profile:{external_id}",
-                payload=user_data,
-                source="tiktok_profile",
-                defaults=defaults,
+        else:
+            logger.warning("⚠️ [TikTok] API returned empty profile, falling back to DB")
+            raise HTTPException(status_code=404, detail="Profile not found")
+            
+    except HTTPException as e:
+        # Pas de token ou erreur auth, fallback DB
+        if e.status_code in (401, 403):
+            logger.warning(f"⚠️ [TikTok] API auth failed ({e.status_code}), falling back to DB")
+        elif e.status_code == 404:
+            logger.info(f"⚠️ [TikTok] API returned 0 results, falling back to DB")
+        else:
+            logger.warning(f"⚠️ [TikTok] API error ({e.status_code}), falling back to DB: {e.detail}")
+    except Exception as e:
+        logger.exception(f"⚠️ [TikTok] API error, falling back to DB: {e}")
+    
+    # 2️⃣ FALLBACK: CHARGER DEPUIS DB
+    logger.info("💾 [TikTok] Loading profile from database (fallback)...")
+    
+    # Chercher les posts TikTok de type "profile" dans la DB
+    if user_id and user_id != "me":
+        # Chercher par external_id si user_id fourni
+        posts = (
+            db.query(Post)
+            .filter(
+                Post.platform_id == tiktok_platform.id,
+                Post.external_id.like(f"profile:%{user_id}%"),
+                Post.source == "tiktok_profile_api"
             )
-            db.commit()
+            .order_by(Post.fetched_at.desc().nullslast())
+            .limit(1)
+            .all()
+        )
+    else:
+        # Chercher le profil le plus récent
+        posts = (
+            db.query(Post)
+            .filter(
+                Post.platform_id == tiktok_platform.id,
+                Post.external_id.like("profile:%"),
+                Post.source == "tiktok_profile_api"
+            )
+            .order_by(Post.fetched_at.desc().nullslast())
+            .limit(1)
+            .all()
+        )
+    
+    if posts:
+        post = posts[0]
+        try:
+            api_payload = json.loads(post.api_payload) if post.api_payload else {}
+        except (TypeError, ValueError):
+            api_payload = {}
+        
+        user_data = {
+            "open_id": api_payload.get("open_id"),
+            "union_id": api_payload.get("union_id"),
+            "display_name": post.author or api_payload.get("display_name"),
+            "avatar_url": post.media_url or api_payload.get("avatar_url"),
+            "bio_description": api_payload.get("bio_description"),
+            "is_verified": api_payload.get("is_verified", False),
+        }
         
         return {
             "status": "success",
@@ -186,14 +264,11 @@ async def get_tiktok_profile(
             "data": user_data,
             "meta": {
                 "fetched_at": datetime.utcnow().isoformat(),
-                "source": "tiktok_api",
+                "source": "database_fallback",
             },
         }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.exception("Error fetching TikTok profile")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch TikTok profile: {str(e)}")
+    else:
+        raise HTTPException(status_code=404, detail="TikTok profile not found in database")
 
 
 @router.get("/stats")
@@ -205,15 +280,21 @@ async def get_tiktok_stats(
     """
     Récupère les statistiques TikTok d'un utilisateur.
     Utilise le scope: user.info.stats
+    
+    STRATÉGIE: 1. Essayer API TikTok d'abord → 2. Fallback DB si échec
     """
-    access_token = _get_tiktok_token(db, current_user)
+    tiktok_platform = _ensure_platform(db, "tiktok")
     
-    if not user_id:
-        user_id = "me"
-    
-    fields = "open_id,follower_count,following_count,likes_count,video_count"
-    
+    # 1️⃣ ESSAYER L'API TIKTOK D'ABORD
     try:
+        access_token = _get_tiktok_token(db, current_user)
+        
+        if not user_id:
+            user_id = "me"
+        
+        fields = "open_id,follower_count,following_count,likes_count,video_count"
+        
+        logger.info(f"📡 [TikTok] Trying TikTok API first (user/info for stats)...")
         response = await call_tiktok(
             method="GET",
             endpoint="user/info/",
@@ -223,30 +304,104 @@ async def get_tiktok_stats(
         
         user_data = response.get("data", {}).get("user", {})
         
-        # Stocker les stats dans Post pour analytics
-        if user_data.get("open_id") or user_data.get("union_id"):
-            external_id = user_data.get("open_id") or user_data.get("union_id")
-            metrics = {
-                "follower_count": user_data.get("follower_count"),
-                "following_count": user_data.get("following_count"),
-                "likes_count": user_data.get("likes_count"),
-                "video_count": user_data.get("video_count"),
+        if user_data:
+            # Stocker les stats dans Post pour analytics
+            if user_data.get("open_id") or user_data.get("union_id"):
+                external_id = user_data.get("open_id") or user_data.get("union_id")
+                metrics = {
+                    "follower_count": user_data.get("follower_count"),
+                    "following_count": user_data.get("following_count"),
+                    "likes_count": user_data.get("likes_count"),
+                    "video_count": user_data.get("video_count"),
+                }
+                defaults = {
+                    "author": user_data.get("display_name") or f"TikTok User {external_id[:8]}",
+                    "caption": f"TikTok stats for {external_id}",
+                    "metrics": json.dumps(metrics),
+                    "fetched_at": datetime.utcnow(),
+                }
+                _upsert_post(
+                    db=db,
+                    platform_name="tiktok",
+                    external_id=f"stats:{external_id}",
+                    payload=user_data,
+                    source="tiktok_stats_api",
+                    defaults=defaults,
+                )
+                db.commit()
+            
+            return {
+                "status": "success",
+                "http_status": 200,
+                "data": user_data,
+                "meta": {
+                    "fetched_at": datetime.utcnow().isoformat(),
+                    "source": "tiktok_stats_api",
+                },
             }
-            defaults = {
-                "author": user_data.get("display_name") or f"TikTok User {external_id[:8]}",
-                "caption": f"TikTok stats for {external_id}",
-                "metrics": json.dumps(metrics),
-                "fetched_at": datetime.utcnow(),
-            }
-            _upsert_post(
-                db=db,
-                platform_name="tiktok",
-                external_id=f"stats:{external_id}",
-                payload=user_data,
-                source="tiktok_stats",
-                defaults=defaults,
+        else:
+            logger.warning("⚠️ [TikTok] API returned empty stats, falling back to DB")
+            raise HTTPException(status_code=404, detail="Stats not found")
+            
+    except HTTPException as e:
+        # Pas de token ou erreur auth, fallback DB
+        if e.status_code in (401, 403):
+            logger.warning(f"⚠️ [TikTok] API auth failed ({e.status_code}), falling back to DB")
+        elif e.status_code == 404:
+            logger.info(f"⚠️ [TikTok] API returned 0 results, falling back to DB")
+        else:
+            logger.warning(f"⚠️ [TikTok] API error ({e.status_code}), falling back to DB: {e.detail}")
+    except Exception as e:
+        logger.exception(f"⚠️ [TikTok] API error, falling back to DB: {e}")
+    
+    # 2️⃣ FALLBACK: CHARGER DEPUIS DB
+    logger.info("💾 [TikTok] Loading stats from database (fallback)...")
+    
+    # Chercher les posts TikTok de type "stats" dans la DB
+    if user_id and user_id != "me":
+        # Chercher par external_id si user_id fourni
+        posts = (
+            db.query(Post)
+            .filter(
+                Post.platform_id == tiktok_platform.id,
+                Post.external_id.like(f"stats:%{user_id}%"),
+                Post.source == "tiktok_stats_api"
             )
-            db.commit()
+            .order_by(Post.fetched_at.desc().nullslast())
+            .limit(1)
+            .all()
+        )
+    else:
+        # Chercher les stats les plus récentes
+        posts = (
+            db.query(Post)
+            .filter(
+                Post.platform_id == tiktok_platform.id,
+                Post.external_id.like("stats:%"),
+                Post.source == "tiktok_stats_api"
+            )
+            .order_by(Post.fetched_at.desc().nullslast())
+            .limit(1)
+            .all()
+        )
+    
+    if posts:
+        post = posts[0]
+        try:
+            api_payload = json.loads(post.api_payload) if post.api_payload else {}
+            metrics = json.loads(post.metrics) if post.metrics else {}
+        except (TypeError, ValueError):
+            api_payload = {}
+            metrics = {}
+        
+        user_data = {
+            "open_id": api_payload.get("open_id"),
+            "union_id": api_payload.get("union_id"),
+            "follower_count": metrics.get("follower_count") or api_payload.get("follower_count"),
+            "following_count": metrics.get("following_count") or api_payload.get("following_count"),
+            "likes_count": metrics.get("likes_count") or api_payload.get("likes_count"),
+            "video_count": metrics.get("video_count") or api_payload.get("video_count"),
+        }
         
         return {
             "status": "success",
@@ -254,14 +409,11 @@ async def get_tiktok_stats(
             "data": user_data,
             "meta": {
                 "fetched_at": datetime.utcnow().isoformat(),
-                "source": "tiktok_api",
+                "source": "database_fallback",
             },
         }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.exception("Error fetching TikTok stats")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch TikTok stats: {str(e)}")
+    else:
+        raise HTTPException(status_code=404, detail="TikTok stats not found in database")
 
 
 @router.get("/videos")
