@@ -389,25 +389,32 @@ def list_project_posts(
             except (TypeError, ValueError):
                 metrics = {}
         permalink = None
+        platform_name = post.platform.name if post.platform else 'instagram'
+        
         if post.external_id:
-            permalink = (
-                post.external_id
-                if post.external_id.startswith('http')
-                else f"https://www.instagram.com/p/{post.external_id.strip('/')}/"
-            )
+            if post.external_id.startswith('http'):
+                permalink = post.external_id
+            elif platform_name == 'tiktok':
+                # TikTok: external_id est le video_id, construire l'URL
+                permalink = f"https://www.tiktok.com/@{(post.author or 'user')}/video/{post.external_id}"
+            else:
+                # Instagram par défaut
+                permalink = f"https://www.instagram.com/p/{post.external_id.strip('/')}/"
         elif post.api_payload:
             try:
                 payload_data = json.loads(post.api_payload)
-                media_details = payload_data.get('media_details') or {}
+                # Chercher permalink dans api_payload (support Meta et TikTok)
                 permalink_candidate = (
-                    media_details.get('permalink')
+                    payload_data.get('share_url')
+                    or payload_data.get('permalink')
                     or payload_data.get('url')
+                    or (payload_data.get('media_details') or {}).get('permalink')
                     or payload_data.get('author_url')
                 )
                 if isinstance(permalink_candidate, str) and permalink_candidate.startswith('http'):
                     permalink = permalink_candidate
             except (TypeError, ValueError):
-                permalink = None
+                pass
 
         results.append(ProjectPostResponse(
             id=post.id,

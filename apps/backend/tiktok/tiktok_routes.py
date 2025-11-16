@@ -29,6 +29,25 @@ def _parse_timestamp(value: Optional[str]) -> Optional[datetime]:
         return None
 
 
+def _get_post_share_url(post: Post, api_payload: dict) -> Optional[str]:
+    """Construit l'URL de partage TikTok depuis api_payload ou external_id"""
+    # D'abord chercher dans api_payload
+    if api_payload:
+        share_url = api_payload.get("share_url") or api_payload.get("permalink") or api_payload.get("url")
+        if share_url:
+            return share_url
+    
+    # Sinon construire depuis external_id
+    if post.external_id:
+        if post.external_id.startswith('http'):
+            return post.external_id
+        else:
+            # Construire URL TikTok depuis video_id
+            return f"https://www.tiktok.com/@{(post.author or 'user')}/video/{post.external_id}"
+    
+    return None
+
+
 def _ensure_platform(db: Session, name: str) -> Platform:
     """Ensure platform exists in database"""
     platform = db.query(Platform).filter(Platform.name == name).first()
@@ -301,7 +320,7 @@ async def get_tiktok_videos(
                 "video_description": post.caption,
                 "cover_image_url": post.media_url or api_payload.get("cover_image_url"),
                 "thumbnail_url": post.media_url or api_payload.get("thumbnail_url"),
-                "share_url": api_payload.get("share_url") or api_payload.get("permalink") or post.permalink,
+                "share_url": _get_post_share_url(post, api_payload),
                 "create_time": post.posted_at.isoformat() if post.posted_at else None,
                 "like_count": metrics.get("like_count", 0),
                 "comment_count": metrics.get("comment_count", 0),
@@ -356,7 +375,7 @@ async def get_tiktok_videos(
                 "creator_username": post.author,
                 "title": post.caption,
                 "cover_image_url": post.media_url or api_payload.get("cover_image_url"),
-                "share_url": api_payload.get("share_url") or post.permalink,
+                "share_url": _get_post_share_url(post, api_payload),
                 "like_count": metrics.get("like_count", 0),
                 "comment_count": metrics.get("comment_count", 0),
             })
@@ -513,7 +532,7 @@ async def get_tiktok_videos(
                 "creator_username": post.author,
                 "title": post.caption,
                 "cover_image_url": post.media_url or api_payload.get("cover_image_url"),
-                "share_url": api_payload.get("share_url") or post.permalink,
+                "share_url": _get_post_share_url(post, api_payload),
                 "like_count": metrics.get("like_count", 0),
                 "comment_count": metrics.get("comment_count", 0),
             })

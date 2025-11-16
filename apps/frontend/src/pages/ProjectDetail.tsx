@@ -778,9 +778,22 @@ export default function ProjectDetail() {
                         }}
                       >
                         <div className="aspect-square relative overflow-hidden bg-muted">
-                          {post.media_url && isImage ? (
-                          <img
-                            src={post.media_url}
+                          {post.platform === 'tiktok' ? (
+                            // TikTok: Afficher thumbnail ou placeholder avec gradient
+                            post.media_url ? (
+                              <img
+                                src={post.media_url}
+                                alt={post.caption || post.author}
+                                className="object-cover w-full h-full"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                            ) : null
+                          ) : post.media_url && isImage ? (
+                            <img
+                              src={post.media_url}
                               alt={post.caption || post.author}
                               className="object-cover w-full h-full"
                             />
@@ -790,16 +803,27 @@ export default function ProjectDetail() {
                               title={post.id}
                               className="w-full h-full"
                               allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
-                          />
-                          ) : (
+                            />
+                          ) : null}
+                          {/* Placeholder TikTok si pas de media_url */}
+                          {post.platform === 'tiktok' && !post.media_url && (
+                            <div className="w-full h-full bg-gradient-to-br from-pink-500 via-red-500 to-blue-500 flex flex-col items-center justify-center text-white">
+                              <svg className="w-16 h-16 mb-2" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                              </svg>
+                              <span className="text-sm font-medium">TikTok Video</span>
+                            </div>
+                          )}
+                          {/* Placeholder générique si pas de media */}
+                          {!post.media_url && !embedUrl && post.platform !== 'tiktok' && (
                             <div className="w-full h-full flex items-center justify-center bg-muted/50">
                               <span className="text-muted-foreground text-sm">No media</span>
                             </div>
                           )}
                           <Badge className="absolute top-2 right-2 bg-accent">
                             {post.platform?.toUpperCase() || 'INSTAGRAM'}
-                            </Badge>
-                          </div>
+                          </Badge>
+                        </div>
                         
                         <CardContent className="p-4 space-y-3">
                           <div className="flex items-center gap-2">
