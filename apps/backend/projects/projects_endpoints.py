@@ -266,22 +266,21 @@ def _attach_hashtag(
     project_hashtag = ProjectHashtag(project_id=project.id, hashtag_id=hashtag.id)
     db.add(project_hashtag)
     
-    # 🔥 AUTO-LINK: Chercher les posts qui contiennent ce hashtag et les lier
-    logger.info(f"🔍 Searching posts with #{normalized_name} in caption...")
+    # 🔥 AUTO-LINK: Chercher les posts qui contiennent ce hashtag sur TOUTES les plateformes
+    # (pas seulement celle spécifiée, car un hashtag peut exister sur plusieurs plateformes)
+    logger.info(f"🔍 Searching posts with #{normalized_name} in caption (all platforms)...")
     
-    # Chercher les posts qui contiennent ce hashtag dans leur caption
+    # Chercher les posts qui contiennent ce hashtag dans leur caption, toutes plateformes
     posts_with_hashtag = (
         db.query(Post)
-        .filter(
-            Post.platform_id == platform.id,
-            Post.caption.ilike(f'%#{normalized_name}%')
-        )
+        .filter(Post.caption.ilike(f'%#{normalized_name}%'))
         .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
-        .limit(50)
+        .limit(100)  # Augmenter la limite pour trouver plus de posts
         .all()
     )
     
     linked_count = 0
+    platform_counts = {}
     for post in posts_with_hashtag:
         # Vérifier si le lien existe déjà
         existing_link = (
@@ -300,9 +299,14 @@ def _attach_hashtag(
             )
             db.add(post_hashtag_link)
             linked_count += 1
+            
+            # Compter par plateforme
+            platform_name = post.platform.name if post.platform else 'unknown'
+            platform_counts[platform_name] = platform_counts.get(platform_name, 0) + 1
     
     if linked_count > 0:
-        logger.info(f"✅ Auto-linked {linked_count} posts to #{normalized_name}")
+        platform_summary = ", ".join([f"{count} {platform}" for platform, count in platform_counts.items()])
+        logger.info(f"✅ Auto-linked {linked_count} posts to #{normalized_name} ({platform_summary})")
         db.flush()  # Commit les liens immédiatement
     else:
         logger.warning(f"⚠️ No posts found with #{normalized_name} in caption")

@@ -14,8 +14,7 @@ export default function Search() {
   const [posts, setPosts] = useState<PostHit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [isTestingMetaAPI, setIsTestingMetaAPI] = useState(false);
-  const [isTestingTikTokAPI, setIsTestingTikTokAPI] = useState(false);
+  const [isTestingAPI, setIsTestingAPI] = useState(false);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const { toast } = useToast();
 
@@ -115,14 +114,17 @@ export default function Search() {
       
       const allPosts: PostHit[] = [];
       
-      // 1️⃣ ESSAYER META API (Instagram) SI DEMANDÉ
+      let apiSuccess = false;
+      
+      // 1️⃣ ESSAYER META API (Instagram) SI DEMANDÉ - PRIORITAIRE
       if (useInstagram) {
-        console.log('📡 [SEARCH] Step 1: Trying Meta API (Instagram)...');
+        console.log('📡 [SEARCH] Step 1: Trying Meta API (Instagram) - PRIORITY...');
         try {
           const metaResponse = await fetchMetaIGPublic(query, 20);
           
           if (metaResponse.status === 'success' && metaResponse.data && metaResponse.data.length > 0) {
-            console.log(`✅ [SEARCH] Meta API success: ${metaResponse.data.length} posts`);
+            console.log(`✅ [SEARCH] Meta API SUCCESS: ${metaResponse.data.length} posts from API`);
+            apiSuccess = true;
             const metaPosts: PostHit[] = metaResponse.data.map((item: any) => ({
               id: item.id,
               platform: 'instagram',
@@ -138,21 +140,28 @@ export default function Search() {
             }));
             allPosts.push(...metaPosts);
           } else {
-            console.log('⚠️ [SEARCH] Meta API returned 0 results');
+            console.log(`⚠️ [SEARCH] Meta API returned 0 results (status: ${metaResponse.status})`);
           }
         } catch (metaError: any) {
-          console.log(`⚠️ [SEARCH] Meta API failed: ${metaError.message}`);
+          console.error(`❌ [SEARCH] Meta API FAILED: ${metaError.message} - Will fallback to DB`);
         }
       }
       
-      // 2️⃣ ESSAYER TIKTOK API SI DEMANDÉ
+      // 2️⃣ ESSAYER TIKTOK API SI DEMANDÉ - PRIORITAIRE
       if (useTikTok) {
-        console.log('📡 [SEARCH] Step 2: Trying TikTok API...');
+        console.log('📡 [SEARCH] Step 2: Trying TikTok API - PRIORITY...');
         try {
           const tiktokResponse = await fetchTikTokVideos(query, 20);
           
           if (tiktokResponse.status === 'success' && tiktokResponse.data && tiktokResponse.data.length > 0) {
-            console.log(`✅ [SEARCH] TikTok API success: ${tiktokResponse.data.length} videos`);
+            const source = tiktokResponse.meta?.source || 'unknown';
+            if (source === 'tiktok_video_list_api') {
+              console.log(`✅ [SEARCH] TikTok API SUCCESS: ${tiktokResponse.data.length} videos from API`);
+              apiSuccess = true;
+            } else {
+              console.log(`⚠️ [SEARCH] TikTok returned ${tiktokResponse.data.length} videos from DB (source: ${source})`);
+            }
+            
             const tiktokPosts: PostHit[] = tiktokResponse.data.map((item: any) => ({
               id: item.id,
               platform: 'tiktok',
@@ -169,21 +178,26 @@ export default function Search() {
             }));
             allPosts.push(...tiktokPosts);
           } else {
-            console.log('⚠️ [SEARCH] TikTok API returned 0 results');
+            console.log(`⚠️ [SEARCH] TikTok API returned 0 results (status: ${tiktokResponse.status})`);
           }
         } catch (tiktokError: any) {
-          console.log(`⚠️ [SEARCH] TikTok API failed: ${tiktokError.message}`);
+          console.error(`❌ [SEARCH] TikTok API FAILED: ${tiktokError.message} - Will fallback to DB`);
         }
       }
       
-      // 3️⃣ FALLBACK: CHARGER DEPUIS DB SI AUCUN RÉSULTAT API
-      if (allPosts.length === 0) {
-        console.log('💾 [SEARCH] Step 3: Loading from database (fallback)...');
+      // 3️⃣ FALLBACK: CHARGER DEPUIS DB SI API ÉCHOUÉ OU AUCUN RÉSULTAT
+      if (!apiSuccess || allPosts.length === 0) {
+        console.log(`💾 [SEARCH] Step 3: Loading from database (fallback) - API success: ${apiSuccess}, Posts: ${allPosts.length}...`);
         const dbPosts = await loadPostsFromDatabase(query, activePlatforms);
         
         if (dbPosts.length > 0) {
-          console.log(`✅ [SEARCH] DB success: ${dbPosts.length} posts`);
-          allPosts.push(...dbPosts);
+          console.log(`✅ [SEARCH] DB fallback success: ${dbPosts.length} posts`);
+          // Éviter les doublons
+          const existingIds = new Set(allPosts.map(p => p.id));
+          const newDbPosts = dbPosts.filter(p => !existingIds.has(p.id));
+          allPosts.push(...newDbPosts);
+        } else {
+          console.log(`⚠️ [SEARCH] No posts found in DB either`);
         }
       }
       
@@ -231,8 +245,8 @@ export default function Search() {
     }
   };
 
-  // Tester Meta API en live (pour App Review)
-  const testMetaAPI = async () => {
+  // Tester API en live - adaptatif selon les plateformes sélectionnées
+  const testAPI = async () => {
     if (!searchQuery) {
       toast({
         title: 'Enter a search query first',
@@ -241,92 +255,146 @@ export default function Search() {
       return;
     }
 
-    setIsTestingMetaAPI(true);
+    setIsTestingAPI(true);
+    
+    // Déterminer quelles plateformes tester
+    const platformsToTest = selectedPlatforms.length > 0 ? selectedPlatforms : ['instagram', 'facebook', 'tiktok', 'x'];
+    const useInstagram = platformsToTest.includes('instagram');
+    const useFacebook = platformsToTest.includes('facebook');
+    const useTikTok = platformsToTest.includes('tiktok');
+    const useX = platformsToTest.includes('x');
+    
+    const allPosts: PostHit[] = [];
+    const results: { platform: string; success: boolean; count: number; error?: string }[] = [];
+    
     try {
-      console.log('[META API] Testing:', searchQuery);
-      const response = await fetchMetaIGPublic(searchQuery, 10);
-      console.log('[META API] Response:', response);
-
-      toast({
-        title: 'Meta API call completed',
-        description: `Status: ${response.status}, Check Network tab for details.`,
-      });
-
-      if (response.status === 'success' && response.data?.length > 0) {
-        const metaPosts: PostHit[] = response.data.map((item: any) => ({
-          id: item.id,
-          platform: 'instagram',
-          username: item.username || 'unknown',
-          caption: item.caption,
-          media_type: item.media_type,
-          media_url: item.media_url,
-          permalink: item.permalink,
-          posted_at: item.timestamp,
-          like_count: item.like_count,
-          comment_count: item.comments_count,
-          score_trend: item.like_count ?? 0,
-        }));
-        setPosts(metaPosts);
+      // Tester Instagram API
+      if (useInstagram) {
+        try {
+          console.log('📡 [TEST API] Testing Instagram API for:', searchQuery);
+          const response = await fetchMetaIGPublic(searchQuery, 10);
+          const source = response.meta?.source || 'unknown';
+          const success = response.status === 'success' && response.data?.length > 0;
+          
+          if (success) {
+            console.log(`✅ [TEST API] Instagram SUCCESS: ${response.data.length} posts (source: ${source})`);
+            const metaPosts: PostHit[] = response.data.map((item: any) => ({
+              id: item.id,
+              platform: 'instagram',
+              username: item.username || 'unknown',
+              caption: item.caption,
+              media_type: item.media_type,
+              media_url: item.media_url,
+              permalink: item.permalink,
+              posted_at: item.timestamp,
+              like_count: item.like_count,
+              comment_count: item.comments_count,
+              score_trend: item.like_count ?? 0,
+            }));
+            allPosts.push(...metaPosts);
+            results.push({ platform: 'Instagram', success: true, count: response.data.length });
+          } else {
+            results.push({ platform: 'Instagram', success: false, count: 0, error: `Status: ${response.status}` });
+          }
+        } catch (error: any) {
+          console.error('❌ [TEST API] Instagram FAILED:', error);
+          results.push({ platform: 'Instagram', success: false, count: 0, error: error.message });
+        }
       }
-    } catch (error: any) {
-      console.error('[META API] Error:', error);
+      
+      // Tester Facebook API (utilise la même API Meta)
+      if (useFacebook) {
+        try {
+          console.log('📡 [TEST API] Testing Facebook API for:', searchQuery);
+          // Facebook utilise la même API Meta mais avec page_id
+          // Pour l'instant, on log juste
+          results.push({ platform: 'Facebook', success: false, count: 0, error: 'Not implemented yet' });
+        } catch (error: any) {
+          console.error('❌ [TEST API] Facebook FAILED:', error);
+          results.push({ platform: 'Facebook', success: false, count: 0, error: error.message });
+        }
+      }
+      
+      // Tester TikTok API
+      if (useTikTok) {
+        try {
+          console.log('📡 [TEST API] Testing TikTok API for:', searchQuery);
+          const response = await fetchTikTokVideos(searchQuery, 10);
+          const source = response.meta?.source || 'unknown';
+          const success = response.status === 'success' && response.data?.length > 0;
+          
+          if (success) {
+            console.log(`✅ [TEST API] TikTok SUCCESS: ${response.data.length} videos (source: ${source})`);
+            const tiktokPosts: PostHit[] = response.data.map((item: any) => ({
+              id: item.id,
+              platform: 'tiktok',
+              username: item.creator_username || item.creator_display_name || 'unknown',
+              caption: item.title || item.video_description,
+              media_type: 'video',
+              media_url: item.cover_image_url || item.thumbnail_url,
+              permalink: item.share_url || `https://www.tiktok.com/@${item.creator_username || 'user'}/video/${item.id}`,
+              posted_at: item.create_time,
+              like_count: item.like_count || 0,
+              comment_count: item.comment_count || 0,
+              view_count: item.view_count || 0,
+              score_trend: item.like_count ?? 0,
+            }));
+            allPosts.push(...tiktokPosts);
+            results.push({ platform: 'TikTok', success: true, count: response.data.length });
+          } else {
+            results.push({ platform: 'TikTok', success: false, count: 0, error: `Status: ${response.status}` });
+          }
+        } catch (error: any) {
+          console.error('❌ [TEST API] TikTok FAILED:', error);
+          results.push({ platform: 'TikTok', success: false, count: 0, error: error.message });
+        }
+      }
+      
+      // Tester X API (pas encore implémenté)
+      if (useX) {
+        results.push({ platform: 'X', success: false, count: 0, error: 'Not implemented yet' });
+      }
+      
+      // Afficher les résultats
+      if (allPosts.length > 0) {
+        setPosts(allPosts);
+      }
+      
+      const successCount = results.filter(r => r.success).length;
+      const totalCount = results.reduce((sum, r) => sum + r.count, 0);
+      
       toast({
-        title: 'Meta API error',
-        description: 'Check Network tab - should show HTTP call attempt',
+        title: `API Test completed`,
+        description: `${successCount}/${results.length} platforms succeeded, ${totalCount} total posts`,
+      });
+      
+    } catch (error: any) {
+      console.error('❌ [TEST API] Fatal error:', error);
+      toast({
+        title: 'API Test error',
+        description: error.message || 'Check Network tab for details',
         variant: 'destructive',
       });
     } finally {
-      setIsTestingMetaAPI(false);
+      setIsTestingAPI(false);
     }
   };
-
-  // Tester TikTok API en live
-  const testTikTokAPI = async () => {
-    if (!searchQuery) {
-      toast({
-        title: 'Enter a search query first',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsTestingTikTokAPI(true);
-    try {
-      console.log('[TIKTOK API] Testing:', searchQuery);
-      const response = await fetchTikTokVideos(searchQuery, 10);
-      console.log('[TIKTOK API] Response:', response);
-
-      toast({
-        title: 'TikTok API call completed',
-        description: `Status: ${response.status}, Check Network tab for details.`,
-      });
-
-      if (response.status === 'success' && response.data?.length > 0) {
-        const tiktokPosts: PostHit[] = response.data.map((item: any) => ({
-          id: item.id,
-          platform: 'tiktok',
-          username: item.creator_username || item.creator_display_name || 'unknown',
-          caption: item.title || item.video_description,
-          media_type: 'video',
-          media_url: item.cover_image_url || item.thumbnail_url,
-          permalink: item.share_url || `https://www.tiktok.com/@${item.creator_username || 'user'}/video/${item.id}`,
-          posted_at: item.create_time,
-          like_count: item.like_count || 0,
-          comment_count: item.comment_count || 0,
-          view_count: item.view_count || 0,
-          score_trend: item.like_count ?? 0,
-        }));
-        setPosts(tiktokPosts);
-      }
-    } catch (error: any) {
-      console.error('[TIKTOK API] Error:', error);
-      toast({
-        title: 'TikTok API error',
-        description: 'Check Network tab - should show HTTP call attempt',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsTestingTikTokAPI(false);
+  
+  // Déterminer le texte du bouton selon les plateformes sélectionnées
+  const getTestButtonText = () => {
+    if (selectedPlatforms.length === 0) {
+      return 'Test All';
+    } else if (selectedPlatforms.length === 1) {
+      const platform = selectedPlatforms[0];
+      const labels: Record<string, string> = {
+        'instagram': 'Instagram',
+        'facebook': 'Facebook',
+        'tiktok': 'TikTok',
+        'x': 'X',
+      };
+      return `Test ${labels[platform] || platform}`;
+    } else {
+      return 'Test All';
     }
   };
 
@@ -360,51 +428,28 @@ export default function Search() {
             ))}
           </div>
 
-          {/* Test API Buttons - Show based on selected platforms */}
+          {/* Test API Button - adaptatif selon les plateformes sélectionnées */}
           {hasSearched && (
             <div className="flex gap-2 items-center flex-wrap justify-center">
-              {(selectedPlatforms.length === 0 || selectedPlatforms.includes('instagram')) && (
-                <Button
-                  onClick={testMetaAPI}
-                  disabled={isTestingMetaAPI}
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 h-8 text-xs"
-                >
-                  {isTestingMetaAPI ? (
-                    <>
-                      <RefreshCcw className="h-3 w-3 animate-spin" />
-                      Testing...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-3 w-3" />
-                      Test Meta API
-                    </>
-                  )}
-                </Button>
-              )}
-              {selectedPlatforms.includes('tiktok') && (
-                <Button
-                  onClick={testTikTokAPI}
-                  disabled={isTestingTikTokAPI}
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 h-8 text-xs"
-                >
-                  {isTestingTikTokAPI ? (
-                    <>
-                      <RefreshCcw className="h-3 w-3 animate-spin" />
-                      Testing...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-3 w-3" />
-                      Test TikTok API
-                    </>
-                  )}
-                </Button>
-              )}
+              <Button
+                onClick={testAPI}
+                disabled={isTestingAPI}
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8 text-xs"
+              >
+                {isTestingAPI ? (
+                  <>
+                    <RefreshCcw className="h-3 w-3 animate-spin" />
+                    Testing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3 w-3" />
+                    {getTestButtonText()}
+                  </>
+                )}
+              </Button>
             </div>
           )}
         </div>

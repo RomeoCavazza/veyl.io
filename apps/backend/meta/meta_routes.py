@@ -141,74 +141,175 @@ async def get_instagram_public_content(
     """
     Récupère du contenu public Instagram via hashtag.
     Prouve l'intégration Instagram Public Content Access pour App Review.
+    
+    STRATÉGIE: 1. Essayer Meta API d'abord → 2. Fallback DB si échec
     """
     ig_user_id = user_id or settings.IG_USER_ID
     if not ig_user_id:
-        raise HTTPException(status_code=400, detail="IG_USER_ID required")
-
-
-    search = await call_meta(
-        method="GET",
-        endpoint="v21.0/ig_hashtag_search",
-        params={"user_id": ig_user_id, "q": tag},
-    )
-    data = search.get("data", [])
-    if not data:
-        return {"status": "no_results", "http_status": 200, "data": [], "meta": {"tag": tag}}
-
-    hashtag_id = data[0]["id"]
-    media = await call_meta(
-        method="GET",
-        endpoint=f"v21.0/{hashtag_id}/recent_media",
-        params={
-            "user_id": ig_user_id,
-            "fields": "id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count",
-            "limit": limit,
-        },
-    )
-
-    posts = media.get("data", [])
-
-    for item in posts:
-        external_id = item.get("id")
-        if not external_id:
-            continue
-
-        metrics = {
-            "like_count": item.get("like_count"),
-            "comment_count": item.get("comments_count"),
+        logger.warning("⚠️ [Meta] IG_USER_ID not found, falling back to DB")
+        # Fallback DB si pas de credentials
+        instagram_platform = _ensure_platform(db, "instagram")
+        posts_from_db = (
+            db.query(Post)
+            .filter(
+                Post.platform_id == instagram_platform.id,
+                or_(
+                    Post.caption.ilike(f'%{tag}%'),
+                    Post.caption.ilike(f'%#{tag}%'),
+                )
+            )
+            .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
+            .limit(limit)
+            .all()
+        )
+        
+        results = []
+        for post in posts_from_db:
+            try:
+                metrics = json.loads(post.metrics) if post.metrics else {}
+            except (TypeError, ValueError):
+                metrics = {}
+            
+            results.append({
+                "id": post.id,
+                "caption": post.caption,
+                "media_type": "IMAGE",
+                "media_url": post.media_url,
+                "permalink": post.external_id if post.external_id.startswith('http') else f"https://www.instagram.com/p/{post.external_id}/",
+                "timestamp": post.posted_at.isoformat() if post.posted_at else None,
+                "like_count": metrics.get("like_count", 0),
+                "comments_count": metrics.get("comment_count", 0),
+            })
+        
+        return {
+            "status": "success",
+            "http_status": 200,
+            "data": results,
+            "meta": {
+                "tag": tag,
+                "count": len(results),
+                "fetched_at": datetime.utcnow().isoformat(),
+                "source": "database_fallback"
+            }
         }
 
-        defaults = {
-            "caption": item.get("caption"),
-            "media_url": item.get("media_url"),
-            "posted_at": _parse_timestamp(item.get("timestamp")),
-            "metrics": json.dumps(metrics),
-            "fetched_at": datetime.utcnow(),
-        }
+    # 1️⃣ ESSAYER META API D'ABORD
+    try:
+        logger.info(f"📡 [Meta] Trying Meta API for hashtag: #{tag}")
+        search = await call_meta(
+            method="GET",
+            endpoint="v21.0/ig_hashtag_search",
+            params={"user_id": ig_user_id, "q": tag},
+        )
+        data = search.get("data", [])
+        if not data:
+            logger.warning(f"⚠️ [Meta] Hashtag #{tag} not found in Meta API, falling back to DB")
+            raise HTTPException(status_code=404, detail=f"Hashtag {tag} not found")
 
-        _upsert_post(
-            db=db,
-            platform_name="instagram",
-            external_id=str(external_id),
-            payload=item,
-            source="meta_ig_public",
-            defaults=defaults,
+        hashtag_id = data[0]["id"]
+        media = await call_meta(
+            method="GET",
+            endpoint=f"v21.0/{hashtag_id}/recent_media",
+            params={
+                "user_id": ig_user_id,
+                "fields": "id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count",
+                "limit": limit,
+            },
         )
 
-    db.commit()
-    
-    return {
-        "status": "success",
-        "http_status": 200,
-        "data": posts,
-        "meta": {
-            "tag": tag,
-            "count": len(posts),
-            "fetched_at": datetime.utcnow().isoformat(),
-            "source": "instagram_public_content_api"
+        posts = media.get("data", [])
+        logger.info(f"✅ [Meta] API success: {len(posts)} posts from Meta API")
+        
+        # Stocker les posts dans la DB
+        for item in posts:
+            external_id = item.get("id")
+            if not external_id:
+                continue
+
+            metrics = {
+                "like_count": item.get("like_count"),
+                "comment_count": item.get("comments_count"),
+            }
+
+            defaults = {
+                "caption": item.get("caption"),
+                "media_url": item.get("media_url"),
+                "posted_at": _parse_timestamp(item.get("timestamp")),
+                "metrics": json.dumps(metrics),
+                "fetched_at": datetime.utcnow(),
+            }
+
+            _upsert_post(
+                db=db,
+                platform_name="instagram",
+                external_id=str(external_id),
+                payload=item,
+                source="meta_ig_public",
+                defaults=defaults,
+            )
+
+        db.commit()
+        
+        return {
+            "status": "success",
+            "http_status": 200,
+            "data": posts,
+            "meta": {
+                "tag": tag,
+                "count": len(posts),
+                "fetched_at": datetime.utcnow().isoformat(),
+                "source": "instagram_public_content_api"
+            }
         }
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"❌ [Meta] API failed for #{tag}, falling back to DB: {e}")
+        # Fallback DB
+        instagram_platform = _ensure_platform(db, "instagram")
+        posts_from_db = (
+            db.query(Post)
+            .filter(
+                Post.platform_id == instagram_platform.id,
+                or_(
+                    Post.caption.ilike(f'%{tag}%'),
+                    Post.caption.ilike(f'%#{tag}%'),
+                )
+            )
+            .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
+            .limit(limit)
+            .all()
+        )
+        
+        posts = []
+        for post in posts_from_db:
+            try:
+                metrics = json.loads(post.metrics) if post.metrics else {}
+            except (TypeError, ValueError):
+                metrics = {}
+            
+            posts.append({
+                "id": post.id,
+                "caption": post.caption,
+                "media_type": "IMAGE",
+                "media_url": post.media_url,
+                "permalink": post.external_id if post.external_id and post.external_id.startswith('http') else f"https://www.instagram.com/p/{post.external_id}/",
+                "timestamp": post.posted_at.isoformat() if post.posted_at else None,
+                "like_count": metrics.get("like_count", 0),
+                "comments_count": metrics.get("comment_count", 0),
+            })
+        
+        return {
+            "status": "success",
+            "http_status": 200,
+            "data": posts,
+            "meta": {
+                "tag": tag,
+                "count": len(posts),
+                "fetched_at": datetime.utcnow().isoformat(),
+                "source": "database_fallback"
+            }
+        }
 
 
 @router.get("/ig-hashtag")
