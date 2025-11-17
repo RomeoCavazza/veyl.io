@@ -1,4 +1,4 @@
-# app.py - REFACTORISÉ - SABOTAGE ÉLIMINÉ - SÉCURISÉ - REDIS INTÉGRÉ !
+# app.py
 from fastapi import FastAPI  # type: ignore
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
 from fastapi.openapi.utils import get_openapi  # type: ignore
@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 # Import des modules unifiés
 from auth_unified.auth_endpoints import auth_router
 from auth_unified.oauth_endpoints import oauth_router
+from auth_unified.oauth_accounts_endpoints import oauth_accounts_router
 
 # Import des modules CRUD
 from posts.posts_endpoints import posts_router
@@ -23,16 +24,18 @@ from hashtags.hashtags_endpoints import hashtags_router
 from platforms.platforms_endpoints import platforms_router
 from analytics.analytics_endpoints import analytics_router
 from projects.projects_endpoints import projects_router
-from meta.meta_routes import router as meta_router
+from meta.meta_endpoints import router as meta_router
+from tiktok.tiktok_endpoints import router as tiktok_router
+from webhooks.webhooks_endpoints import webhooks_router
 
-# Import Redis et rate limiting
-from core.redis_client import redis
-from core.ratelimit import setup_rate_limit, limiter
+# Import rate limiting
+from core.ratelimit import setup_rate_limit
+from core.middleware import RequestIDMiddleware, ErrorHandlerMiddleware
 
 app = FastAPI(
     title="Insider Trends API",
     version="2.0.0",
-    description="API refactorisée pour l'analyse des tendances - SÉCURISÉE",
+    description="API pour l'analyse des tendances",
     # Configuration pour Railway proxy
     # root_path est utilisé quand l'app est derrière un proxy (Railway, nginx, etc.)
     # Railway ajoute automatiquement les headers X-Forwarded-*
@@ -72,7 +75,13 @@ def custom_openapi():
 
 app.openapi = custom_openapi
 
-# Configuration du rate limiting avec Redis
+# Middleware de tracing (Request ID) - doit être avant les autres
+app.add_middleware(RequestIDMiddleware)
+
+# Middleware de gestion d'erreurs standardisé
+app.add_middleware(ErrorHandlerMiddleware)
+
+# Configuration du rate limiting
 setup_rate_limit(app)
 
 # Middleware pour gérer les headers Railway et éviter les redirections 307
@@ -93,7 +102,7 @@ async def railway_proxy_middleware(request, call_next):
     
     # Logger pour debugging (seulement en cas de problème)
     if forwarded_proto and forwarded_proto != "https" and forwarded_proto != "http":
-        logger.warning(f"⚠️ X-Forwarded-Proto inattendu: {forwarded_proto} pour {request.url.path}")
+        logger.warning(f"X-Forwarded-Proto inattendu: {forwarded_proto} pour {request.url.path}")
     
     # IMPORTANT: Ne pas forcer de redirection HTTPS car Railway le gère déjà
     # Juste traiter la requête normalement
@@ -111,7 +120,7 @@ async def railway_proxy_middleware(request, call_next):
     
     return response
 
-# CORS - SÉCURISÉ
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -140,17 +149,14 @@ app.add_middleware(
 # Inclusion des routers
 app.include_router(auth_router)
 app.include_router(oauth_router)
+app.include_router(oauth_accounts_router)
 app.include_router(posts_router)
 app.include_router(hashtags_router)
 app.include_router(platforms_router)
 app.include_router(analytics_router)
 app.include_router(projects_router)
 app.include_router(meta_router)
-from tiktok.tiktok_routes import router as tiktok_router
 app.include_router(tiktok_router)
-from auth_unified.oauth_accounts_endpoints import oauth_accounts_router
-app.include_router(oauth_accounts_router)
-from webhooks.webhooks_endpoints import webhooks_router
 app.include_router(webhooks_router)
 
 # =====================================================
@@ -179,31 +185,6 @@ def healthz():
     """Health check Kubernetes - pas de rate limit"""
     return {"status": "ok", "message": "API running"}
 
-@app.get("/api/v1/meilisearch/test")
-def test_meilisearch():
-    """Test de connexion Meilisearch"""
-    from services.meilisearch_client import meilisearch_service
-    
-    if not meilisearch_service.client:
-        return {
-            "status": "error",
-            "message": "Meilisearch client non initialisé",
-            "check": "Vérifier MEILI_HOST et MEILI_API_KEY"
-        }
-    
-    try:
-        stats = meilisearch_service.get_stats()
-        return {
-            "status": "ok",
-            "message": "Meilisearch connecté avec succès",
-            "stats": stats,
-            "index_name": meilisearch_service.index_name
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Erreur connexion Meilisearch: {str(e)}"
-        }
 
 @app.get("/api/v1/oauth/debug/google")
 def debug_google_oauth():
@@ -338,29 +319,22 @@ def debug_instagram_oauth():
         }
 
 # =====================================================
-# LIFECYCLE EVENTS - REDIS STARTUP CHECK
+# LIFECYCLE EVENTS
 # =====================================================
 
 @app.on_event("startup")
 async def startup_event():
     """Démarrage de l'application - Création des tables"""
-    # Vérifier Redis
-    try:
-        await redis.ping()
-        logger.info("✅ Redis OK - Rate limiting activé")
-    except Exception as e:
-        logger.warning(f"⚠️ Redis KO: {e} - Rate limiting désactivé")
-    
     # Créer les tables si elles n'existent pas
-    logger.info("🔄 Création des tables de base de données...")
+    logger.info("Création des tables de base de données...")
     try:
         from db.base import Base, engine
         # Importer tous les modèles pour qu'ils soient enregistrés dans Base.metadata
         from db.models import User, OAuthAccount, Platform, Hashtag, Post, PostHashtag, Subscription, Project, ProjectHashtag, ProjectCreator
         Base.metadata.create_all(bind=engine)
-        logger.info("✅ Tables de base de données créées/vérifiées")
+        logger.info("Tables de base de données créées/vérifiées")
     except Exception as e:
-        logger.error(f"❌ Erreur création tables: {e}")
+        logger.error(f"Erreur création tables: {e}", exc_info=True)
         import traceback
         traceback.print_exc()
         raise  # Propager l'erreur pour arrêter le démarrage si problème

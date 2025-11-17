@@ -1,5 +1,5 @@
 # auth_unified/schemas.py
-# Schémas Pydantic pour l'authentification - SÉCURISÉS
+# Schémas Pydantic pour l'authentification
 
 from pydantic import BaseModel, EmailStr, validator, Field  # type: ignore
 from datetime import datetime
@@ -29,7 +29,7 @@ class UserCreate(BaseModel):
         return v.strip()
 
 class UserResponse(BaseModel):
-    """Schéma pour la réponse utilisateur - SÉCURISÉ"""
+    """Schéma pour la réponse utilisateur"""
     id: UUID
     email: str
     name: Optional[str]
@@ -46,7 +46,7 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=6, description="Mot de passe (min 6 caractères)")
 
 class TokenResponse(BaseModel):
-    """Schéma pour la réponse de token - SÉCURISÉ"""
+    """Schéma pour la réponse de token"""
     access_token: str
     token_type: str = "bearer"
     user: UserResponse

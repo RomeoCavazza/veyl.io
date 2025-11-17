@@ -13,18 +13,24 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     if (!loading && !user) {
       const token = localStorage.getItem('token');
       if (!token) {
-        console.log('🔒 ProtectedRoute: No token found, redirecting to /auth');
+        if (import.meta.env.DEV) {
+          console.log('🔒 ProtectedRoute: No token found, redirecting to /auth');
+        }
         // Sauvegarder la page demandée pour rediriger après login
         sessionStorage.setItem('redirectAfterLogin', location.pathname + location.search);
         navigate('/auth');
       } else {
-        console.log('⚠️ ProtectedRoute: Token exists but no user. Waiting for AuthContext to load...');
+        if (import.meta.env.DEV) {
+          console.log('⚠️ ProtectedRoute: Token exists but no user. Waiting for AuthContext to load...');
+        }
         // Token existe mais user est null - attendre un peu plus pour laisser le temps au AuthContext de charger
         // Ne pas rediriger immédiatement, attendre que le contexte charge
         const timer = setTimeout(() => {
           // Si après 2 secondes user est toujours null malgré le token, vérifier à nouveau
           if (!user && token) {
-            console.log('⚠️ ProtectedRoute: User still null after delay, token might be invalid');
+            if (import.meta.env.DEV) {
+              console.log('⚠️ ProtectedRoute: User still null after delay, token might be invalid');
+            }
             // Ne pas rediriger automatiquement, laisser AuthContext gérer
           }
         }, 2000);

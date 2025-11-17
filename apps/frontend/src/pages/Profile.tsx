@@ -9,16 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Globe, Instagram, Facebook, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { TikTokIcon } from '@/components/icons/TikTokIcon';
-import { getApiBase } from '@/lib/api';
-
-interface ConnectedAccount {
-  id: number;
-  provider: string;
-  provider_user_id: string;
-  connected_at: string;
-  has_token: boolean;
-}
-
+import { getApiBase, type ConnectedAccount } from '@/lib/api';
 
 export default function Profile() {
   const { user } = useAuth();
@@ -42,19 +33,9 @@ export default function Profile() {
 
   const fetchConnectedAccounts = async () => {
     try {
-      const token = localStorage.getItem('token');
-      // Use Vercel proxy (relative path)
-      const response = await fetch('/api/v1/auth/accounts/connected', {
-        mode: 'cors',
-        credentials: 'same-origin',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setConnectedAccounts(data.accounts || []);
-      }
+      const { getConnectedAccounts } = await import('@/lib/api');
+      const data = await getConnectedAccounts();
+      setConnectedAccounts(data.accounts || []);
     } catch (error) {
       console.error('Error fetching connected accounts:', error);
     } finally {
@@ -69,23 +50,12 @@ export default function Profile() {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const apiBase = getApiBase();
-      const url = apiBase ? `${apiBase}/api/v1/auth/accounts/${accountId}` : `/api/v1/auth/accounts/${accountId}`;
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        toast.success(`${provider} account disconnected`);
-        fetchConnectedAccounts();
-      } else {
-        toast.error('Error during disconnection');
-      }
+      const { disconnectAccount } = await import('@/lib/api');
+      await disconnectAccount(accountId);
+      toast.success(`${provider} account disconnected`);
+      fetchConnectedAccounts();
     } catch (error) {
+      console.error('Error during disconnection:', error);
       toast.error('Error during disconnection');
     }
   };

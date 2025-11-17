@@ -1,4 +1,5 @@
 # auth/auth_service.py
+import logging
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
@@ -8,6 +9,8 @@ from fastapi import HTTPException
 from core.config import settings
 from db.models import User
 from .schemas import UserCreate, TokenResponse, LoginRequest
+
+logger = logging.getLogger(__name__)
 
 class AuthService:
     def __init__(self):
@@ -36,17 +39,17 @@ class AuthService:
     def register_user(self, user_in: UserCreate, db: Session) -> TokenResponse:
         """Inscrire un nouvel utilisateur"""
         try:
-            print(f"🔍 Register attempt: {user_in.email}")
+            logger.info(f"Register attempt: {user_in.email}")
             
             # Vérifier si l'email existe déjà
             existing_user = db.query(User).filter(User.email == user_in.email).first()
             if existing_user:
-                print(f"❌ Email already exists: {user_in.email}")
+                logger.warning(f"Email already exists: {user_in.email}")
                 raise HTTPException(status_code=400, detail="Email déjà utilisé")
             
             # Créer l'utilisateur
             hashed_password = self.get_password_hash(user_in.password)
-            print(f"✅ Password hashed")
+            logger.debug("Password hashed")
             
             user = User(
                 email=user_in.email,
@@ -58,11 +61,11 @@ class AuthService:
             db.add(user)
             db.commit()
             db.refresh(user)
-            print(f"✅ User created: {user.id}")
+            logger.info(f"User created: {user.id}")
             
             # Créer le token
             access_token = self.create_access_token(data={"sub": str(user.id)})
-            print(f"✅ Token created")
+            logger.debug("Token created")
             
             return TokenResponse(
                 access_token=access_token,
@@ -72,9 +75,7 @@ class AuthService:
         except HTTPException:
             raise
         except Exception as e:
-            print(f"❌ ERROR in register_user: {type(e).__name__}: {str(e)}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"ERROR in register_user: {type(e).__name__}: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Erreur création utilisateur: {str(e)}")
     
     def login_user(self, user_in, db: Session) -> TokenResponse:

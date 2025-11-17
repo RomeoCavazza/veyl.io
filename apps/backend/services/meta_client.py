@@ -96,7 +96,7 @@ async def call_meta(
             detail = {"error": response.text}
 
         logger.error(
-            "❌ META API ERROR | %s %s | Status: %d | Duration: %.2fs",
+            "META API ERROR | %s %s | Status: %d | Duration: %.2fs",
             method_upper,
             url,
             response.status_code,
@@ -114,7 +114,7 @@ async def call_meta(
 
     # Log succès seulement si HTTP 200-399
     logger.info(
-        "✅ META API SUCCESS | %s %s | Status: %d | Duration: %.2fs | Params: %s",
+        "META API SUCCESS | %s %s | Status: %d | Duration: %.2fs | Params: %s",
         method_upper,
         url,
         response.status_code,

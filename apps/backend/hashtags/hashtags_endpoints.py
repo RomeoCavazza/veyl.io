@@ -1,5 +1,6 @@
 # hashtags/hashtags_endpoints.py
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from db.base import get_db
@@ -111,7 +112,10 @@ def get_hashtag_stats(
         raise HTTPException(status_code=404, detail="Hashtag non trouvé")
     
     # Utiliser la vue hashtags_with_stats
-    result = db.execute(f"SELECT * FROM hashtags_with_stats WHERE id = {hashtag_id}")
+    result = db.execute(
+        text("SELECT * FROM hashtags_with_stats WHERE id = :hashtag_id"),
+        {"hashtag_id": hashtag_id}
+    )
     stats = result.fetchone()
     
     if not stats:

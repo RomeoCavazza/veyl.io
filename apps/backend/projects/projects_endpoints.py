@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
-from sqlalchemy import text, or_, and_, func, cast, String
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import Dict, List, Optional, Set
 from uuid import UUID
@@ -30,29 +30,12 @@ from projects.schemas import (
     ProjectHashtagCreate,
     ProjectPostResponse,
 )
+from services.post_utils import search_posts_by_hashtag, ensure_platform, normalize_hashtag, normalize_creator, load_post_payload
 
 logger = logging.getLogger(__name__)
 projects_router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 
 
-def _normalize_creator(value: str) -> str:
-    return value.strip().lstrip("@").lower()
-
-
-def _normalize_hashtag(value: str) -> str:
-    return value.strip().lstrip("#").lower()
-
-
-def _ensure_platform(db: Session, name: Optional[str]) -> Platform:
-    normalized = (name or "").strip().lower()
-    if not normalized:
-        raise HTTPException(status_code=400, detail="Platform invalide")
-    platform = db.query(Platform).filter(Platform.name == normalized).first()
-    if not platform:
-        platform = Platform(name=normalized)
-        db.add(platform)
-        db.flush()
-    return platform
 
 
 def _get_project_or_404(db: Session, current_user: User, project_id: str) -> Project:
@@ -88,14 +71,14 @@ def _collect_project_posts(
         platform = db.query(Platform).filter(Platform.name == platform_filter).first()
         if platform:
             platform_ids = [platform.id]
-            logger.info(f"🔍 [COLLECT] Filtering by platform: {platform_filter} (platform_id: {platform.id})")
+            logger.debug(f"[COLLECT] Filtering by platform: {platform_filter} (platform_id: {platform.id})")
         elif platform_filter == 'meta':
             # Meta = Instagram + Facebook
             meta_platforms = db.query(Platform).filter(Platform.name.in_(['instagram', 'facebook'])).all()
             platform_ids = [p.id for p in meta_platforms]
-            logger.info(f"🔍 [COLLECT] Filtering by meta platforms: {[p.name for p in meta_platforms]}")
+            logger.debug(f"[COLLECT] Filtering by meta platforms: {[p.name for p in meta_platforms]}")
         else:
-            logger.warning(f"⚠️ [COLLECT] Platform '{platform_filter}' not found in database")
+            logger.warning(f"[COLLECT] Platform '{platform_filter}' not found in database")
 
     creator_links = (
         db.query(ProjectCreator)
@@ -122,7 +105,7 @@ def _collect_project_posts(
         .all()
     )
     hashtag_ids = [link.hashtag_id for link in hashtag_links]
-    logger.info(f"🔍 [COLLECT] Found {len(hashtag_links)} hashtag links, {len(hashtag_ids)} hashtag_ids")
+    logger.debug(f"[COLLECT] Found {len(hashtag_links)} hashtag links, {len(hashtag_ids)} hashtag_ids")
     if hashtag_ids:
         # 1️⃣ Essayer d'abord via PostHashtag (liens explicites)
         hashtag_query = (
@@ -132,12 +115,12 @@ def _collect_project_posts(
         )
         if platform_ids:
             hashtag_query = hashtag_query.filter(Post.platform_id.in_(platform_ids))
-            logger.info(f"🔍 [COLLECT] Filtering posts by platform_ids: {platform_ids}")
+            logger.debug(f"[COLLECT] Filtering posts by platform_ids: {platform_ids}")
         hashtag_query = hashtag_query.order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
         if limit:
             hashtag_query = hashtag_query.limit(limit)
         posts_from_hashtags = hashtag_query.all()
-        logger.info(f"🔍 [COLLECT] Found {len(posts_from_hashtags)} posts from hashtags via PostHashtag (platform_filter: {platform_filter})")
+        logger.info(f"[COLLECT] Found {len(posts_from_hashtags)} posts from hashtags via PostHashtag (platform_filter: {platform_filter})")
         for post in posts_from_hashtags:
             post_map[post.id] = post
             logger.debug(f"  - Post {post.id}: platform={post.platform.name if post.platform else 'None'}, caption={post.caption[:50] if post.caption else 'None'}")
@@ -145,61 +128,22 @@ def _collect_project_posts(
         # 2️⃣ FALLBACK: Si aucun post trouvé via PostHashtag, chercher directement dans caption/hashtags
         # (comme dans Search page - fallback DB direct)
         if len(posts_from_hashtags) == 0:
-            logger.warning(f"⚠️ [COLLECT] No posts found via PostHashtag, trying direct search in caption/hashtags...")
+            logger.warning(f"[COLLECT] No posts found via PostHashtag, trying direct search in caption/hashtags...")
             
             # Récupérer les noms des hashtags
             hashtags = db.query(Hashtag).filter(Hashtag.id.in_(hashtag_ids)).all()
             hashtag_names = [h.name for h in hashtags]
-            logger.info(f"🔍 [COLLECT] Searching for posts with hashtags: {hashtag_names}")
+            logger.debug(f"[COLLECT] Searching for posts with hashtags: {hashtag_names}")
             
             for hashtag_name in hashtag_names:
-                # Recherche flexible dans caption et hashtags array (comme _attach_hashtag)
-                search_patterns = [
-                    f'%#{hashtag_name}%',
-                    f'%#{hashtag_name.lower()}%',
-                    f'%#{hashtag_name.upper()}%',
-                    f'%{hashtag_name}%',
-                ]
-                
-                caption_filter = or_(*[Post.caption.ilike(pattern) for pattern in search_patterns])
-                
-                hashtag_variants = [
-                    hashtag_name,
-                    hashtag_name.lower(),
-                    hashtag_name.upper(),
-                    f'#{hashtag_name}',
-                    f'#{hashtag_name.lower()}',
-                    f'#{hashtag_name.upper()}',
-                ]
-                
-                hashtags_filters = []
-                for variant in hashtag_variants:
-                    hashtags_filters.append(
-                        and_(
-                            Post.hashtags.isnot(None),
-                            func.array_to_string(Post.hashtags, ',').ilike(f'%{variant}%')
-                        )
-                    )
-                
-                if hashtags_filters:
-                    hashtags_filter = or_(*hashtags_filters)
-                    combined_filter = or_(caption_filter, hashtags_filter)
-                else:
-                    combined_filter = caption_filter
-                
-                fallback_query = (
-                    db.query(Post)
-                    .filter(combined_filter)
+                # Utiliser la fonction partagée pour la recherche (avec filtrage par plateforme)
+                fallback_posts = search_posts_by_hashtag(
+                    db, 
+                    hashtag_name, 
+                    limit=limit or 100,
+                    platform_ids=platform_ids
                 )
-                if platform_ids:
-                    fallback_query = fallback_query.filter(Post.platform_id.in_(platform_ids))
-                
-                fallback_query = fallback_query.order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
-                if limit:
-                    fallback_query = fallback_query.limit(limit)
-                
-                fallback_posts = fallback_query.all()
-                logger.info(f"🔍 [COLLECT] Found {len(fallback_posts)} posts via direct search for #{hashtag_name} (platform_filter: {platform_filter})")
+                logger.info(f"[COLLECT] Found {len(fallback_posts)} posts via direct search for #{hashtag_name} (platform_filter: {platform_filter})")
                 
                 for post in fallback_posts:
                     post_map[post.id] = post
@@ -222,15 +166,15 @@ def _collect_project_posts(
                                 hashtag_id=hashtag.id
                             )
                             db.add(post_hashtag_link)
-                            logger.debug(f"  🔗 Auto-linked post {post.id} to hashtag {hashtag.name}")
+                            logger.debug(f"Auto-linked post {post.id} to hashtag {hashtag.name}")
             
             # Commit les auto-links
             if len(post_map) > len(posts_from_hashtags):
                 try:
                     db.commit()
-                    logger.info(f"✅ [COLLECT] Auto-linked {len(post_map) - len(posts_from_hashtags)} posts to hashtags")
+                    logger.info(f"[COLLECT] Auto-linked {len(post_map) - len(posts_from_hashtags)} posts to hashtags")
                 except Exception as e:
-                    logger.exception(f"❌ [COLLECT] Error auto-linking posts: {e}")
+                    logger.exception(f"[COLLECT] Error auto-linking posts: {e}")
                     db.rollback()
 
     posts = list(post_map.values())
@@ -304,11 +248,15 @@ def _attach_creator(
     username: str,
     platform_name: str,
 ) -> ProjectCreator:
-    normalized_username = _normalize_creator(username)
+    normalized_username = normalize_creator(username)
     if not normalized_username:
         raise HTTPException(status_code=400, detail="Creator username invalide")
 
-    platform = _ensure_platform(db, platform_name)
+    # Normaliser le nom de la plateforme
+    normalized_platform = (platform_name or "").strip().lower()
+    if not normalized_platform:
+        raise HTTPException(status_code=400, detail="Platform invalide")
+    platform = ensure_platform(db, normalized_platform)
 
     existing = (
         db.query(ProjectCreator)
@@ -337,11 +285,15 @@ def _attach_hashtag(
     hashtag_value: str,
     platform_name: str,
 ) -> ProjectHashtag:
-    normalized_name = _normalize_hashtag(hashtag_value)
+    normalized_name = normalize_hashtag(hashtag_value)
     if not normalized_name:
         raise HTTPException(status_code=400, detail="Hashtag invalide")
 
-    platform = _ensure_platform(db, platform_name)
+    # Normaliser le nom de la plateforme
+    normalized_platform = (platform_name or "").strip().lower()
+    if not normalized_platform:
+        raise HTTPException(status_code=400, detail="Platform invalide")
+    platform = ensure_platform(db, normalized_platform)
 
     hashtag = (
         db.query(Hashtag)
@@ -368,61 +320,7 @@ def _attach_hashtag(
     db.add(project_hashtag)
     
     # 🔥 AUTO-LINK: Chercher les posts qui contiennent ce hashtag sur TOUTES les plateformes
-    # (pas seulement celle spécifiée, car un hashtag peut exister sur plusieurs plateformes)
-    logger.info(f"🔍 Searching posts with #{normalized_name} (all platforms, caption + hashtags array)...")
-    
-    # Chercher les posts qui contiennent ce hashtag dans leur caption OU dans la colonne hashtags (ArrayType)
-    # Recherche flexible : #fashion, fashion, #Fashion, etc.
-    search_patterns = [
-        f'%#{normalized_name}%',  # #fashion
-        f'%#{normalized_name.lower()}%',  # #fashion (lowercase)
-        f'%#{normalized_name.upper()}%',  # #FASHION (uppercase)
-        f'%{normalized_name}%',  # fashion (sans #)
-    ]
-    
-    # Recherche dans caption
-    caption_filter = or_(*[Post.caption.ilike(pattern) for pattern in search_patterns])
-    
-    # Recherche dans la colonne hashtags (ArrayType) si elle existe
-    # PostgreSQL: hashtags @> ARRAY['fashion'] ou hashtags @> ARRAY['#fashion']
-    hashtag_variants = [
-        normalized_name,
-        normalized_name.lower(),
-        normalized_name.upper(),
-        f'#{normalized_name}',
-        f'#{normalized_name.lower()}',
-        f'#{normalized_name.upper()}',
-    ]
-    
-    # Construire le filtre pour la colonne hashtags
-    # En PostgreSQL, hashtags est un text[] (array), donc on doit caster en text avant .ilike()
-    # Utiliser func.array_to_string() pour convertir l'array en texte séparé par virgules
-    hashtags_filters = []
-    for variant in hashtag_variants:
-        # Caster l'array en text avec array_to_string() pour permettre .ilike()
-        hashtags_filters.append(
-            and_(
-                Post.hashtags.isnot(None),
-                func.array_to_string(Post.hashtags, ',').ilike(f'%{variant}%')
-            )
-        )
-    
-    # Combiner les deux recherches (caption + hashtags column)
-    if hashtags_filters:
-        hashtags_filter = or_(*hashtags_filters)
-        combined_filter = or_(caption_filter, hashtags_filter)
-    else:
-        combined_filter = caption_filter
-    
-    posts_with_hashtag = (
-        db.query(Post)
-        .filter(combined_filter)
-        .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
-        .limit(100)  # Augmenter la limite pour trouver plus de posts
-        .all()
-    )
-    
-    logger.info(f"🔍 Found {len(posts_with_hashtag)} posts with #{normalized_name} (caption or hashtags array)")
+    posts_with_hashtag = search_posts_by_hashtag(db, normalized_name, limit=100)
     
     linked_count = 0
     platform_counts = {}
@@ -451,10 +349,10 @@ def _attach_hashtag(
     
     if linked_count > 0:
         platform_summary = ", ".join([f"{count} {platform}" for platform, count in platform_counts.items()])
-        logger.info(f"✅ Auto-linked {linked_count} posts to #{normalized_name} ({platform_summary})")
+        logger.info(f"Auto-linked {linked_count} posts to #{normalized_name} ({platform_summary})")
         db.flush()  # Commit les liens immédiatement
     else:
-        logger.warning(f"⚠️ No posts found with #{normalized_name} in caption")
+        logger.warning(f"No posts found with #{normalized_name} in caption")
     
     return project_hashtag
 
@@ -552,12 +450,11 @@ def list_project_posts(
 
     results: List[ProjectPostResponse] = []
     for post in posts:
-        metrics: dict = {}
-        if post.metrics:
-            try:
-                metrics = json.loads(post.metrics)
-            except (TypeError, ValueError):
-                metrics = {}
+        # Charger payload une seule fois par post
+        payload_data = load_post_payload(post)
+        metrics = payload_data["metrics"]
+        api_payload = payload_data["api_payload"]
+        
         permalink = None
         platform_name = post.platform.name if post.platform else 'instagram'
         
@@ -570,46 +467,58 @@ def list_project_posts(
             else:
                 # Instagram par défaut
                 permalink = f"https://www.instagram.com/p/{post.external_id.strip('/')}/"
-        elif post.api_payload:
-            try:
-                payload_data = json.loads(post.api_payload)
-                # Chercher permalink dans api_payload (support Meta et TikTok)
-                permalink_candidate = (
-                    payload_data.get('share_url')
-                    or payload_data.get('permalink')
-                    or payload_data.get('url')
-                    or (payload_data.get('media_details') or {}).get('permalink')
-                    or payload_data.get('author_url')
-                )
-                if isinstance(permalink_candidate, str) and permalink_candidate.startswith('http'):
-                    permalink = permalink_candidate
-            except (TypeError, ValueError):
-                pass
+        elif api_payload:
+            # Chercher permalink dans api_payload (support Meta et TikTok)
+            permalink_candidate = (
+                api_payload.get('share_url')
+                or api_payload.get('permalink')
+                or api_payload.get('url')
+                or (api_payload.get('media_details') or {}).get('permalink')
+                or api_payload.get('author_url')
+            )
+            if isinstance(permalink_candidate, str) and permalink_candidate.startswith('http'):
+                permalink = permalink_candidate
 
         # Pour TikTok, extraire cover_image_url ou thumbnail_url depuis api_payload si media_url manquant
         media_url = post.media_url
-        if platform_name == 'tiktok' and not media_url and post.api_payload:
-            try:
-                payload_data = json.loads(post.api_payload)
-                media_url = (
-                    payload_data.get('cover_image_url')
-                    or payload_data.get('thumbnail_url')
-                    or payload_data.get('media_url')
-                )
-            except (TypeError, ValueError):
-                pass
+        if platform_name == 'tiktok' and not media_url and api_payload:
+            media_url = (
+                api_payload.get('cover_image_url')
+                or api_payload.get('thumbnail_url')
+                or api_payload.get('media_url')
+            )
+        
+        # Extraire hashtags et mentions depuis caption ou colonne hashtags
+        hashtags_list = post.hashtags if isinstance(post.hashtags, list) else []
+        if not hashtags_list and post.caption:
+            # Extraire hashtags depuis caption si colonne hashtags vide
+            hashtags_list = re.findall(r'#\w+', post.caption)
+        
+        mentions_list = []
+        if post.caption:
+            mentions_list = re.findall(r'@\w+', post.caption)
         
         results.append(ProjectPostResponse(
             id=post.id,
             author=post.author,
+            username=post.author,  # Alias pour compatibilité frontend
             caption=post.caption,
             media_url=media_url,
             permalink=permalink,
             posted_at=post.posted_at,
+            fetched_at=post.fetched_at,
             platform=post.platform.name if post.platform else None,
             like_count=metrics.get('like_count') or metrics.get('likes') or 0,
             comment_count=metrics.get('comment_count') or metrics.get('comments_count') or 0,
+            share_count=metrics.get('share_count') or 0,
+            view_count=metrics.get('view_count') or 0,
             score_trend=post.score_trend,
+            hashtags=hashtags_list,
+            mentions=mentions_list,
+            location=None,  # Pas stocké actuellement dans Post
+            media_type=api_payload.get('media_type') if api_payload else None,
+            thumbnail_url=api_payload.get('thumbnail_url') if api_payload else None,
+            external_id=post.external_id,
         ))
 
     return results
@@ -622,65 +531,8 @@ def create_project(
 ):
     """Créer un nouveau projet (peut être vide)."""
     try:
-        # Sécuriser la présence des colonnes (compat legacy)
-        db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS scope_type VARCHAR(50);"))
-        db.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS scope_query TEXT;"))
-        db.execute(
-            text(
-                """
-                DO $$
-                DECLARE
-                    column_udt text;
-                BEGIN
-                    SELECT udt_name INTO column_udt
-                    FROM information_schema.columns
-                    WHERE table_name = 'projects'
-                      AND column_name = 'platforms';
-
-                    IF column_udt IS NOT NULL AND column_udt LIKE '\\_%' THEN
-                        EXECUTE 'ALTER TABLE projects ALTER COLUMN platforms DROP DEFAULT;';
-
-                        IF column_udt = '_int8' THEN
-                            EXECUTE 'ALTER TABLE projects
-                                     ALTER COLUMN platforms
-                                     TYPE text
-                                     USING to_json(COALESCE(platforms::text[], ARRAY[]::text[]))::text;';
-                        ELSE
-                            EXECUTE 'ALTER TABLE projects
-                                     ALTER COLUMN platforms
-                                     TYPE text
-                                     USING to_json(COALESCE(platforms, ARRAY[]::text[]))::text;';
-                        END IF;
-
-                        EXECUTE 'ALTER TABLE projects ALTER COLUMN platforms SET DEFAULT ''[]'';';
-                    END IF;
-                END $$;
-                """
-            )
-        )
-
-        db.execute(
-            text(
-                """
-                DO $$
-                BEGIN
-                    IF NOT EXISTS (
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_name = 'hashtags' AND column_name = 'last_scraped'
-                    ) THEN
-                        EXECUTE 'ALTER TABLE hashtags ADD COLUMN last_scraped TIMESTAMP;';
-                    END IF;
-
-                    IF NOT EXISTS (
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_name = 'hashtags' AND column_name = 'updated_at'
-                    ) THEN
-                        EXECUTE 'ALTER TABLE hashtags ADD COLUMN updated_at TIMESTAMP;';
-                    END IF;
-                END $$;
-                """
-            )
-        )
+        # Note: Les colonnes sont créées via Base.metadata.create_all() dans startup_event
+        # Ce code de migration SQL est conservé pour compatibilité avec les anciennes bases
 
         if hasattr(project_in, "model_dump"):
             project_data = project_in.model_dump(exclude={"hashtag_names", "creator_usernames"})
@@ -913,8 +765,8 @@ def add_project_hashtag(
         # Note: Le paramètre fetch_live est conservé pour compatibilité, mais le vrai fetch
         # se fait via le bouton "Fetch" dans l'UI qui appelle directement les endpoints API
         if fetch_live:
-            logger.info(f"🌐 fetch_live=true for #{payload.hashtag} (platform: {payload.platform})")
-            logger.info(f"💡 Use 'Fetch' button in UI to get live posts from API")
+            logger.info(f"fetch_live=true for #{payload.hashtag} (platform: {payload.platform})")
+            logger.info(f" Use 'Fetch' button in UI to get live posts from API")
         
         return serialize_project(project)
     except HTTPException:
@@ -958,51 +810,8 @@ def link_posts_to_project_hashtag(
     
     normalized_name = hashtag.name
     
-    # Rechercher les posts (même logique que _attach_hashtag)
-    search_patterns = [
-        f'%#{normalized_name}%',
-        f'%#{normalized_name.lower()}%',
-        f'%#{normalized_name.upper()}%',
-        f'%{normalized_name}%',
-    ]
-    
-    caption_filter = or_(*[Post.caption.ilike(pattern) for pattern in search_patterns])
-    
-    hashtag_variants = [
-        normalized_name,
-        normalized_name.lower(),
-        normalized_name.upper(),
-        f'#{normalized_name}',
-        f'#{normalized_name.lower()}',
-        f'#{normalized_name.upper()}',
-    ]
-    
-    hashtags_filters = []
-    for variant in hashtag_variants:
-        # Caster l'array en text avec array_to_string() pour permettre .ilike()
-        hashtags_filters.append(
-            and_(
-                Post.hashtags.isnot(None),
-                func.array_to_string(Post.hashtags, ',').ilike(f'%{variant}%')
-            )
-        )
-    
-    # Combiner les deux recherches (caption + hashtags column)
-    if hashtags_filters:
-        hashtags_filter = or_(*hashtags_filters)
-        combined_filter = or_(caption_filter, hashtags_filter)
-    else:
-        combined_filter = caption_filter
-    
-    posts_with_hashtag = (
-        db.query(Post)
-        .filter(combined_filter)
-        .order_by(Post.posted_at.desc().nullslast(), Post.fetched_at.desc().nullslast())
-        .limit(limit)
-        .all()
-    )
-    
-    logger.info(f"🔗 [LINK-POSTS] Found {len(posts_with_hashtag)} posts matching #{normalized_name}")
+    # Rechercher les posts (utilise la fonction partagée)
+    posts_with_hashtag = search_posts_by_hashtag(db, normalized_name, limit=limit)
     
     linked_count = 0
     already_linked = 0

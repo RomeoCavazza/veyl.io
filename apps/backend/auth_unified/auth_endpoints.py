@@ -1,4 +1,5 @@
 # auth/auth_endpoints.py
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -9,6 +10,7 @@ from db.models import User
 from .schemas import UserCreate, UserResponse, TokenResponse, LoginRequest
 from .auth_service import AuthService
 
+logger = logging.getLogger(__name__)
 auth_router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 auth_service = AuthService()
 
@@ -69,25 +71,25 @@ def get_optional_user(
 @auth_router.post("/register", response_model=TokenResponse)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
     """Inscription simple"""
-    print(f"📝 Register request received: {user_in.email}")
+    logger.info(f"Register request received: {user_in.email}")
     try:
         result = auth_service.register_user(user_in, db)
-        print(f"✅ Register successful: {user_in.email}")
+        logger.info(f"Register successful: {user_in.email}")
         return result
     except Exception as e:
-        print(f"❌ Register error: {e}")
+        logger.error(f"Register error: {e}", exc_info=True)
         raise
 
 @auth_router.post("/login", response_model=TokenResponse)
 def login(user_in: LoginRequest, db: Session = Depends(get_db)):
     """Connexion simple"""
-    print(f"🔑 Login request received: {user_in.email}")
+    logger.info(f"Login request received: {user_in.email}")
     try:
         result = auth_service.login_user(user_in, db)
-        print(f"✅ Login successful: {user_in.email}")
+        logger.info(f"Login successful: {user_in.email}")
         return result
     except Exception as e:
-        print(f"❌ Login error: {e}")
+        logger.error(f"Login error: {e}", exc_info=True)
         raise
 
 @auth_router.get("/me", response_model=UserResponse)

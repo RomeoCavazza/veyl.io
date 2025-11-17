@@ -1,15 +1,14 @@
 # core/ratelimit.py
-# Configuration du rate limiting avec SlowAPI et Redis
+# Configuration du rate limiting avec SlowAPI (en mémoire)
 
-import os
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1")
-limiter = Limiter(key_func=get_remote_address, storage_uri=REDIS_URL)
+# Rate limiting en mémoire (suffisant pour un early SaaS)
+limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
 
 def setup_rate_limit(app: FastAPI):
     """Configure le rate limiting pour l'application FastAPI"""

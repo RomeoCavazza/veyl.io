@@ -15,22 +15,28 @@ export default function AuthCallback() {
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
 
-    console.log('📥 AuthCallback - Received parameters:', { 
-      hasToken: !!token, 
-      hasUserId: !!userId, 
-      hasEmail: !!email,
-      hasName: !!name,
-      error,
-      errorDescription
-    });
+    if (import.meta.env.DEV) {
+      console.log('📥 AuthCallback - Received parameters:', { 
+        hasToken: !!token, 
+        hasUserId: !!userId, 
+        hasEmail: !!email,
+        hasName: !!name,
+        error,
+        errorDescription
+      });
+    }
 
     // Handle OAuth errors
     if (error) {
-      console.error('❌ OAuth error:', error, errorDescription);
+      if (import.meta.env.DEV) {
+        console.error('❌ OAuth error:', error, errorDescription);
+      }
       // Display error in URL for debugging, but redirect to /auth/callback with error
       // so user can see the error message on the callback page
       const errorMsg = errorDescription || error;
-      console.error('Redirecting to /auth with error:', errorMsg);
+      if (import.meta.env.DEV) {
+        console.error('Redirecting to /auth with error:', errorMsg);
+      }
       // Redirect to /auth instead of /auth/callback to display error on login page
       navigate('/auth?error=' + encodeURIComponent(errorMsg));
       return;
@@ -48,7 +54,9 @@ export default function AuthCallback() {
         decodedToken = token;
       }
       
-      console.log('🔑 Decoded token, length:', decodedToken.length);
+      if (import.meta.env.DEV) {
+        console.log('🔑 Decoded token, length:', decodedToken.length);
+      }
       
       // Store token immediately
       localStorage.setItem('token', decodedToken);
@@ -69,7 +77,9 @@ export default function AuthCallback() {
       }
       
       // Redirect to landing page (/)
-      console.log('🚀 Redirecting to landing page');
+      if (import.meta.env.DEV) {
+        console.log('🚀 Redirecting to landing page');
+      }
       navigate('/');
       return;
     } else if (userId && email) {
@@ -86,12 +96,16 @@ export default function AuthCallback() {
         is_active: true
       });
       setTimeout(() => {
-        console.log('🚀 Redirecting to landing page (fallback userId)');
+        if (import.meta.env.DEV) {
+          console.log('🚀 Redirecting to landing page (fallback userId)');
+        }
         navigate('/');
       }, 300);
     } else {
       // On error, redirect to login page
-      console.error('Missing required parameters:', { token, userId, email });
+      if (import.meta.env.DEV) {
+        console.error('Missing required parameters:', { token, userId, email });
+      }
       navigate('/auth?error=missing_params');
     }
   }, [searchParams, navigate, setUser, setToken]);

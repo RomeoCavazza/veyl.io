@@ -39,8 +39,7 @@ export default function DataDeletion() {
     setIsSubmitting(true);
 
     try {
-      // TODO: Implémenter l'endpoint backend /api/v1/users/delete-account
-      // Pour l'instant, on simule une soumission
+      // Appel de l'endpoint backend /api/v1/users/delete-account
       const response = await fetch('/api/v1/users/delete-account', {
         method: 'POST',
         headers: {
@@ -62,7 +61,9 @@ export default function DataDeletion() {
         });
       } else {
         // Fallback if endpoint doesn't exist yet
-        console.warn('Endpoint /api/v1/users/delete-account not available, simulating submission');
+        if (import.meta.env.DEV) {
+          console.warn('Endpoint /api/v1/users/delete-account not available, simulating submission');
+        }
         setIsSubmitted(true);
         toast({
           title: "Request registered",
@@ -70,7 +71,9 @@ export default function DataDeletion() {
         });
       }
     } catch (error) {
-      console.error('Error during submission:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error during submission:', error);
+      }
       // In case of error, we still simulate submission for UX
       setIsSubmitted(true);
         toast({

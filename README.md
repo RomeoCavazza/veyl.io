@@ -18,13 +18,13 @@
 
 <p align="center">⚡ A social media intelligence platform that helps you monitor, analyze, and anticipate trends on Instagram and TikTok 🔍</p>
 
-[veyl.io](https://www.veyl.io) helps you shape a comprehensive social media monitoring experience, offering powerful analytics and trend detection features powered by [Meilisearch](https://www.meilisearch.com) and official Meta/TikTok APIs.
+[veyl.io](https://www.veyl.io) helps you shape a comprehensive social media monitoring experience, offering powerful analytics and trend detection features powered by official Meta/TikTok APIs.
 
 ## 🖥 Platform Features
 
 - **Trend Monitoring** — Create custom projects to track hashtags, creators, and emerging trends across Instagram and TikTok
 - **Advanced Analytics** — Real-time engagement metrics, growth tracking, and performance insights
-- **Fast Search** — Ultra-fast, typo-tolerant search powered by Meilisearch across millions of posts
+- **Fast Search** — Search across millions of posts with database-backed fallback
 - **Creator Intelligence** — Analyze influencer performance, partnerships, and content strategies
 - **Project Workspaces** — Organize your monitoring with dedicated project dashboards (Watchlist, Grid, Analytics)
 
@@ -32,7 +32,7 @@ See the [online documentation](https://www.veyl.io/docs) for more details.
 
 ## ✨ Features
 
-- **Search-as-you-type:** Find posts and creators in milliseconds with typo-tolerant search via Meilisearch
+- **Search-as-you-type:** Find posts and creators with real-time API integration and database fallback
 - **Multi-platform monitoring:** Track trends simultaneously on Instagram and TikTok
 - **Real-time analytics:** Monitor engagement rates, follower growth, and content performance
 - **Creator insights:** Analyze influencer partnerships, content strategies, and audience demographics
@@ -49,13 +49,8 @@ You can consult veyl.io's documentation at [veyl.io/docs](https://www.veyl.io/do
 
 The complete technical documentation is organized in the [`docs/`](docs/) directory:
 
-- **[docs/architecture.md](docs/architecture.md)** — Complete architecture, product vision, and roadmap
-- **[docs/backend.md](docs/backend.md)** — Backend modules, endpoints, services
-- **[docs/frontend.md](docs/frontend.md)** — Frontend implementation status and pages
 - **[docs/database.md](docs/database.md)** — Database schema and structure
-- **[docs/api-reference.md](docs/api-reference.md)** — API reference, endpoints, and schemas
 - **[docs/oauth-scopes.md](docs/oauth-scopes.md)** — OAuth permissions for Meta and TikTok
-- **[docs/post-app-review-roadmap.md](docs/post-app-review-roadmap.md)** — Post-App Review roadmap (Meilisearch advanced, Supabase+pgvector, Make/n8n, Dust)
 
 ## 🚀 Getting Started
 
@@ -89,8 +84,7 @@ npm run dev
 **Backend:**
 - **FastAPI** — Python async API framework
 - **PostgreSQL** — Relational database (Railway)
-- **Redis** — Caching and rate limiting
-- **Meilisearch** — Ultra-fast search engine
+- **Rate Limiting** — In-memory rate limiting for API protection
 
 **Frontend:**
 - **React 18** — UI framework
@@ -117,37 +111,25 @@ veyl.io integrates with official developer platforms:
 - TikTok API — Access to public videos and creator statistics
 - [Documentation](https://developers.tiktok.com/)
 
-**Meilisearch**
-- Ultra-fast, typo-tolerant search engine
-- Real-time indexing and faceted search
-- [Documentation](https://www.meilisearch.com/docs)
 
 ## ⚙️ Advanced Usage
 
-Experienced users will want to keep our [API Reference](docs/api-reference.md) close at hand.
-
-We also offer dedicated guides for:
-- [OAuth Configuration](docs/oauth-scopes.md) — Meta and TikTok permissions setup
-- [Database Schema](docs/database.md) — Complete database structure
-- [Backend Architecture](docs/backend.md) — Backend modules and services
-- [Frontend Implementation](docs/frontend.md) — Frontend pages and components
+For technical details, see the [Database Schema](docs/database.md) and [OAuth Configuration](docs/oauth-scopes.md) documentation.
 
 ## 🧾 Roadmap
 
 ### ✅ Phase 1: Foundations (Completed)
 - Projects CRUD with database models
 - OAuth integration (Meta, TikTok, Google)
-- Search interface powered by Meilisearch
+- Search interface with API-first strategy and database fallback
 - Analytics dashboards and insights
 - Project management UI
 
 ### 🔄 Phase 2: Post-App Review (In Progress)
-- **Meilisearch Advanced** — Search UX, filters, ranking rules
+- **Advanced Search** — Enhanced search UX, filters, and ranking
 - **Supabase + pgvector** — Semantic storage, RAG, similarity search
 - **Make / n8n** — Automated data ingestion
 - **Dust** — Agent internal reasoning (if needed)
-
-See [docs/post-app-review-roadmap.md](docs/post-app-review-roadmap.md) for detailed roadmap.
 
 ## 📊 Privacy & Data Protection
 

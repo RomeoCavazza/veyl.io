@@ -1,5 +1,5 @@
 # core/config.py
-# Configuration centralisée pour l'API Insider Trends - SÉCURISÉE
+# Configuration centralisée pour l'API
 
 import os
 from typing import Optional
@@ -9,12 +9,9 @@ from dotenv import load_dotenv  # type: ignore
 load_dotenv()
 
 class Settings:
-    """Configuration centralisée de l'application - SÉCURISÉE"""
+    """Configuration centralisée de l'application"""
     
     def __init__(self):
-        # =====================================================
-        # CONFIGURATION SÉCURISÉE - PAS DE VALEURS PAR DÉFAUT
-        # =====================================================
         
         # Base de données - OBLIGATOIRE
         self.DATABASE_URL: str = os.getenv("DATABASE_URL")
@@ -53,11 +50,6 @@ class Settings:
         if not self.WEBHOOK_VERIFY_TOKEN:
             raise ValueError("WEBHOOK_VERIFY_TOKEN must be set in environment variables")
         
-        # Configuration MeiliSearch (optionnel)
-        self.MEILI_HOST: str = os.getenv("MEILI_HOST", "http://localhost:7700")
-        self.MEILI_INDEX: str = os.getenv("MEILI_INDEX", "posts")
-        self.MEILI_MASTER_KEY: Optional[str] = os.getenv("MEILI_MASTER_KEY")
-        
         # Configuration Google OAuth - OBLIGATOIRE
         self.GOOGLE_CLIENT_ID: Optional[str] = os.getenv("GOOGLE_CLIENT_ID")
         self.GOOGLE_CLIENT_SECRET: Optional[str] = os.getenv("GOOGLE_CLIENT_SECRET")
@@ -69,9 +61,6 @@ class Settings:
         self.TIKTOK_CLIENT_KEY: Optional[str] = os.getenv("TIKTOK_CLIENT_KEY")
         self.TIKTOK_CLIENT_SECRET: Optional[str] = os.getenv("TIKTOK_CLIENT_SECRET")
         self.TIKTOK_REDIRECT_URI: str = os.getenv("TIKTOK_REDIRECT_URI", "https://veyl.io/api/v1/auth/tiktok/callback")
-        
-        # Configuration Redis (optionnel)
-        self.REDIS_URL: str = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 
 # Instance globale
 settings = Settings()

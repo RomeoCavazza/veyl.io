@@ -1,11 +1,10 @@
-import { ExternalLink, Sparkles, Search, Share2, Video, Cpu, Binoculars } from 'lucide-react';
+import { ExternalLink, Sparkles, Search, Share2, Video, Binoculars } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import metaLogo from '@/assets/img/meta-for-dev.png';
 import tiktokLogo from '@/assets/img/tiktok-for-dev.png';
-import meilisearchLogo from '@/assets/img/meilisearch.png';
 
 export default function Docs() {
   const metaProducts = [
@@ -134,9 +133,6 @@ export default function Docs() {
                     <img src="https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black" alt="React" className="h-5" />
                     <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" className="h-5" />
                     <img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" alt="Docker" className="h-5" />
-                    <a href="https://www.meilisearch.com" target="_blank" rel="noopener noreferrer">
-                      <img src="https://img.shields.io/badge/MeiliSearch-FF006D?logo=meilisearch&logoColor=white" alt="MeiliSearch" className="h-5" />
-                    </a>
                     <img src="https://img.shields.io/badge/Vercel-000000?logo=vercel&logoColor=white" alt="Vercel" className="h-5" />
                     <img src="https://img.shields.io/badge/Railway-131415?logo=railway&logoColor=white" alt="Railway" className="h-5" />
                     </div>
@@ -147,7 +143,6 @@ export default function Docs() {
                       <li><strong>Backend:</strong> Deployed on Railway (FastAPI application, API endpoints)</li>
                       <li><strong>Database:</strong> PostgreSQL hosted on Railway (user data, projects, OAuth tokens)</li>
                       <li><strong>Cache:</strong> Redis on Railway (session management, rate limiting, temporary data)</li>
-                      <li><strong>Search Engine:</strong> Meilisearch (self-hosted or cloud, post indexing and full-text search)</li>
                       <li><strong>Vector Storage:</strong> Supabase pgvector extension (semantic embeddings, similarity search, RAG)</li>
                       </ul>
                     </div>
@@ -159,41 +154,6 @@ export default function Docs() {
                     <img src="/logo.svg" alt="veyl.io" className="h-16 w-auto max-w-none" />
                   </a>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-          {/* Powered by Meilisearch */}
-          <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-8 items-center">
-                {/* Description on the left */}
-                <div className="flex-1 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Cpu className="h-6 w-6 text-primary" />
-                    <h3 className="text-xl font-bold">Meilisearch</h3>
-            </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Indexing and searching millions of posts is powered by <strong>Meilisearch</strong>, 
-                    an ultra-fast and typo-tolerant search engine enabling instant search with advanced facets and filters.
-                  </p>
-                  <a 
-                    href="https://www.meilisearch.com/" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline flex items-center gap-1"
-                  >
-                    meilisearch.com
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-            </div>
-            
-                {/* Logo on the right */}
-                <div className="flex-shrink-0">
-                  <a href="https://www.meilisearch.com/" target="_blank" rel="noopener noreferrer" className="block transition-transform hover:scale-105">
-                    <img src={meilisearchLogo} alt="Meilisearch" className="h-[300px] w-auto max-w-none" />
-                  </a>
-                </div>
                     </div>
                   </CardContent>
                 </Card>

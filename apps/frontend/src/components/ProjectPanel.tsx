@@ -10,11 +10,12 @@ import {
 import { Settings, Edit, Copy, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { getApiBase } from '@/lib/api';
+import { createProject, type Project } from '@/lib/api';
 import { formatDistanceToNow } from 'date-fns';
+import { getErrorMessage } from '@/lib/utils';
 
 interface ProjectPanelProps {
-  project: any;
+  project: Project;
   onEdit: () => void;
   onDelete: () => void;
 }
@@ -25,39 +26,23 @@ export function ProjectPanel({ project, onEdit, onDelete }: ProjectPanelProps) {
 
   const handleDuplicate = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const apiBase = getApiBase();
-      const url = apiBase ? `${apiBase}/api/v1/projects` : `/api/v1/projects`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token || ''}`,
-        },
-        body: JSON.stringify({
-          name: `${project.name} copy`,
-          description: project.description,
-          platforms: project.platforms || [],
-          scope_type: project.scope_type,
-          scope_query: project.scope_query,
-        }),
+      const duplicatedProject = await createProject({
+        name: `${project.name} copy`,
+        description: project.description,
+        platforms: project.platforms || [],
+        scope_type: project.scope_type,
+        scope_query: project.scope_query,
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to duplicate project');
-      }
-
-      const duplicatedProject = await response.json();
       toast({
         title: 'Project duplicated',
         description: 'You can now customise the copy.',
       });
       navigate(`/projects/${duplicatedProject.id}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Duplication failed',
-        description: error.message || 'We were unable to duplicate the project.',
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     }

@@ -106,7 +106,7 @@ async def call_tiktok(
             detail = {"error": response.text}
 
         logger.error(
-            "❌ TIKTOK API ERROR | %s %s | Status: %d | Duration: %.2fs",
+            "TIKTOK API ERROR | %s %s | Status: %d | Duration: %.2fs",
             method_upper,
             url,
             response.status_code,
@@ -124,7 +124,7 @@ async def call_tiktok(
 
     # Log succès seulement si HTTP 200-399
     logger.info(
-        "✅ TIKTOK API SUCCESS | %s %s | Status: %d | Duration: %.2fs | Params: %s",
+        "TIKTOK API SUCCESS | %s %s | Status: %d | Duration: %.2fs | Params: %s",
         method_upper,
         url,
         response.status_code,

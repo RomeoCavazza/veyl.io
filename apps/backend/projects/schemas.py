@@ -54,14 +54,24 @@ class ProjectResponse(BaseModel):
 class ProjectPostResponse(BaseModel):
     id: str
     author: Optional[str] = None
+    username: Optional[str] = None  # Alias pour author (compatibilité frontend)
     caption: Optional[str] = None
     media_url: Optional[str] = None
     permalink: Optional[str] = None
     posted_at: Optional[datetime] = None
+    fetched_at: Optional[datetime] = None
     platform: Optional[str] = None
     like_count: Optional[int] = 0
     comment_count: Optional[int] = 0
+    share_count: Optional[int] = 0
+    view_count: Optional[int] = 0
     score_trend: Optional[float] = None
+    hashtags: Optional[List[str]] = None
+    mentions: Optional[List[str]] = None
+    location: Optional[str] = None
+    media_type: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    external_id: Optional[str] = None
 
     class Config:
         from_attributes = True

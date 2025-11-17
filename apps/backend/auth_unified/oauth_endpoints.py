@@ -1,4 +1,5 @@
 # oauth/oauth_endpoints.py
+import logging
 from typing import Optional
 from uuid import UUID
 
@@ -10,6 +11,7 @@ from core.config import settings
 from urllib.parse import quote
 from .oauth_service import OAuthService
 
+logger = logging.getLogger(__name__)
 oauth_router = APIRouter(prefix="/api/v1/auth", tags=["oauth"])
 oauth_service = OAuthService()
 
@@ -65,18 +67,14 @@ async def auth_callback(
     error: str = None,
     db: Session = Depends(get_db)
 ):
-    """Callback général pour redirection vers localhost"""
+    """Callback général pour redirection vers localhost (dev uniquement)"""
     if error:
-        # Rediriger vers localhost avec l'erreur
-        from fastapi.responses import RedirectResponse
         return RedirectResponse(url=f"http://localhost:8081/auth/callback?error={error}")
     
     if code and state:
-        # Appeler le callback Instagram
+        # Appeler le callback Instagram (fallback pour dev)
         return await oauth_service.handle_instagram_callback(code, state, db)
     
-    # Rediriger vers localhost par défaut
-    from fastapi.responses import RedirectResponse
     return RedirectResponse(url="http://localhost:8081/auth/callback")
 
 @oauth_router.get("/facebook/start")
@@ -210,7 +208,7 @@ async def tiktok_auth_callback(
         else:
             error_msg += ")"
             
-        logger.error(f"❌ TikTok OAuth Error: {error} - {error_description or error_type}")
+        logger.error(f"TikTok OAuth Error: {error} - {error_description or error_type}")
         return RedirectResponse(url=f"{frontend_url}?error={quote(error_msg)}&error_description={error_desc}")
     
     # Vérifier les paramètres requis

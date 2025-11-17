@@ -1,5 +1,6 @@
 # analytics/analytics_endpoints.py
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from db.base import get_db
@@ -18,10 +19,16 @@ def get_trending_posts(
 ):
     """Récupérer les posts les plus tendance"""
     if platform:
-        # Utiliser la fonction PostgreSQL
-        result = db.execute(f"SELECT * FROM get_trending_posts('{platform}', {limit})")
+        # Utiliser la fonction PostgreSQL avec paramètres sécurisés
+        result = db.execute(
+            text("SELECT * FROM get_trending_posts(:platform, :limit)"),
+            {"platform": platform, "limit": limit}
+        )
     else:
-        result = db.execute(f"SELECT * FROM get_trending_posts(NULL, {limit})")
+        result = db.execute(
+            text("SELECT * FROM get_trending_posts(NULL, :limit)"),
+            {"limit": limit}
+        )
     
     posts = result.fetchall()
     return [
@@ -43,16 +50,16 @@ def get_hashtags_stats(
     current_user: User = Depends(get_current_user)
 ):
     """Récupérer les statistiques des hashtags"""
-    query = "SELECT * FROM hashtags_with_stats"
-    params = []
-    
     if platform:
-        query += " WHERE platform = %s"
-        params.append(platform)
-    
-    query += f" ORDER BY total_posts DESC LIMIT {limit}"
-    
-    result = db.execute(query, params)
+        result = db.execute(
+            text("SELECT * FROM hashtags_with_stats WHERE platform = :platform ORDER BY total_posts DESC LIMIT :limit"),
+            {"platform": platform, "limit": limit}
+        )
+    else:
+        result = db.execute(
+            text("SELECT * FROM hashtags_with_stats ORDER BY total_posts DESC LIMIT :limit"),
+            {"limit": limit}
+        )
     hashtags = result.fetchall()
     
     return [
@@ -75,25 +82,37 @@ def get_engagement_stats(
     current_user: User = Depends(get_current_user)
 ):
     """Récupérer les statistiques d'engagement des posts"""
-    query = """
-        SELECT 
-            COUNT(*) as total_posts,
-            AVG(score) as avg_score,
-            AVG(score_trend) as avg_trend_score,
-            MAX(score) as max_score,
-            MAX(score_trend) as max_trend_score
-        FROM posts p
-        JOIN platforms pl ON p.platform_id = pl.id
-        WHERE p.posted_at > NOW() - INTERVAL '%s days'
-    """
-    
-    params = [days]
-    
     if platform:
-        query += " AND pl.name = %s"
-        params.append(platform)
-    
-    result = db.execute(query, params)
+        result = db.execute(
+            text("""
+                SELECT 
+                    COUNT(*) as total_posts,
+                    AVG(score) as avg_score,
+                    AVG(score_trend) as avg_trend_score,
+                    MAX(score) as max_score,
+                    MAX(score_trend) as max_trend_score
+                FROM posts p
+                JOIN platforms pl ON p.platform_id = pl.id
+                WHERE p.posted_at > NOW() - INTERVAL '1 day' * :days
+                AND pl.name = :platform
+            """),
+            {"days": days, "platform": platform}
+        )
+    else:
+        result = db.execute(
+            text("""
+                SELECT 
+                    COUNT(*) as total_posts,
+                    AVG(score) as avg_score,
+                    AVG(score_trend) as avg_trend_score,
+                    MAX(score) as max_score,
+                    MAX(score_trend) as max_trend_score
+                FROM posts p
+                JOIN platforms pl ON p.platform_id = pl.id
+                WHERE p.posted_at > NOW() - INTERVAL '1 day' * :days
+            """),
+            {"days": days}
+        )
     stats = result.fetchone()
     
     return {

@@ -2,9 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from db.base import get_db
-from db.models import OAuthAccount, User
-from core.config import settings
-import json
+from db.models import OAuthAccount
 
 webhooks_router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
 
@@ -20,9 +18,6 @@ async def facebook_deauthorize(
     try:
         # Récupérer les données JSON du body
         body = await request.json()
-        
-        # Vérifier le signed_request si présent
-        signed_request = body.get("signed_request")
         user_id = body.get("user_id")
         
         if not user_id:
@@ -76,15 +71,9 @@ async def facebook_data_deletion(
         ).all()
         
         deleted_count = 0
-        user_ids_to_check = set()
-        
         for account in oauth_accounts:
-            user_ids_to_check.add(account.user_id)
             db.delete(account)
             deleted_count += 1
-        
-        # Optionnellement, supprimer aussi l'utilisateur si toutes ses connexions OAuth sont supprimées
-        # (On ne supprime pas automatiquement pour éviter de perdre d'autres données)
         
         db.commit()
         
@@ -99,9 +88,7 @@ async def facebook_data_deletion(
         raise HTTPException(status_code=500, detail=f"Erreur lors de la suppression: {str(e)}")
 
 @webhooks_router.get("/facebook/deauthorize")
-async def facebook_deauthorize_get(
-    request: Request
-):
+async def facebook_deauthorize_get():
     """
     Endpoint GET pour vérification du webhook Facebook (appelé par Facebook lors de la configuration)
     """
@@ -109,9 +96,7 @@ async def facebook_deauthorize_get(
     return {"status": "ok", "message": "Endpoint deauthorize configuré"}
 
 @webhooks_router.get("/facebook/data-deletion")
-async def facebook_data_deletion_get(
-    request: Request
-):
+async def facebook_data_deletion_get():
     """
     Endpoint GET pour vérification du webhook Facebook (appelé par Facebook lors de la configuration)
     """

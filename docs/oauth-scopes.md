@@ -106,4 +106,4 @@ Pour la validation App Review Meta/TikTok, l'application fonctionne en **mode d�
 
 ---
 
-**Référence**: [architecture.md](./architecture.md) pour détails App Review Mode, [backend.md](./backend.md) pour implémentation OAuth.
+**Référence**: Voir le code source dans `apps/backend/auth_unified/` pour l'implémentation OAuth.

@@ -41,7 +41,7 @@ class OAuthAccount(Base):
     __tablename__ = "oauth_accounts"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     provider = Column(String(50), nullable=False)  # 'google', 'instagram', 'tiktok', 'x'
     provider_user_id = Column(Text, nullable=False)
     access_token = Column(Text)
@@ -78,7 +78,7 @@ class Hashtag(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), unique=True, nullable=False)
-    platform_id = Column(Integer, ForeignKey("platforms.id"), nullable=False)
+    platform_id = Column(Integer, ForeignKey("platforms.id"), nullable=False, index=True)
     last_scraped = Column(DateTime)
     updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
     
@@ -90,8 +90,8 @@ class PostHashtag(Base):
     __tablename__ = "post_hashtags"
     
     id = Column(Integer, primary_key=True, index=True)
-    post_id = Column(Text, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
-    hashtag_id = Column(Integer, ForeignKey("hashtags.id", ondelete="CASCADE"), nullable=False)
+    post_id = Column(Text, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False, index=True)
+    hashtag_id = Column(Integer, ForeignKey("hashtags.id", ondelete="CASCADE"), nullable=False, index=True)
     created_at = Column(DateTime, default=dt.datetime.utcnow)
     
     # Relations
@@ -109,8 +109,8 @@ class Post(Base):
     
     id = Column(Text, primary_key=True)
     external_id = Column(Text, unique=True, index=True)
-    platform_id = Column(Integer, ForeignKey("platforms.id"), nullable=False)
-    author = Column(String(255))
+    platform_id = Column(Integer, ForeignKey("platforms.id"), nullable=False, index=True)
+    author = Column(String(255), index=True)
     caption = Column(Text)
     hashtags = Column(ArrayType)
     metrics = Column(JSONType)  # likes, comments, shares, views
@@ -139,7 +139,7 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     plan = Column(String(50), default='free')
     quota = Column(JSONType)
     renewed_at = Column(DateTime)
@@ -158,7 +158,7 @@ class Project(Base):
     __tablename__ = "projects"
     
     id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text)  # Description du projet (remplace 'goal')
     status = Column(String(50), default='draft')  # 'draft', 'active', 'archived', 'paused'
@@ -197,8 +197,8 @@ class ProjectHashtag(Base):
     __tablename__ = "project_hashtags"
     
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
-    hashtag_id = Column(Integer, ForeignKey("hashtags.id", ondelete="CASCADE"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    hashtag_id = Column(Integer, ForeignKey("hashtags.id", ondelete="CASCADE"), nullable=False, index=True)
     added_at = Column(DateTime, default=dt.datetime.utcnow)
     
     # Relations avec overlaps pour éviter les warnings SQLAlchemy
@@ -215,9 +215,9 @@ class ProjectCreator(Base):
     __tablename__ = "project_creators"
     
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     creator_username = Column(String(255), nullable=False)  # "@username" ou "username"
-    platform_id = Column(Integer, ForeignKey("platforms.id"), nullable=False)
+    platform_id = Column(Integer, ForeignKey("platforms.id"), nullable=False, index=True)
     added_at = Column(DateTime, default=dt.datetime.utcnow)
     
     # Relations

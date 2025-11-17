@@ -9,8 +9,7 @@ import { format } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 
-// Importer getApiBase depuis api.ts pour éviter la duplication
-import { getApiBase } from '@/lib/api';
+import { getProjects as fetchProjectsApi } from '@/lib/api';
 
 interface Project {
   id: string;
@@ -48,38 +47,27 @@ export default function Projects() {
     try {
       if (!silent) setLoading(true);
       
-      const token = localStorage.getItem('token');
-      if (!token) {
+      const data = await fetchProjectsApi();
+      setProjects(data.map((p) => ({
+        id: String(p.id),
+        name: p.name,
+        description: p.description,
+        createdAt: p.created_at,
+        updatedAt: p.updated_at,
+        status: p.status || 'draft',
+        creators: p.creators || [],
+        creatorsCount: typeof p.creators_count === 'number' ? p.creators_count : undefined,
+        platforms: p.platforms || [],
+        scope_query: p.scope_query || '',
+      })));
+    } catch (error: unknown) {
+      if (import.meta.env.DEV) {
+        console.error('Error fetching projects:', error);
+      }
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('401') || errorMessage.includes('403')) {
         navigate('/auth');
-        return;
       }
-
-      // Utiliser le proxy Vercel (chemin relatif SANS slash final)
-      const response = await fetch('/api/v1/projects', {
-        mode: 'cors',
-        credentials: 'same-origin',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setProjects(data.map((p: any) => ({
-          id: String(p.id),
-          name: p.name,
-          description: p.description,
-          createdAt: p.created_at,
-          updatedAt: p.updated_at,
-          status: p.status || 'draft',
-          creators: p.creators || [],
-          creatorsCount: typeof p.creators_count === 'number' ? p.creators_count : undefined,
-          platforms: p.platforms || [],
-          scope_query: p.scope_query || '',
-        })));
-      }
-    } catch (error) {
-      console.error('Error fetching projects:', error);
     } finally {
       setLoading(false);
     }
@@ -89,21 +77,15 @@ export default function Projects() {
   const handleRefreshAll = async () => {
     setRefreshing(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
       // 1. Recharger les projets
       await fetchProjects(true);
 
       // 2. Pour chaque projet, appeler /projects/{id}/posts pour mettre à jour les stats
+      const { getProjectPosts } = await import('@/lib/api');
       const refreshPromises = projects.map(async (project) => {
         try {
-          const response = await fetch(`/api/v1/projects/${project.id}/posts`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (response.ok) {
-            console.log(`✅ Refreshed stats for project ${project.name}`);
-          }
+          await getProjectPosts(project.id);
+          console.log(`✅ Refreshed stats for project ${project.name}`);
         } catch (error) {
           console.error(`❌ Failed to refresh project ${project.name}:`, error);
         }

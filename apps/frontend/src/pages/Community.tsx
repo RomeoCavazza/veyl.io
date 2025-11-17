@@ -37,7 +37,9 @@ export default function Community() {
       alert('Message sent successfully!');
       setFormData({ name: '', email: '', message: '' });
     } catch (error) {
-      console.error('Error:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error:', error);
+      }
       alert('Error sending message. Please try again.');
     } finally {
       setIsSubmitting(false);

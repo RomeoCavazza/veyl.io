@@ -5,7 +5,6 @@ from typing import List, Optional
 from db.base import get_db
 from db.models import Post, Platform, User
 from auth_unified.auth_endpoints import get_current_user
-from services.meilisearch_client import meilisearch_service
 from .schemas import PostCreate, PostResponse, PostUpdate
 
 posts_router = APIRouter(prefix="/api/v1/posts", tags=["posts"])
@@ -132,42 +131,8 @@ def search_posts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Recherche de posts avec Meilisearch (fallback PostgreSQL si indisponible)"""
-    # Essayer d'abord avec Meilisearch
-    if meilisearch_service.client:
-        try:
-            filters = {}
-            if platform:
-                filters['platform_name'] = platform
-            if min_score is not None:
-                filters['min_score'] = min_score
-            
-            sort = ['score_trend:desc', 'posted_at:desc']
-            
-            results = meilisearch_service.search_posts(
-                query=q,
-                limit=limit,
-                offset=offset,
-                filters=filters if filters else None,
-                sort=sort
-            )
-            
-            # Récupérer les IDs des posts trouvés
-            hit_ids = [hit.get('id') for hit in results.get('hits', [])]
-            
-            if hit_ids:
-                # Récupérer les posts complets depuis PostgreSQL
-                posts = db.query(Post).filter(Post.id.in_(hit_ids)).all()
-                # Trier selon l'ordre Meilisearch
-                post_dict = {post.id: post for post in posts}
-                posts = [post_dict[pid] for pid in hit_ids if pid in post_dict]
-                return posts
-            
-        except Exception as e:
-            # Fallback sur PostgreSQL si Meilisearch échoue
-            pass
-    
-    # Fallback: recherche PostgreSQL basique
+    """Recherche de posts avec PostgreSQL"""
+    # Recherche PostgreSQL
     query = db.query(Post)
     
     if platform:

@@ -26,13 +26,13 @@ class OAuthService:
         """
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            logger.info(f"🆕 Création d'un nouveau User: email={email}, name={name}")
+            logger.info(f" Création d'un nouveau User: email={email}, name={name}")
             user = User(email=email, name=name, role=role)
             db.add(user)
             db.commit()
             db.refresh(user)
         else:
-            logger.info(f"✅ User existant trouvé: email={email}, user_id={user.id}")
+            logger.info(f"User existant trouvé: email={email}, user_id={user.id}")
         return user
     
     def find_or_create_user_for_oauth(
@@ -61,11 +61,11 @@ class OAuthService:
         if linked_user_id:
             user = db.query(User).filter(User.id == linked_user_id).first()
             if user:
-                logger.info(f"📎 Liaison OAuth {provider} au User ID: {linked_user_id}")
+                logger.info(f"Liaison OAuth {provider} au User ID: {linked_user_id}")
                 # IMPORTANT: Ne jamais mettre à jour name/email du User existant
                 # Les informations du User principal doivent rester constantes
                 return user
-            logger.warning(f"⚠️ User ID {linked_user_id} non trouvé, poursuite de la recherche...")
+            logger.warning(f"User ID {linked_user_id} non trouvé, poursuite de la recherche...")
         
         # PRIORITÉ 2: Chercher si un OAuthAccount du même provider existe déjà
         existing_oauth = db.query(OAuthAccount).filter(
@@ -76,7 +76,7 @@ class OAuthService:
         if existing_oauth:
             user = db.query(User).filter(User.id == existing_oauth.user_id).first()
             if user:
-                logger.info(f"🔗 OAuthAccount {provider} existe déjà pour User ID: {user.id}")
+                logger.info(f"OAuthAccount {provider} existe déjà pour User ID: {user.id}")
                 # IMPORTANT: Ne jamais mettre à jour name/email du User existant
                 # Les informations du User principal doivent rester constantes
                 return user
@@ -93,7 +93,7 @@ class OAuthService:
             if is_real_email:
                 user = db.query(User).filter(User.email == email).first()
                 if user:
-                    logger.info(f"📧 User trouvé via email réel: {email} (User ID: {user.id})")
+                    logger.info(f"User trouvé via email réel: {email} (User ID: {user.id})")
                     # IMPORTANT: Ne jamais mettre à jour name/email du User existant
                     # Les informations du User principal doivent rester constantes
                     return user
@@ -125,14 +125,14 @@ class OAuthService:
                 # En production, on pourrait ajouter plus de vérifications pour éviter les faux positifs
                 if len(users_with_oauth) == 1:
                     user = users_with_oauth[0]
-                    logger.info(f"🔗 Liaison automatique OAuth {provider} au User existant avec email réel: {user.email} (User ID: {user.id})")
+                    logger.info(f"Liaison automatique OAuth {provider} au User existant avec email réel: {user.email} (User ID: {user.id})")
                     return user
                 else:
                     # Plusieurs Users avec email réel trouvés - on prend le plus récent ou celui avec le plus d'OAuthAccounts
                     # Pour l'instant, on prend le premier (on pourrait améliorer cette logique)
                     user = users_with_oauth[0]
                     logger.warning(
-                        f"⚠️ Plusieurs Users avec email réel trouvés ({len(users_with_oauth)}). "
+                        f"Plusieurs Users avec email réel trouvés ({len(users_with_oauth)}). "
                         f"Liaison de OAuth {provider} au User ID {user.id} ({user.email}). "
                         f"Autres Users: {[u.id for u in users_with_oauth[1:]]}"
                     )
@@ -147,12 +147,12 @@ class OAuthService:
             name = f"{provider.capitalize()} User {provider_user_id[:8]}"
         
         logger.warning(
-            f"⚠️ Création d'un nouveau User pour OAuth {provider} "
+            f"Création d'un nouveau User pour OAuth {provider} "
             f"(provider_user_id={provider_user_id}, linked_user_id={linked_user_id}). "
             f"Cela peut indiquer que linked_user_id n'a pas été correctement passé ou décodé."
         )
         user = self.create_or_get_user(db, email=email, name=name)
-        logger.info(f"✅ Nouveau User créé: user_id={user.id}, email={user.email}, name={user.name}")
+        logger.info(f"Nouveau User créé: user_id={user.id}, email={user.email}, name={user.name}")
         return user
     
     def start_instagram_auth(self, user_id: Optional[UUID] = None) -> Dict[str, str]:
@@ -161,9 +161,9 @@ class OAuthService:
         Args:
             user_id: ID de l'utilisateur actuellement connecté (pour lier le compte OAuth au User existant)
         """
-        logger.info(f"🚀 Démarrage OAuth Instagram (user_id: {user_id})")
+        logger.info(f"Démarrage OAuth Instagram (user_id: {user_id})")
         if not settings.IG_APP_ID:
-            logger.error("❌ IG_APP_ID non configuré")
+            logger.error("IG_APP_ID non configuré")
             raise HTTPException(status_code=500, detail="IG_APP_ID non configuré dans Railway")
         
         # Nettoyer les valeurs pour enlever les espaces et caractères indésirables
@@ -234,9 +234,9 @@ class OAuthService:
         # Utiliser Facebook OAuth pour Instagram Business API
         auth_url = "https://www.facebook.com/v21.0/dialog/oauth?" + "&".join(query_parts)
         
-        logger.info(f"✅ URL OAuth Instagram générée: {auth_url[:100]}...")
-        logger.info(f"📋 Redirect URI: {redirect_uri}")
-        logger.info(f"📋 App ID: {app_id[:10]}...")
+        logger.info(f"URL OAuth Instagram générée: {auth_url[:100]}...")
+        logger.debug(f"Redirect URI: {redirect_uri}")
+        logger.debug(f"App ID: {app_id[:10]}...")
         
         return {
             "auth_url": auth_url,
@@ -259,14 +259,14 @@ class OAuthService:
                 expected_hash = hashlib.sha256(f"{timestamp}_{user_id_str}_{settings.OAUTH_STATE_SECRET}".encode()).hexdigest()[:8]
                 if state_hash == expected_hash:
                     linked_user_id = UUID(user_id_str)
-                    logger.info(f"📎 Liaison Instagram OAuth au User ID: {linked_user_id}")
+                    logger.info(f"Liaison Instagram OAuth au User ID: {linked_user_id}")
         except (ValueError, IndexError):
             # State ne contient pas d'user_id ou est un timestamp simple
             pass
         
-        logger.info(f"📥 Callback Instagram reçu - Code: {code[:20]}..., State: {state}")
+        logger.info(f"Callback Instagram reçu - Code: {code[:20]}..., State: {state}")
         if not settings.IG_APP_SECRET:
-            logger.error("❌ IG_APP_SECRET non configuré")
+            logger.error("IG_APP_SECRET non configuré")
             raise HTTPException(status_code=500, detail="IG_APP_SECRET non configuré")
         
         # Nettoyer les valeurs pour enlever les espaces et caractères indésirables
@@ -299,8 +299,8 @@ class OAuthService:
                     error_msg = error_json.get("error", {}).get("message", "unknown_error") if isinstance(error_json.get("error"), dict) else error_json.get("error", "unknown_error")
                     error_desc = error_detail
                     
-                    logger.error(f"❌ Erreur Instagram token exchange: {r.status_code} - {error_msg}")
-                    logger.error(f"📋 Réponse complète: {error_detail}")
+                    logger.error(f" Erreur Instagram token exchange: {r.status_code} - {error_msg}")
+                    logger.error(f" Réponse complète: {error_detail}")
                     
                     # Message détaillé pour redirect_uri invalide
                     if "redirect_uri" in error_desc.lower() or "Invalid redirect" in error_desc:
@@ -344,7 +344,7 @@ class OAuthService:
                     error_detail = r2.text
                     error_json = r2.json() if r2.headers.get("content-type", "").startswith("application/json") else {}
                     error_msg = error_json.get("error", {}).get("message", "unknown_error") if isinstance(error_json.get("error"), dict) else error_json.get("error", "unknown_error")
-                    logger.error(f"❌ Erreur Instagram long-lived token exchange: {r2.status_code} - {error_msg}")
+                    logger.error(f" Erreur Instagram long-lived token exchange: {r2.status_code} - {error_msg}")
                     raise HTTPException(
                         status_code=400,
                         detail=f"Erreur Instagram long-lived token: {r2.status_code} - {error_msg}"
@@ -354,7 +354,7 @@ class OAuthService:
             except HTTPException:
                 raise
             except Exception as e:
-                logger.error(f"❌ Erreur requête Instagram long-lived token: {str(e)}")
+                logger.error(f" Erreur requête Instagram long-lived token: {str(e)}")
                 raise HTTPException(status_code=400, detail=f"Erreur requête Instagram long-lived token: {str(e)}")
 
             # 3) Récupérer Page(s) -> IG Business ID
@@ -365,7 +365,7 @@ class OAuthService:
                 )
                 if pages.status_code != 200:
                     error_detail = pages.text
-                    logger.error(f"❌ Erreur récupération Pages Instagram: {pages.status_code} - {error_detail}")
+                    logger.error(f" Erreur récupération Pages Instagram: {pages.status_code} - {error_detail}")
                     raise HTTPException(
                         status_code=400,
                         detail=f"Erreur récupération Pages Instagram: {pages.status_code} - {error_detail}"
@@ -385,21 +385,21 @@ class OAuthService:
                             },
                         )
                         if r3.status_code != 200:
-                            logger.warning(f"⚠️ Erreur récupération Instagram Business Account pour Page {page_id}: {r3.status_code}")
+                            logger.warning(f" Erreur récupération Instagram Business Account pour Page {page_id}: {r3.status_code}")
                             continue
                         r3.raise_for_status()
                         ig = r3.json().get("instagram_business_account")
                         if ig and ig.get("id"):
                             ig_user_id = ig["id"]
-                            logger.info(f"✅ Instagram Business ID trouvé: {ig_user_id}")
+                            logger.info(f" Instagram Business ID trouvé: {ig_user_id}")
                             break
                     except Exception as e:
-                        logger.warning(f"⚠️ Erreur lors de la récupération de l'Instagram Business Account pour Page {page_id}: {str(e)}")
+                        logger.warning(f" Erreur lors de la récupération de l'Instagram Business Account pour Page {page_id}: {str(e)}")
                         continue
             except HTTPException:
                 raise
             except Exception as e:
-                logger.error(f"❌ Erreur requête Pages Instagram: {str(e)}")
+                logger.error(f" Erreur requête Pages Instagram: {str(e)}")
                 raise HTTPException(status_code=400, detail=f"Erreur requête Pages Instagram: {str(e)}")
 
         if not long_token:
@@ -410,7 +410,7 @@ class OAuthService:
             # 1. L'utilisateur n'a pas de Page Facebook liée à Instagram Business
             # 2. La Page Facebook n'a pas d'Instagram Business Account associé
             # 3. Les permissions ne permettent pas d'accéder à l'Instagram Business Account
-            logger.error("❌ Instagram Business ID non trouvé - L'utilisateur doit avoir une Page Facebook avec Instagram Business Account")
+            logger.error(" Instagram Business ID non trouvé - L'utilisateur doit avoir une Page Facebook avec Instagram Business Account")
             raise HTTPException(
                 status_code=400,
                 detail="Instagram Business Account non trouvé. Assurez-vous que votre compte Facebook a une Page liée à un compte Instagram Business."
@@ -419,7 +419,7 @@ class OAuthService:
         if long_token and ig_user_id:
             from db.models import OAuthAccount
             
-            logger.info(f"🔍 Recherche/création User pour Instagram - linked_user_id={linked_user_id}, provider_user_id={ig_user_id}")
+            logger.info(f" Recherche/création User pour Instagram - linked_user_id={linked_user_id}, provider_user_id={ig_user_id}")
             
             # Utiliser la fonction centralisée pour trouver ou créer le User
             # IMPORTANT: Ne pas passer d'email généré ici pour permettre à la logique de trouver un User existant
@@ -432,7 +432,7 @@ class OAuthService:
                 linked_user_id=linked_user_id
             )
             
-            logger.info(f"✅ User trouvé/créé pour Instagram: user_id={user.id}, email={user.email}, name={user.name}")
+            logger.info(f" User trouvé/créé pour Instagram: user_id={user.id}, email={user.email}, name={user.name}")
             
             # Vérifier si l'OAuthAccount Instagram existe déjà pour ce User
             existing_oauth = db.query(OAuthAccount).filter(
@@ -534,7 +534,7 @@ class OAuthService:
                 expected_hash = hashlib.sha256(f"{timestamp}_{user_id_str}_{settings.OAUTH_STATE_SECRET}".encode()).hexdigest()[:8]
                 if state_hash == expected_hash:
                     linked_user_id = UUID(user_id_str)
-                    logger.info(f"📎 Liaison Facebook OAuth au User ID: {linked_user_id}")
+                    logger.info(f" Liaison Facebook OAuth au User ID: {linked_user_id}")
         except (ValueError, IndexError):
             # State ne contient pas d'user_id, comportement normal
             pass
@@ -586,7 +586,7 @@ class OAuthService:
             if access_token and fb_user_id:
                 from db.models import OAuthAccount
                 
-                logger.info(f"🔍 Recherche/création User pour Facebook - linked_user_id={linked_user_id}, provider_user_id={fb_user_id}, email={email}")
+                logger.info(f" Recherche/création User pour Facebook - linked_user_id={linked_user_id}, provider_user_id={fb_user_id}, email={email}")
                 
                 # Utiliser la fonction centralisée pour trouver ou créer le User
                 # Si email est None ou un email généré, ne pas le passer pour forcer la recherche d'un User existant
@@ -603,7 +603,7 @@ class OAuthService:
                     linked_user_id=linked_user_id
                 )
                 
-                logger.info(f"✅ User trouvé/créé pour Facebook: user_id={user.id}, email={user.email}, name={user.name}")
+                logger.info(f" User trouvé/créé pour Facebook: user_id={user.id}, email={user.email}, name={user.name}")
                 
                 # Vérifier si l'OAuthAccount Facebook existe déjà pour ce User
                 existing_oauth = db.query(OAuthAccount).filter(
@@ -797,7 +797,7 @@ class OAuthService:
                         expected_hash = hashlib.sha256(f"{timestamp}_{user_id_str}_{settings.OAUTH_STATE_SECRET}".encode()).hexdigest()[:8]
                         if state_hash == expected_hash:
                             linked_user_id = UUID(user_id_str)
-                            logger.info(f"📎 Liaison Google OAuth au User ID: {linked_user_id}")
+                            logger.info(f" Liaison Google OAuth au User ID: {linked_user_id}")
                 except (ValueError, IndexError):
                     pass
                 
@@ -914,13 +914,13 @@ class OAuthService:
                 detail=f"TIKTOK_CLIENT_KEY semble invalide (trop court: {len(client_key)} caractères). Vérifiez la configuration dans Railway."
             )
         
-        logger.info(f"🔑 TikTok OAuth - Client Key: {client_key[:10]}... (longueur: {len(client_key) if client_key else 0})")
-        logger.info(f"🔗 TikTok OAuth - Redirect URI: {redirect_uri}")
-        logger.info(f"📋 TikTok OAuth - Scopes: {scopes}")
+        logger.info(f" TikTok OAuth - Client Key: {client_key[:10]}... (longueur: {len(client_key) if client_key else 0})")
+        logger.info(f" TikTok OAuth - Redirect URI: {redirect_uri}")
+        logger.info(f" TikTok OAuth - Scopes: {scopes}")
         
         # Avertissement si redirect_uri ne correspond pas à un format attendu
         if not redirect_uri.startswith("https://"):
-            logger.warning(f"⚠️ TikTok OAuth - Redirect URI ne commence pas par https:// : {redirect_uri}")
+            logger.warning(f" TikTok OAuth - Redirect URI ne commence pas par https:// : {redirect_uri}")
         
         for key, value in params.items():
             # Pour redirect_uri, garder : et / non encodés
@@ -932,7 +932,7 @@ class OAuthService:
         
         # TikTok OAuth v2 endpoint (sans slash final avant le ?)
         auth_url = "https://www.tiktok.com/v2/auth/authorize?" + "&".join(query_parts)
-        logger.info(f"✅ TikTok OAuth URL générée: {auth_url[:150]}...")
+        logger.info(f" TikTok OAuth URL générée: {auth_url[:150]}...")
         
         return {
             "auth_url": auth_url,
@@ -958,23 +958,23 @@ class OAuthService:
                     expected_hash = hashlib.sha256(f"{timestamp}_{user_id_str}_{settings.OAUTH_STATE_SECRET}".encode()).hexdigest()[:8]
                     if state_hash == expected_hash:
                         linked_user_id = UUID(user_id_str)
-                        logger.info(f"📎 Liaison TikTok OAuth au User ID: {linked_user_id} (décodé depuis state)")
+                        logger.info(f" Liaison TikTok OAuth au User ID: {linked_user_id} (décodé depuis state)")
                 elif len(parts) == 2:
                     # Format alternatif: timestamp_userid (sans hash, moins sécurisé mais parfois utilisé)
                     try:
                         linked_user_id = UUID(parts[1])
-                        logger.info(f"📎 Liaison TikTok OAuth au User ID: {linked_user_id} (format simplifié)")
+                        logger.info(f" Liaison TikTok OAuth au User ID: {linked_user_id} (format simplifié)")
                     except ValueError:
                         pass
         except (ValueError, IndexError, AttributeError) as e:
             # State ne contient pas d'user_id ou est un token sécurisé classique
-            logger.debug(f"⚠️ State TikTok ne contient pas d'user_id ou format inattendu: {state[:50]}... (erreur: {e})")
+            logger.debug(f" State TikTok ne contient pas d'user_id ou format inattendu: {state[:50]}... (erreur: {e})")
             pass
         
         if linked_user_id:
-            logger.info(f"✅ User ID à lier trouvé dans state TikTok: {linked_user_id}")
+            logger.info(f" User ID à lier trouvé dans state TikTok: {linked_user_id}")
         else:
-            logger.warning(f"⚠️ Aucun linked_user_id trouvé dans state TikTok: {state[:50]}...")
+            logger.warning(f" Aucun linked_user_id trouvé dans state TikTok: {state[:50]}...")
         
         if not settings.TIKTOK_CLIENT_SECRET:
             raise HTTPException(status_code=500, detail="TIKTOK_CLIENT_SECRET non configuré")
@@ -1045,7 +1045,7 @@ class OAuthService:
             if access_token and tiktok_user_id:
                 from db.models import OAuthAccount
                 
-                logger.info(f"🔍 Recherche/création User pour TikTok - linked_user_id={linked_user_id}, provider_user_id={tiktok_user_id}")
+                logger.info(f" Recherche/création User pour TikTok - linked_user_id={linked_user_id}, provider_user_id={tiktok_user_id}")
                 
                 # Utiliser la fonction centralisée pour trouver ou créer le User
                 # IMPORTANT: Ne pas passer d'email généré ici pour permettre à la logique de trouver un User existant
@@ -1058,7 +1058,7 @@ class OAuthService:
                     linked_user_id=linked_user_id
                 )
                 
-                logger.info(f"✅ User trouvé/créé pour TikTok: user_id={user.id}, email={user.email}, name={user.name}")
+                logger.info(f" User trouvé/créé pour TikTok: user_id={user.id}, email={user.email}, name={user.name}")
                 
                 # Mettre à jour l'avatar si disponible
                 if avatar_url:

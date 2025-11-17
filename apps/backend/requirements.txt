@@ -12,9 +12,7 @@ python-jose[cryptography]==3.3.0
 bcrypt==4.0.1
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.9
-redis[asyncio]>=5.0.1
 slowapi>=0.1.9
 limits>=3.10.0
 pydantic-settings==2.1.0
 email-validator==2.1.0
-meilisearch>=0.37.0

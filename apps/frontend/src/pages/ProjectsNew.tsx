@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createProject } from '@/lib/api';
+import { getErrorMessage } from '@/lib/utils';
 
 export default function ProjectsNew() {
   const navigate = useNavigate();
@@ -21,12 +22,14 @@ export default function ProjectsNew() {
       return;
     }
       navigate(`/projects/${project.id}`, { replace: true });
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (options?.cancelled?.()) {
       return;
     }
-      console.error('Error auto-creating project:', err);
-      const message = err?.message || 'Unable to create a new project';
+      if (import.meta.env.DEV) {
+        console.error('Error auto-creating project:', err);
+      }
+      const message = getErrorMessage(err);
       toast({
         title: 'Creation failed',
         description: message,

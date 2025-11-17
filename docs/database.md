@@ -204,4 +204,4 @@ ProjectCreator:
 
 ---
 
-**Référence**: [backend.md](./backend.md) pour état backend, [architecture.md](./architecture.md) pour architecture complète.
+**Référence**: Voir le code source dans `apps/backend/db/models.py` pour l'implémentation complète.

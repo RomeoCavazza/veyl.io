@@ -1,6 +1,8 @@
-// src/lib/api.ts - API client pour Lovable
+// src/lib/api.ts - API client pour veyl.io
 // En dev : utiliser le proxy Vite (vite.config.ts) qui redirige vers Railway
 // En prod : utiliser VITE_API_URL si défini, sinon proxy Vercel
+import type { ProjectPost } from '@/types/project';
+
 export const getApiBase = (): string => {
   // En développement, utiliser le proxy Vite
   if (import.meta.env.DEV) {
@@ -253,13 +255,18 @@ export async function fetchTikTokVideos(query?: string, limit: number = 10, curs
   return response.json();
 }
 
-export async function searchHashtags(q: string, platform: string = 'instagram'): Promise<any[]> {
+export interface HashtagSearchResult {
+  id: number;
+  name: string;
+  platform?: string;
+  posts_count?: number;
+}
+
+export async function searchHashtags(q: string, platform: string = 'instagram'): Promise<HashtagSearchResult[]> {
   const apiBase = getApiBase();
-  const url = apiBase ? `${apiBase}/v1/search/hashtags?q=${q}&platform=${platform}` : `/v1/search/hashtags?q=${q}&platform=${platform}`;
+  const url = apiBase ? `${apiBase}/api/v1/hashtags?q=${q}&platform=${platform}` : `/api/v1/hashtags?q=${q}&platform=${platform}`;
   const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-    }
+    headers: withAuthHeaders(),
   });
   
   if (!response.ok) {
@@ -309,15 +316,115 @@ export async function register(email: string, password: string, name?: string) {
   return response.json();
 }
 
-export async function getMe(token: string) {
+export async function getMe(token?: string): Promise<any> {
   const apiBase = getApiBase();
   const url = apiBase ? `${apiBase}/api/v1/auth/me` : '/api/v1/auth/me';
+  const authToken = token || getStoredToken();
   const response = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${token}` }
+    headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
   });
   
   if (!response.ok) {
     throw new Error('Failed to get user info');
+  }
+  
+  return response.json();
+}
+
+export interface ConnectedAccount {
+  id: number;
+  provider: string;
+  provider_user_id: string;
+  connected_at: string;
+  has_token: boolean;
+}
+
+export async function getConnectedAccounts(): Promise<{ accounts: ConnectedAccount[] }> {
+  const apiBase = getApiBase();
+  const url = apiBase ? `${apiBase}/api/v1/auth/accounts/connected` : '/api/v1/auth/accounts/connected';
+  const response = await fetch(url, {
+    mode: 'cors',
+    credentials: 'same-origin',
+    headers: withAuthHeaders(),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to get connected accounts');
+  }
+  
+  return response.json();
+}
+
+export async function disconnectAccount(accountId: number): Promise<void> {
+  const apiBase = getApiBase();
+  const url = apiBase ? `${apiBase}/api/v1/auth/accounts/${accountId}` : `/api/v1/auth/accounts/${accountId}`;
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: withAuthHeaders(),
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    let detail = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      detail = parsed.detail || errorText;
+    } catch (err) {
+      /* ignore */
+    }
+    throw new Error(detail || `HTTP ${response.status}: Failed to disconnect account`);
+  }
+}
+
+export async function deleteUserAccount(email: string, userId?: string, reason?: string): Promise<void> {
+  const apiBase = getApiBase();
+  const url = apiBase ? `${apiBase}/api/v1/users/delete-account` : '/api/v1/users/delete-account';
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      email,
+      user_id: userId || undefined,
+      reason: reason || undefined,
+    }),
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    let detail = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      detail = parsed.detail || errorText;
+    } catch (err) {
+      /* ignore */
+    }
+    throw new Error(detail || `HTTP ${response.status}: Failed to delete account`);
+  }
+}
+
+export async function searchCreators(query: string, limit: number = 10): Promise<{ creators: Array<{ username: string }> }> {
+  const apiBase = getApiBase();
+  const url = apiBase 
+    ? `${apiBase}/api/v1/projects/creators/search?q=${encodeURIComponent(query)}&limit=${limit}`
+    : `/api/v1/projects/creators/search?q=${encodeURIComponent(query)}&limit=${limit}`;
+  
+  const response = await fetch(url, {
+    headers: withAuthHeaders(),
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    let detail = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      detail = parsed.detail || errorText;
+    } catch (err) {
+      /* ignore */
+    }
+    throw new Error(detail || `HTTP ${response.status}: Failed to search creators`);
   }
   
   return response.json();
@@ -368,17 +475,17 @@ export interface Project {
 }
 
 export async function createProject(project: ProjectCreate): Promise<Project> {
-  const token = localStorage.getItem('token');
-  
   // Utiliser getApiBase() pour déterminer l'URL de base
   // En dev : proxy Vite (''), en prod : VITE_API_URL ou proxy Vercel ('')
   const apiBase = getApiBase();
   // IMPORTANT: Utiliser '/' (slash) pour la route, FastAPI gère les deux versions
   const url = apiBase ? `${apiBase}/api/v1/projects` : '/api/v1/projects';
   
-  console.log('API: Creating project at:', url);
-  console.log('API: Using proxy:', import.meta.env.DEV ? 'Vite' : 'Vercel');
-  console.log('API: Request body:', JSON.stringify(project, null, 2));
+  if (import.meta.env.DEV) {
+    console.log('API: Creating project at:', url);
+    console.log('API: Using proxy:', import.meta.env.DEV ? 'Vite' : 'Vercel');
+    console.log('API: Request body:', JSON.stringify(project, null, 2));
+  }
   
   const response = await fetch(url, {
     mode: 'cors',
@@ -387,18 +494,22 @@ export async function createProject(project: ProjectCreate): Promise<Project> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token || ''}`,
+      ...withAuthHeaders(),
     },
     body: JSON.stringify(project),
   });
   
-  console.log('API: Response status:', response.status);
-  console.log('API: Response type:', response.type);
-  console.log('API: Response redirected:', response.redirected);
+  if (import.meta.env.DEV) {
+    console.log('API: Response status:', response.status);
+    console.log('API: Response type:', response.type);
+    console.log('API: Response redirected:', response.redirected);
+  }
   
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('API: Error response:', errorText);
+    if (import.meta.env.DEV) {
+      console.error('API: Error response:', errorText);
+    }
     let error;
     try {
       error = JSON.parse(errorText);
@@ -409,13 +520,13 @@ export async function createProject(project: ProjectCreate): Promise<Project> {
   }
   
   const data = await response.json();
-  console.log('API: Project created successfully:', data);
+  if (import.meta.env.DEV) {
+    console.log('API: Project created successfully:', data);
+  }
   return data;
 }
 
 export async function getProjects(): Promise<Project[]> {
-  const token = localStorage.getItem('token');
-  
   // Utiliser getApiBase() pour déterminer l'URL de base
   const apiBase = getApiBase();
   const url = apiBase ? `${apiBase}/api/v1/projects` : '/api/v1/projects';
@@ -423,9 +534,7 @@ export async function getProjects(): Promise<Project[]> {
   const response = await fetch(url, {
     mode: 'cors',
     credentials: apiBase ? 'include' : 'same-origin', // include pour Railway direct, same-origin pour proxy
-    headers: {
-      'Authorization': `Bearer ${token || ''}`,
-    },
+    headers: withAuthHeaders(),
   });
   
   if (!response.ok) {
@@ -436,7 +545,6 @@ export async function getProjects(): Promise<Project[]> {
 }
 
 export async function addProjectCreator(projectId: string, payload: { username: string; platform?: string }): Promise<Project> {
-  const token = localStorage.getItem('token');
   const apiBase = getApiBase();
   const url = apiBase ? `${apiBase}/api/v1/projects/${projectId}/creators` : `/api/v1/projects/${projectId}/creators`;
 
@@ -446,7 +554,7 @@ export async function addProjectCreator(projectId: string, payload: { username: 
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token || ''}`,
+      ...withAuthHeaders(),
     },
     body: JSON.stringify(payload),
   });
@@ -467,7 +575,6 @@ export async function addProjectCreator(projectId: string, payload: { username: 
 }
 
 export async function removeProjectCreator(projectId: string, creatorLinkId: number): Promise<void> {
-  const token = localStorage.getItem('token');
   const apiBase = getApiBase();
   const url = apiBase ? `${apiBase}/api/v1/projects/${projectId}/creators/${creatorLinkId}` : `/api/v1/projects/${projectId}/creators/${creatorLinkId}`;
 
@@ -475,9 +582,7 @@ export async function removeProjectCreator(projectId: string, creatorLinkId: num
     mode: 'cors',
     credentials: 'same-origin',
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token || ''}`,
-    },
+    headers: withAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -494,7 +599,6 @@ export async function removeProjectCreator(projectId: string, creatorLinkId: num
 }
 
 export async function addProjectHashtag(projectId: string, payload: { hashtag: string; platform?: string }): Promise<Project> {
-  const token = localStorage.getItem('token');
   const apiBase = getApiBase();
   const url = apiBase ? `${apiBase}/api/v1/projects/${projectId}/hashtags` : `/api/v1/projects/${projectId}/hashtags`;
 
@@ -504,7 +608,7 @@ export async function addProjectHashtag(projectId: string, payload: { hashtag: s
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token || ''}`,
+      ...withAuthHeaders(),
     },
     body: JSON.stringify(payload),
   });
@@ -525,7 +629,6 @@ export async function addProjectHashtag(projectId: string, payload: { hashtag: s
 }
 
 export async function removeProjectHashtag(projectId: string, linkId: number): Promise<void> {
-  const token = localStorage.getItem('token');
   const apiBase = getApiBase();
   const url = apiBase ? `${apiBase}/api/v1/projects/${projectId}/hashtags/${linkId}` : `/api/v1/projects/${projectId}/hashtags/${linkId}`;
 
@@ -533,9 +636,7 @@ export async function removeProjectHashtag(projectId: string, linkId: number): P
     mode: 'cors',
     credentials: 'same-origin',
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token || ''}`,
-    },
+    headers: withAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -551,21 +652,118 @@ export async function removeProjectHashtag(projectId: string, linkId: number): P
   }
 }
 
-export interface ProjectPost {
-  id: string;
-  author?: string;
-  caption?: string;
-  media_url?: string;
-  permalink?: string;
-  posted_at?: string;
-  platform?: string;
-  like_count?: number;
-  comment_count?: number;
-  score_trend?: number;
+// ProjectPost est maintenant défini dans types/project.ts
+// Ré-exporter pour compatibilité avec les imports existants
+export type { ProjectPost } from '@/types/project';
+
+export async function getProject(projectId: string): Promise<Project> {
+  const token = getStoredToken();
+  const apiBase = getApiBase();
+  const url = apiBase ? `${apiBase}/api/v1/projects/${projectId}` : `/api/v1/projects/${projectId}`;
+
+  const response = await fetch(url, {
+    mode: 'cors',
+    credentials: 'same-origin',
+    headers: withAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let detail = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      detail = parsed.detail || errorText;
+    } catch (err) {
+      /* ignore */
+    }
+    throw new Error(detail || `HTTP ${response.status}: Failed to load project`);
+  }
+  
+  return response.json();
+}
+
+export async function updateProject(projectId: string, updates: Partial<ProjectCreate>): Promise<Project> {
+  const token = getStoredToken();
+  const apiBase = getApiBase();
+  const url = apiBase ? `${apiBase}/api/v1/projects/${projectId}` : `/api/v1/projects/${projectId}`;
+
+  const response = await fetch(url, {
+    mode: 'cors',
+    credentials: 'same-origin',
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...withAuthHeaders(),
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let detail = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      detail = parsed.detail || errorText;
+    } catch (err) {
+      /* ignore */
+    }
+    throw new Error(detail || `HTTP ${response.status}: Failed to update project`);
+  }
+  
+  return response.json();
+}
+
+export async function deleteProject(projectId: string): Promise<void> {
+  const apiBase = getApiBase();
+  const url = apiBase ? `${apiBase}/api/v1/projects/${projectId}` : `/api/v1/projects/${projectId}`;
+
+  const response = await fetch(url, {
+    mode: 'cors',
+    credentials: 'same-origin',
+    method: 'DELETE',
+    headers: withAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let detail = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      detail = parsed.detail || errorText;
+    } catch (err) {
+      /* ignore */
+    }
+    throw new Error(detail || `HTTP ${response.status}: Failed to delete project`);
+  }
+}
+
+export async function linkProjectHashtagPosts(projectId: string, linkId: number, limit: number = 100): Promise<{ newly_linked?: number }> {
+  const apiBase = getApiBase();
+  const url = apiBase 
+    ? `${apiBase}/api/v1/projects/${projectId}/hashtags/${linkId}/link-posts?limit=${limit}`
+    : `/api/v1/projects/${projectId}/hashtags/${linkId}/link-posts?limit=${limit}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: withAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let detail = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      detail = parsed.detail || errorText;
+    } catch (err) {
+      /* ignore */
+    }
+    throw new Error(detail || `HTTP ${response.status}: Failed to link posts`);
+  }
+  
+  return response.json();
 }
 
 export async function getProjectPosts(projectId: string, platform?: string): Promise<ProjectPost[]> {
-  const token = localStorage.getItem('token');
   const apiBase = getApiBase();
   const params = new URLSearchParams();
   if (platform) {
@@ -578,9 +776,7 @@ export async function getProjectPosts(projectId: string, platform?: string): Pro
   const response = await fetch(url, {
     mode: 'cors',
     credentials: 'same-origin',
-    headers: {
-      'Authorization': `Bearer ${token || ''}`,
-    },
+    headers: withAuthHeaders(),
   });
 
   if (!response.ok) {
