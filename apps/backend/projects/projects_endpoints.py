@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
 from sqlalchemy import text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import Dict, List, Optional, Set
 from uuid import UUID
 
@@ -90,6 +90,7 @@ def _collect_project_posts(
     if usernames:
         query = (
             db.query(Post)
+            .options(joinedload(Post.platform))
             .filter(Post.author.in_(usernames))
         )
         if platform_ids:
@@ -111,6 +112,7 @@ def _collect_project_posts(
         # 1️⃣ Essayer d'abord via PostHashtag (liens explicites)
         hashtag_query = (
             db.query(Post)
+            .options(joinedload(Post.platform))
             .join(PostHashtag, PostHashtag.post_id == Post.id)
             .filter(PostHashtag.hashtag_id.in_(hashtag_ids))
         )
