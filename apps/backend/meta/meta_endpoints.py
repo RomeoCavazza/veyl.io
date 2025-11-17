@@ -72,7 +72,7 @@ async def get_instagram_public_content(
         data = search.get("data", [])
         if not data:
             logger.warning(f"Hashtag #{tag} not found in Meta API, falling back to DB")
-            raise HTTPException(status_code=404, detail=f"Hashtag {tag} not found")
+            raise Exception(f"Hashtag {tag} not found in Meta API")  # Raise generic exception to trigger fallback
 
         hashtag_id = data[0]["id"]
         media = await call_meta(
@@ -86,7 +86,12 @@ async def get_instagram_public_content(
         )
 
         posts = media.get("data", [])
-        logger.info(f"API success: {len(posts)} posts from Meta API")
+        logger.info(f"API returned {len(posts)} posts from Meta API")
+        
+        # Si l'API retourne 0 posts, faire le fallback DB
+        if not posts:
+            logger.warning(f"Meta API returned 0 posts for #{tag}, falling back to DB")
+            raise Exception(f"No posts returned from Meta API for #{tag}")  # Trigger fallback
         
         # Stocker les posts dans la DB
         results = []
@@ -116,8 +121,13 @@ async def get_instagram_public_content(
         
         db.commit()
         return {"data": results, "source": "meta_api"}
-    except HTTPException:
-        raise
+    except HTTPException as http_exc:
+        # Si c'est une erreur 404 (hashtag non trouvé), faire le fallback DB
+        if http_exc.status_code == 404:
+            logger.warning(f"Meta API returned 404 for #{tag}, falling back to DB")
+        else:
+            # Pour les autres erreurs HTTP (401, 403, 500, etc.), relancer l'exception
+            raise
     except Exception as e:
         logger.exception(f"API failed for #{tag}, falling back to DB: {e}")
     
@@ -144,7 +154,11 @@ async def get_instagram_public_content(
     )
     
     if not posts:
-        raise HTTPException(status_code=404, detail=f"No posts found for hashtag #{tag} in database")
+        # Si ni l'API ni la DB n'ont retourné de résultats, renvoyer une erreur 500 avec message explicite
+        raise HTTPException(
+            status_code=500, 
+            detail=f"No results found: neither API nor database returned results for hashtag #{tag}"
+        )
     
     results = []
     for post in posts:
