@@ -322,30 +322,34 @@ export default function Search() {
             console.log('📡 [TEST API] Testing Instagram API for:', searchQuery);
           }
           const response = await fetchMetaIGPublic(searchQuery, 10);
-          const source = response.meta?.source || 'unknown';
-          const success = response.status === 'success' && response.data?.length > 0;
+          const source = response?.source || 'unknown';
           
-          if (success) {
+          // L'endpoint renvoie {"data": [...], "source": "meta_api" | "database_fallback"}
+          if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
             if (import.meta.env.DEV) {
               console.log(`✅ [TEST API] Instagram SUCCESS: ${response.data.length} posts (source: ${source})`);
             }
-            const metaPosts: PostHit[] = response.data.map((item) => ({
+            const metaPosts: PostHit[] = response.data.map((item: any) => ({
               id: item.id,
               platform: 'instagram',
-              username: item.username || 'unknown',
+              username: item.username || item.author || 'unknown',
               caption: item.caption,
               media_type: item.media_type,
               media_url: item.media_url,
               permalink: item.permalink,
-              posted_at: item.timestamp,
-              like_count: item.like_count,
-              comment_count: item.comments_count,
+              posted_at: item.timestamp || item.posted_at,
+              like_count: item.like_count || 0,
+              comment_count: item.comments_count || item.comment_count || 0,
               score_trend: item.like_count ?? 0,
             }));
             allPosts.push(...metaPosts);
             results.push({ platform: 'Instagram', success: true, count: response.data.length });
           } else {
-            results.push({ platform: 'Instagram', success: false, count: 0, error: `Status: ${response.status}` });
+            const errorMsg = response?.data?.length === 0 ? 'No results found' : 'Invalid response format';
+            if (import.meta.env.DEV) {
+              console.log(`⚠️ [TEST API] Instagram returned 0 results (source: ${source})`);
+            }
+            results.push({ platform: 'Instagram', success: false, count: 0, error: errorMsg });
           }
         } catch (error: unknown) {
           if (import.meta.env.DEV) {
