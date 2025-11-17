@@ -154,11 +154,10 @@ async def get_instagram_public_content(
     )
     
     if not posts:
-        # Si ni l'API ni la DB n'ont retourné de résultats, renvoyer une erreur 500 avec message explicite
-        raise HTTPException(
-            status_code=500, 
-            detail=f"No results found: neither API nor database returned results for hashtag #{tag}"
-        )
+        # Si ni l'API ni la DB n'ont retourné de résultats, renvoyer une liste vide au lieu d'une erreur 500
+        # C'est normal qu'il n'y ait pas toujours de résultats, ce n'est pas une erreur serveur
+        logger.info(f"No posts found for hashtag #{tag} in database (fallback)")
+        return {"data": [], "source": "database_fallback"}
     
     results = []
     for post in posts:
