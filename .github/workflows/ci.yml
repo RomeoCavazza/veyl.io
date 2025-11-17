@@ -121,9 +121,8 @@ jobs:
               
               console.log(`📦 ${deployments.data.length} ancien(s) déploiement(s) trouvé(s)`);
               
-              // Supprimer tous les anciens déploiements (on garde seulement le dernier)
-              const toDelete = deployments.data.slice(1);
-              for (const deployment of toDelete) {
+              // Supprimer TOUS les anciens déploiements avant de créer le nouveau
+              for (const deployment of deployments.data) {
                 try {
                   await github.rest.repos.deleteDeployment({
                     owner: context.repo.owner,
@@ -240,9 +239,8 @@ jobs:
               
               console.log(`📦 ${deployments.data.length} ancien(s) déploiement(s) trouvé(s)`);
               
-              // Supprimer tous les anciens déploiements (on garde seulement le dernier)
-              const toDeleteRailway = deployments.data.slice(1);
-              for (const deployment of toDeleteRailway) {
+              // Supprimer TOUS les anciens déploiements avant de créer le nouveau
+              for (const deployment of deployments.data) {
                 try {
                   await github.rest.repos.deleteDeployment({
                     owner: context.repo.owner,
