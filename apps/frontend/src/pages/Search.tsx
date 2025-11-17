@@ -136,28 +136,30 @@ export default function Search() {
         try {
           const metaResponse = await fetchMetaIGPublic(query, 20);
           
-          if (metaResponse.status === 'success' && metaResponse.data && metaResponse.data.length > 0) {
+          // L'endpoint renvoie {"data": [...], "source": "meta_api" | "database_fallback"}
+          if (metaResponse && metaResponse.data && Array.isArray(metaResponse.data) && metaResponse.data.length > 0) {
+            const source = metaResponse.source || 'unknown';
             if (import.meta.env.DEV) {
-              console.log(`✅ [SEARCH] Meta API SUCCESS: ${metaResponse.data.length} posts from API`);
+              console.log(`✅ [SEARCH] Meta API SUCCESS: ${metaResponse.data.length} posts from ${source}`);
             }
             apiSuccess = true;
-            const metaPosts: PostHit[] = metaResponse.data.map((item) => ({
+            const metaPosts: PostHit[] = metaResponse.data.map((item: any) => ({
               id: item.id,
               platform: 'instagram',
-              username: item.username || 'unknown',
+              username: item.username || item.author || 'unknown',
               caption: item.caption,
               media_type: item.media_type,
               media_url: item.media_url,
               permalink: item.permalink,
-              posted_at: item.timestamp,
-              like_count: item.like_count,
-              comment_count: item.comments_count,
+              posted_at: item.timestamp || item.posted_at,
+              like_count: item.like_count || 0,
+              comment_count: item.comments_count || item.comment_count || 0,
               score_trend: item.like_count ?? 0,
             }));
             allPosts.push(...metaPosts);
           } else {
             if (import.meta.env.DEV) {
-              console.log(`⚠️ [SEARCH] Meta API returned 0 results (status: ${metaResponse.status})`);
+              console.log(`⚠️ [SEARCH] Meta API returned 0 results (source: ${metaResponse?.source || 'unknown'})`);
             }
           }
         } catch (metaError: unknown) {

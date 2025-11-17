@@ -181,12 +181,16 @@ export default function ProjectDetail() {
             try {
               console.log(`📡 [FETCH] Calling Meta API for #${hashtag.name}...`);
               const response = await fetchMetaIGPublic(hashtag.name, 10);
-              const source = response.meta?.source || 'unknown';
-              if (source === 'instagram_public_content_api') {
-                console.log(`✅ [FETCH] Meta API SUCCESS for #${hashtag.name} (${response.data?.length || 0} posts from API)`);
-                fetchedCount++;
+              const source = response?.source || 'unknown';
+              if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
+                if (source === 'meta_api') {
+                  console.log(`✅ [FETCH] Meta API SUCCESS for #${hashtag.name} (${response.data.length} posts from API)`);
+                  fetchedCount++;
+                } else {
+                  console.log(`⚠️ [FETCH] Meta returned DB fallback for #${hashtag.name} (${response.data.length} posts from DB)`);
+                }
               } else {
-                console.log(`⚠️ [FETCH] Meta returned DB fallback for #${hashtag.name} (source: ${source})`);
+                console.log(`⚠️ [FETCH] Meta returned 0 posts for #${hashtag.name} (source: ${source})`);
               }
             } catch (error: unknown) {
               console.error(`❌ [FETCH] Meta API FAILED for #${hashtag.name}:`, getErrorMessage(error));
