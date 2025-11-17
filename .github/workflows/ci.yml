@@ -30,6 +30,51 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Nettoyer TOUS les anciens déploiements avant de créer les nouveaux
+  cleanup-deployments:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - name: Cleanup all old deployments
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              console.log('🧹 Nettoyage de tous les anciens déploiements...');
+              
+              // Récupérer TOUS les déploiements (tous environnements)
+              const allDeployments = await github.rest.repos.listDeployments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100
+              });
+              
+              console.log(`📦 ${allDeployments.data.length} déploiement(s) trouvé(s) au total`);
+              
+              // Supprimer TOUS les anciens déploiements
+              for (const deployment of allDeployments.data) {
+                try {
+                  await github.rest.repos.deleteDeployment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    deployment_id: deployment.id
+                  });
+                  console.log(`🗑️  Déploiement #${deployment.id} (${deployment.environment}) supprimé`);
+                } catch (error) {
+                  console.log(`⚠️  Erreur lors de la suppression du déploiement #${deployment.id}: ${error.message}`);
+                }
+              }
+              
+              console.log('✅ Nettoyage terminé');
+            } catch (error) {
+              console.error('❌ Erreur lors du nettoyage:', error.message);
+              // Ne pas faire échouer le workflow si le nettoyage échoue
+            }
+
   # Check if deployment is needed
   check-changes:
     runs-on: ubuntu-latest
@@ -49,7 +94,7 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
-    needs: check-changes
+    needs: [check-changes, cleanup-deployments]
     if: needs.check-changes.steps.filter.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     outputs:
       vercel-deploy-outcome: ${{ steps.vercel-deploy.outcome }}
@@ -111,31 +156,8 @@ jobs:
               console.log(`🔍 État du déploiement Vercel: ${vercelOutcome || 'not executed'}`);
               console.log(`📦 Création du GitHub Deployment avec statut: ${deployState}`);
               
-              // Supprimer les anciens déploiements Production pour garder seulement le dernier
-              const deployments = await github.rest.repos.listDeployments({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                environment: 'Production',
-                per_page: 100
-              });
-              
-              console.log(`📦 ${deployments.data.length} ancien(s) déploiement(s) trouvé(s)`);
-              
-              // Supprimer TOUS les anciens déploiements avant de créer le nouveau
-              for (const deployment of deployments.data) {
-                try {
-                  await github.rest.repos.deleteDeployment({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    deployment_id: deployment.id
-                  });
-                  console.log(`🗑️  Déploiement #${deployment.id} supprimé`);
-                } catch (error) {
-                  console.log(`⚠️  Erreur lors de la suppression du déploiement #${deployment.id}: ${error.message}`);
-                }
-              }
-              
-              // Créer le nouveau déploiement (le seul visible)
+              // Le nettoyage a déjà été fait par le job cleanup-deployments
+              // Créer directement le nouveau déploiement
               console.log('✨ Création du nouveau déploiement Production...');
               const newDeployment = await github.rest.repos.createDeployment({
                 owner: context.repo.owner,
@@ -167,7 +189,7 @@ jobs:
 
   backend:
     runs-on: ubuntu-latest
-    needs: check-changes
+    needs: [check-changes, cleanup-deployments]
     if: needs.check-changes.steps.filter.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     outputs:
       railway-deploy-outcome: ${{ steps.railway-deploy.outcome }}
@@ -227,33 +249,9 @@ jobs:
               
               console.log(`🔍 État du déploiement Railway: ${railwayOutcome || 'not executed'}`);
               console.log(`📦 Création du GitHub Deployment avec statut: ${deployState}`);
-              console.log(`🔍 Recherche des anciens déploiements Railway (${envName})...`);
               
-              // Supprimer les anciens déploiements Railway pour garder seulement le dernier
-              const deployments = await github.rest.repos.listDeployments({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                environment: envName,
-                per_page: 100
-              });
-              
-              console.log(`📦 ${deployments.data.length} ancien(s) déploiement(s) trouvé(s)`);
-              
-              // Supprimer TOUS les anciens déploiements avant de créer le nouveau
-              for (const deployment of deployments.data) {
-                try {
-                  await github.rest.repos.deleteDeployment({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    deployment_id: deployment.id
-                  });
-                  console.log(`🗑️  Déploiement #${deployment.id} supprimé`);
-                } catch (error) {
-                  console.log(`⚠️  Erreur lors de la suppression du déploiement #${deployment.id}: ${error.message}`);
-                }
-              }
-              
-              // Créer le nouveau déploiement (le seul visible)
+              // Le nettoyage a déjà été fait par le job cleanup-deployments
+              // Créer directement le nouveau déploiement
               console.log(`✨ Création du nouveau déploiement Railway (${envName})...`);
               const newDeployment = await github.rest.repos.createDeployment({
                 owner: context.repo.owner,
