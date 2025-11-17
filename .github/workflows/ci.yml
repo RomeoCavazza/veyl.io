@@ -95,7 +95,7 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     needs: [check-changes, cleanup-deployments]
-    if: needs.check-changes.steps.filter.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    if: always() && (needs.check-changes.steps.filter.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main')
     outputs:
       vercel-deploy-outcome: ${{ steps.vercel-deploy.outcome }}
     
@@ -190,7 +190,7 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     needs: [check-changes, cleanup-deployments]
-    if: needs.check-changes.steps.filter.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    if: always() && (needs.check-changes.steps.filter.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main')
     outputs:
       railway-deploy-outcome: ${{ steps.railway-deploy.outcome }}
     defaults:
