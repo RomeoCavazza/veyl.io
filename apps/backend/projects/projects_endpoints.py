@@ -445,8 +445,10 @@ def list_project_posts(
     """Retourne les posts associés au projet (via ses créateurs)."""
     try:
         project = _get_project_or_404(db, current_user, project_id)
+        logger.info(f"Loading posts for project {project_id} (platform filter: {platform})")
 
         posts = _collect_project_posts(db, project, limit=60, platform_filter=platform)
+        logger.info(f"Found {len(posts)} posts for project {project_id}")
         if not posts:
             return []
 
@@ -461,7 +463,7 @@ def list_project_posts(
                 permalink = None
                 platform_name = post.platform.name if post.platform else 'instagram'
                 
-                if post.external_id:
+                if post.external_id and isinstance(post.external_id, str):
                     if post.external_id.startswith('http'):
                         permalink = post.external_id
                     elif platform_name == 'tiktok':
@@ -501,28 +503,30 @@ def list_project_posts(
                 if post.caption:
                     mentions_list = re.findall(r'@\w+', post.caption)
                 
-                results.append(ProjectPostResponse(
-                    id=post.id,
-                    author=post.author,
-                    username=post.author,  # Alias pour compatibilité frontend
-                    caption=post.caption,
-                    media_url=media_url,
-                    permalink=permalink,
-                    posted_at=post.posted_at,
-                    fetched_at=post.fetched_at,
-                    platform=post.platform.name if post.platform else None,
-                    like_count=metrics.get('like_count') or metrics.get('likes') or 0,
-                    comment_count=metrics.get('comment_count') or metrics.get('comments_count') or 0,
-                    share_count=metrics.get('share_count') or 0,
-                    view_count=metrics.get('view_count') or 0,
-                    score_trend=post.score_trend,
-                    hashtags=hashtags_list,
-                    mentions=mentions_list,
-                    location=None,  # Pas stocké actuellement dans Post
-                    media_type=api_payload.get('media_type') if api_payload else None,
-                    thumbnail_url=api_payload.get('thumbnail_url') if api_payload else None,
-                    external_id=post.external_id,
-                ))
+                # S'assurer que tous les champs sont valides avant de créer ProjectPostResponse
+                post_data = {
+                    "id": str(post.id) if post.id else "",
+                    "author": post.author,
+                    "username": post.author,  # Alias pour compatibilité frontend
+                    "caption": post.caption,
+                    "media_url": media_url,
+                    "permalink": permalink,
+                    "posted_at": post.posted_at,
+                    "fetched_at": post.fetched_at,
+                    "platform": post.platform.name if post.platform else None,
+                    "like_count": int(metrics.get('like_count') or metrics.get('likes') or 0),
+                    "comment_count": int(metrics.get('comment_count') or metrics.get('comments_count') or 0),
+                    "share_count": int(metrics.get('share_count') or 0),
+                    "view_count": int(metrics.get('view_count') or 0),
+                    "score_trend": float(post.score_trend) if post.score_trend is not None else None,
+                    "hashtags": hashtags_list or [],
+                    "mentions": mentions_list or [],
+                    "location": None,  # Pas stocké actuellement dans Post
+                    "media_type": api_payload.get('media_type') if api_payload else None,
+                    "thumbnail_url": api_payload.get('thumbnail_url') if api_payload else None,
+                    "external_id": post.external_id,
+                }
+                results.append(ProjectPostResponse(**post_data))
             except Exception as e:
                 logger.error(f"Error processing post {post.id} in project {project_id}: {e}", exc_info=True)
                 # Continue avec les autres posts au lieu de faire échouer toute la requête
