@@ -285,8 +285,8 @@ jobs:
   # Crée les déploiements manquants si les jobs frontend/backend ont été skippés
   ensure-deployments:
     runs-on: ubuntu-latest
-    needs: [check-changes, cleanup-deployments, frontend, backend]
-    if: github.ref == 'refs/heads/main'
+    needs: [check-changes, cleanup-deployments]
+    if: always() && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       deployments: write
