@@ -97,7 +97,7 @@ class GoogleOAuthProvider(BaseOAuthProvider):
                 access_token = token_data.get("access_token")
                 if not access_token:
                     raise HTTPException(status_code=400, detail="Access token manquant")
-                return {"access_token": access_token, "client": client}
+                return {"access_token": access_token}
             except HTTPException:
                 raise
             except Exception as e:
@@ -105,41 +105,42 @@ class GoogleOAuthProvider(BaseOAuthProvider):
     
     async def get_user_info(self, token_data: Dict[str, Any]) -> Dict[str, Any]:
         """Récupère les informations utilisateur Google"""
-        client = token_data.get("client")
         access_token = token_data.get("access_token")
         
-        if not client:
-            raise HTTPException(status_code=500, detail="Client HTTP manquant")
+        if not access_token:
+            raise HTTPException(status_code=400, detail="Access token manquant")
         
-        try:
-            r = await client.get(
-                "https://www.googleapis.com/oauth2/v2/userinfo",
-                headers={"Authorization": f"Bearer {access_token}"}
-            )
-            if r.status_code != 200:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Erreur récupération user info Google: {r.status_code}"
+        # Créer un nouveau client (le précédent est fermé)
+        async with httpx.AsyncClient(timeout=20) as client:
+            try:
+                r = await client.get(
+                    "https://www.googleapis.com/oauth2/v2/userinfo",
+                    headers={"Authorization": f"Bearer {access_token}"}
                 )
-            
-            user_info = r.json()
-            google_user_id = user_info.get("id")
-            email = user_info.get("email")
-            name = user_info.get("name")
-            
-            if not google_user_id:
-                raise HTTPException(status_code=400, detail="Impossible de récupérer l'ID utilisateur Google")
-            if not email:
-                raise HTTPException(status_code=400, detail="Impossible de récupérer l'email Google")
-            
-            return {
-                "provider_user_id": str(google_user_id),
-                "name": name or email.split("@")[0],
-                "email": email,
-                "access_token": access_token
-            }
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Erreur requête user info Google: {str(e)}")
+                if r.status_code != 200:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Erreur récupération user info Google: {r.status_code}"
+                    )
+                
+                user_info = r.json()
+                google_user_id = user_info.get("id")
+                email = user_info.get("email")
+                name = user_info.get("name")
+                
+                if not google_user_id:
+                    raise HTTPException(status_code=400, detail="Impossible de récupérer l'ID utilisateur Google")
+                if not email:
+                    raise HTTPException(status_code=400, detail="Impossible de récupérer l'email Google")
+                
+                return {
+                    "provider_user_id": str(google_user_id),
+                    "name": name or email.split("@")[0],
+                    "email": email,
+                    "access_token": access_token
+                }
+            except HTTPException:
+                raise
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Erreur requête user info Google: {str(e)}")
 

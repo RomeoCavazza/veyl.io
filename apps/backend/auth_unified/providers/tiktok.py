@@ -115,45 +115,46 @@ class TikTokOAuthProvider(BaseOAuthProvider):
             if not access_token:
                 raise HTTPException(status_code=400, detail="Access token TikTok non obtenu")
             
-            return {"access_token": access_token, "refresh_token": refresh_token, "client": client}
+            return {"access_token": access_token, "refresh_token": refresh_token}
     
     async def get_user_info(self, token_data: Dict[str, Any]) -> Dict[str, Any]:
         """Récupère les informations utilisateur TikTok"""
-        client = token_data.get("client")
         access_token = token_data.get("access_token")
         refresh_token = token_data.get("refresh_token")
         
-        if not client:
-            raise HTTPException(status_code=500, detail="Client HTTP manquant")
+        if not access_token:
+            raise HTTPException(status_code=400, detail="Access token manquant")
         
-        r = await client.get(
-            "https://open.tiktokapis.com/v2/user/info/",
-            params={"fields": "open_id,union_id,avatar_url,display_name"},
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json"
+        # Créer un nouveau client (le précédent est fermé)
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.get(
+                "https://open.tiktokapis.com/v2/user/info/",
+                params={"fields": "open_id,union_id,avatar_url,display_name"},
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json"
+                }
+            )
+            
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=f"Erreur récupération info TikTok: {r.text}")
+            
+            user_info = r.json()
+            user_data = user_info.get("data", {}).get("user", {})
+            
+            tiktok_user_id = user_data.get("open_id") or user_data.get("union_id")
+            display_name = user_data.get("display_name", "")
+            avatar_url = user_data.get("avatar_url")
+            
+            if not tiktok_user_id:
+                raise HTTPException(status_code=400, detail="Impossible de récupérer l'ID utilisateur TikTok")
+            
+            return {
+                "provider_user_id": str(tiktok_user_id),
+                "name": display_name or f"TikTok User {tiktok_user_id[:8]}",
+                "email": None,  # TikTok ne fournit pas d'email
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "avatar_url": avatar_url  # Pour mise à jour du User.picture_url
             }
-        )
-        
-        if r.status_code != 200:
-            raise HTTPException(status_code=r.status_code, detail=f"Erreur récupération info TikTok: {r.text}")
-        
-        user_info = r.json()
-        user_data = user_info.get("data", {}).get("user", {})
-        
-        tiktok_user_id = user_data.get("open_id") or user_data.get("union_id")
-        display_name = user_data.get("display_name", "")
-        avatar_url = user_data.get("avatar_url")
-        
-        if not tiktok_user_id:
-            raise HTTPException(status_code=400, detail="Impossible de récupérer l'ID utilisateur TikTok")
-        
-        return {
-            "provider_user_id": str(tiktok_user_id),
-            "name": display_name or f"TikTok User {tiktok_user_id[:8]}",
-            "email": None,  # TikTok ne fournit pas d'email
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "avatar_url": avatar_url  # Pour mise à jour du User.picture_url
-        }
 

@@ -52,46 +52,47 @@ class FacebookOAuthProvider(BaseOAuthProvider):
             access_token = data.get("access_token")
             if not access_token:
                 raise HTTPException(status_code=400, detail="Access token manquant")
-            return {"access_token": access_token, "client": client}
+            return {"access_token": access_token}
     
     async def get_user_info(self, token_data: Dict[str, Any]) -> Dict[str, Any]:
         """Récupère les informations utilisateur Facebook"""
-        client = token_data.get("client")
         access_token = token_data.get("access_token")
         
-        if not client:
-            raise HTTPException(status_code=500, detail="Client HTTP manquant")
+        if not access_token:
+            raise HTTPException(status_code=400, detail="Access token manquant")
         
-        r = await client.get(
-            "https://graph.facebook.com/v21.0/me",
-            params={
-                "fields": "id,name,email",
+        # Créer un nouveau client (le précédent est fermé)
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.get(
+                "https://graph.facebook.com/v21.0/me",
+                params={
+                    "fields": "id,name,email",
+                    "access_token": access_token
+                }
+            )
+            r.raise_for_status()
+            user_info = r.json()
+            
+            fb_user_id = user_info.get("id")
+            email = user_info.get("email")
+            name = user_info.get("name")
+            
+            if not fb_user_id:
+                raise HTTPException(status_code=400, detail="Impossible de récupérer l'ID utilisateur Facebook")
+            
+            # Email peut être None selon les permissions
+            if not email:
+                email = f"facebook_{fb_user_id}@insidr.dev"
+            
+            # Ne passer que si c'est un email réel (pas généré)
+            email_to_pass = None
+            if email and not email.endswith(('@veyl.io', '@insidr.dev')) and '@' in email:
+                email_to_pass = email
+            
+            return {
+                "provider_user_id": str(fb_user_id),
+                "name": name or f"Facebook User {fb_user_id}",
+                "email": email_to_pass,  # None si email généré
                 "access_token": access_token
             }
-        )
-        r.raise_for_status()
-        user_info = r.json()
-        
-        fb_user_id = user_info.get("id")
-        email = user_info.get("email")
-        name = user_info.get("name")
-        
-        if not fb_user_id:
-            raise HTTPException(status_code=400, detail="Impossible de récupérer l'ID utilisateur Facebook")
-        
-        # Email peut être None selon les permissions
-        if not email:
-            email = f"facebook_{fb_user_id}@insidr.dev"
-        
-        # Ne passer que si c'est un email réel (pas généré)
-        email_to_pass = None
-        if email and not email.endswith(('@veyl.io', '@insidr.dev')) and '@' in email:
-            email_to_pass = email
-        
-        return {
-            "provider_user_id": str(fb_user_id),
-            "name": name or f"Facebook User {fb_user_id}",
-            "email": email_to_pass,  # None si email généré
-            "access_token": access_token
-        }
 

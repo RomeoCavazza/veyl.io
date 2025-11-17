@@ -124,7 +124,7 @@ class InstagramOAuthProvider(BaseOAuthProvider):
                 long_token = r2.json().get("access_token")
                 if not long_token:
                     raise HTTPException(status_code=400, detail="Long-lived token manquant")
-                return {"access_token": long_token, "client": client}
+                return {"access_token": long_token}
             except HTTPException:
                 raise
             except Exception as e:
@@ -132,61 +132,62 @@ class InstagramOAuthProvider(BaseOAuthProvider):
     
     async def get_user_info(self, token_data: Dict[str, Any]) -> Dict[str, Any]:
         """Récupère l'Instagram Business ID depuis les Pages Facebook"""
-        client = token_data.get("client")
         long_token = token_data.get("access_token")
         
-        if not client:
-            raise HTTPException(status_code=500, detail="Client HTTP manquant")
+        if not long_token:
+            raise HTTPException(status_code=400, detail="Access token manquant")
         
-        # Récupérer Page(s) -> IG Business ID
-        try:
-            pages = await client.get(
-                "https://graph.facebook.com/v21.0/me/accounts",
-                params={"access_token": long_token}
-            )
-            if pages.status_code != 200:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Erreur récupération Pages Instagram: {pages.status_code}"
+        # Créer un nouveau client (le précédent est fermé)
+        async with httpx.AsyncClient(timeout=20) as client:
+            # Récupérer Page(s) -> IG Business ID
+            try:
+                pages = await client.get(
+                    "https://graph.facebook.com/v21.0/me/accounts",
+                    params={"access_token": long_token}
                 )
-            
-            pages_data = pages.json().get("data", [])
-            ig_user_id = None
-            
-            for p in pages_data:
-                page_id = p["id"]
-                try:
-                    r3 = await client.get(
-                        f"https://graph.facebook.com/v21.0/{page_id}",
-                        params={
-                            "fields": "instagram_business_account{username,id}",
-                            "access_token": long_token
-                        },
+                if pages.status_code != 200:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Erreur récupération Pages Instagram: {pages.status_code}"
                     )
-                    if r3.status_code == 200:
-                        ig = r3.json().get("instagram_business_account")
-                        if ig and ig.get("id"):
-                            ig_user_id = ig["id"]
-                            logger.info(f"Instagram Business ID trouvé: {ig_user_id}")
-                            break
-                except Exception as e:
-                    logger.warning(f"Erreur récupération IG Business Account pour Page {page_id}: {str(e)}")
-                    continue
-            
-            if not ig_user_id:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Instagram Business Account non trouvé. Assurez-vous que votre compte Facebook a une Page liée à un compte Instagram Business."
-                )
-            
-            return {
-                "provider_user_id": str(ig_user_id),
-                "name": f"Instagram User {ig_user_id}",
-                "email": None,
-                "access_token": long_token
-            }
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Erreur requête Pages Instagram: {str(e)}")
+                
+                pages_data = pages.json().get("data", [])
+                ig_user_id = None
+                
+                for p in pages_data:
+                    page_id = p["id"]
+                    try:
+                        r3 = await client.get(
+                            f"https://graph.facebook.com/v21.0/{page_id}",
+                            params={
+                                "fields": "instagram_business_account{username,id}",
+                                "access_token": long_token
+                            },
+                        )
+                        if r3.status_code == 200:
+                            ig = r3.json().get("instagram_business_account")
+                            if ig and ig.get("id"):
+                                ig_user_id = ig["id"]
+                                logger.info(f"Instagram Business ID trouvé: {ig_user_id}")
+                                break
+                    except Exception as e:
+                        logger.warning(f"Erreur récupération IG Business Account pour Page {page_id}: {str(e)}")
+                        continue
+                
+                if not ig_user_id:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Instagram Business Account non trouvé. Assurez-vous que votre compte Facebook a une Page liée à un compte Instagram Business."
+                    )
+                
+                return {
+                    "provider_user_id": str(ig_user_id),
+                    "name": f"Instagram User {ig_user_id}",
+                    "email": None,
+                    "access_token": long_token
+                }
+            except HTTPException:
+                raise
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Erreur requête Pages Instagram: {str(e)}")
 
