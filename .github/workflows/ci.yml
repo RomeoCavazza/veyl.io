@@ -125,7 +125,7 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     needs: [check-changes, cleanup-deployments]
-    if: always() && (needs.check-changes.steps.filter.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main')
+    if: always() && github.ref == 'refs/heads/main'
     outputs:
       vercel-deploy-outcome: ${{ steps.vercel-deploy.outcome }}
     
