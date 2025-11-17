@@ -54,7 +54,7 @@ export default function Projects() {
         description: p.description,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
-        status: p.status || 'draft',
+        status: (p.status === 'active' || p.status === 'archived' || p.status === 'draft' ? p.status : 'draft') as 'active' | 'archived' | 'draft',
         creators: p.creators || [],
         creatorsCount: typeof p.creators_count === 'number' ? p.creators_count : undefined,
         platforms: p.platforms || [],

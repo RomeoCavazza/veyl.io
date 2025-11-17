@@ -355,7 +355,7 @@ export default function ProjectDetail() {
       console.error('Error adding creator:', error);
         toast({
           title: 'Error',
-        description: error?.message || 'Unable to add creator',
+        description: getErrorMessage(error),
           variant: 'destructive',
         });
       } finally {
@@ -374,7 +374,7 @@ export default function ProjectDetail() {
       console.error('Error removing creator:', error);
     toast({
         title: 'Error',
-        description: error?.message || 'Unable to remove creator',
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     }
@@ -471,7 +471,7 @@ export default function ProjectDetail() {
             console.log(`✅ [RE-LINK] Re-linked ${linkResult.newly_linked || 0} posts to #${hashtag}`);
           }
         } catch (error: unknown) {
-          console.error(`❌ [RE-LINK] Error re-linking posts:`, error.message);
+          console.error(`❌ [RE-LINK] Error re-linking posts:`, getErrorMessage(error));
           // Continue même si le re-link échoue
         }
       }
@@ -490,7 +490,7 @@ export default function ProjectDetail() {
       console.error('Error adding hashtag:', error);
     toast({
         title: 'Error',
-        description: error?.message || 'Unable to add hashtag',
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
@@ -509,7 +509,7 @@ export default function ProjectDetail() {
       console.error('Error removing hashtag:', error);
       toast({
         title: 'Error',
-        description: error?.message || 'Unable to remove hashtag',
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     }
@@ -542,8 +542,8 @@ export default function ProjectDetail() {
 
       // Tri par date
       if (sortColumn === 'posted_at' || sortColumn === 'fetched_at') {
-        const aDate = aVal ? new Date(aVal).getTime() : 0;
-        const bDate = bVal ? new Date(bVal).getTime() : 0;
+        const aDate = aVal ? new Date(String(aVal)).getTime() : 0;
+        const bDate = bVal ? new Date(String(bVal)).getTime() : 0;
         return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
       }
 
