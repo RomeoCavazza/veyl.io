@@ -47,11 +47,6 @@ See the [online documentation](https://www.veyl.io/docs) for more details.
 
 You can consult veyl.io's documentation at [veyl.io/docs](https://www.veyl.io/docs).
 
-The complete technical documentation is organized in the [`docs/`](docs/) directory:
-
-- **[docs/database.md](docs/database.md)** — Database schema and structure
-- **[docs/oauth-scopes.md](docs/oauth-scopes.md)** — OAuth permissions for Meta and TikTok
-
 ## 🚀 Getting Started
 
 For basic instructions on how to set up veyl.io, configure OAuth, and create your first monitoring project, take a look at our [documentation](https://www.veyl.io/docs) guide.
@@ -114,7 +109,7 @@ veyl.io integrates with official developer platforms:
 
 ## ⚙️ Advanced Usage
 
-For technical details, see the [Database Schema](docs/database.md) and [OAuth Configuration](docs/oauth-scopes.md) documentation.
+For technical details, see the [online documentation](https://www.veyl.io/docs).
 
 ## 🧾 Roadmap
 
