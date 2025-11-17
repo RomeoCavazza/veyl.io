@@ -443,86 +443,97 @@ def list_project_posts(
     current_user: User = Depends(get_current_user)
 ):
     """Retourne les posts associés au projet (via ses créateurs)."""
-    project = _get_project_or_404(db, current_user, project_id)
+    try:
+        project = _get_project_or_404(db, current_user, project_id)
 
-    posts = _collect_project_posts(db, project, limit=60, platform_filter=platform)
-    if not posts:
-        return []
+        posts = _collect_project_posts(db, project, limit=60, platform_filter=platform)
+        if not posts:
+            return []
 
-    results: List[ProjectPostResponse] = []
-    for post in posts:
-        # Charger payload une seule fois par post
-        payload_data = load_post_payload(post)
-        metrics = payload_data["metrics"]
-        api_payload = payload_data["api_payload"]
-        
-        permalink = None
-        platform_name = post.platform.name if post.platform else 'instagram'
-        
-        if post.external_id:
-            if post.external_id.startswith('http'):
-                permalink = post.external_id
-            elif platform_name == 'tiktok':
-                # TikTok: external_id est le video_id, construire l'URL
-                permalink = f"https://www.tiktok.com/@{(post.author or 'user')}/video/{post.external_id}"
-            else:
-                # Instagram par défaut
-                permalink = f"https://www.instagram.com/p/{post.external_id.strip('/')}/"
-        elif api_payload:
-            # Chercher permalink dans api_payload (support Meta et TikTok)
-            permalink_candidate = (
-                api_payload.get('share_url')
-                or api_payload.get('permalink')
-                or api_payload.get('url')
-                or (api_payload.get('media_details') or {}).get('permalink')
-                or api_payload.get('author_url')
-            )
-            if isinstance(permalink_candidate, str) and permalink_candidate.startswith('http'):
-                permalink = permalink_candidate
+        results: List[ProjectPostResponse] = []
+        for post in posts:
+            try:
+                # Charger payload une seule fois par post
+                payload_data = load_post_payload(post)
+                metrics = payload_data["metrics"]
+                api_payload = payload_data["api_payload"]
+                
+                permalink = None
+                platform_name = post.platform.name if post.platform else 'instagram'
+                
+                if post.external_id:
+                    if post.external_id.startswith('http'):
+                        permalink = post.external_id
+                    elif platform_name == 'tiktok':
+                        # TikTok: external_id est le video_id, construire l'URL
+                        permalink = f"https://www.tiktok.com/@{(post.author or 'user')}/video/{post.external_id}"
+                    else:
+                        # Instagram par défaut
+                        permalink = f"https://www.instagram.com/p/{post.external_id.strip('/')}/"
+                elif api_payload:
+                    # Chercher permalink dans api_payload (support Meta et TikTok)
+                    permalink_candidate = (
+                        api_payload.get('share_url')
+                        or api_payload.get('permalink')
+                        or api_payload.get('url')
+                        or (api_payload.get('media_details') or {}).get('permalink')
+                        or api_payload.get('author_url')
+                    )
+                    if isinstance(permalink_candidate, str) and permalink_candidate.startswith('http'):
+                        permalink = permalink_candidate
 
-        # Pour TikTok, extraire cover_image_url ou thumbnail_url depuis api_payload si media_url manquant
-        media_url = post.media_url
-        if platform_name == 'tiktok' and not media_url and api_payload:
-            media_url = (
-                api_payload.get('cover_image_url')
-                or api_payload.get('thumbnail_url')
-                or api_payload.get('media_url')
-            )
-        
-        # Extraire hashtags et mentions depuis caption ou colonne hashtags
-        hashtags_list = post.hashtags if isinstance(post.hashtags, list) else []
-        if not hashtags_list and post.caption:
-            # Extraire hashtags depuis caption si colonne hashtags vide
-            hashtags_list = re.findall(r'#\w+', post.caption)
-        
-        mentions_list = []
-        if post.caption:
-            mentions_list = re.findall(r'@\w+', post.caption)
-        
-        results.append(ProjectPostResponse(
-            id=post.id,
-            author=post.author,
-            username=post.author,  # Alias pour compatibilité frontend
-            caption=post.caption,
-            media_url=media_url,
-            permalink=permalink,
-            posted_at=post.posted_at,
-            fetched_at=post.fetched_at,
-            platform=post.platform.name if post.platform else None,
-            like_count=metrics.get('like_count') or metrics.get('likes') or 0,
-            comment_count=metrics.get('comment_count') or metrics.get('comments_count') or 0,
-            share_count=metrics.get('share_count') or 0,
-            view_count=metrics.get('view_count') or 0,
-            score_trend=post.score_trend,
-            hashtags=hashtags_list,
-            mentions=mentions_list,
-            location=None,  # Pas stocké actuellement dans Post
-            media_type=api_payload.get('media_type') if api_payload else None,
-            thumbnail_url=api_payload.get('thumbnail_url') if api_payload else None,
-            external_id=post.external_id,
-        ))
+                # Pour TikTok, extraire cover_image_url ou thumbnail_url depuis api_payload si media_url manquant
+                media_url = post.media_url
+                if platform_name == 'tiktok' and not media_url and api_payload:
+                    media_url = (
+                        api_payload.get('cover_image_url')
+                        or api_payload.get('thumbnail_url')
+                        or api_payload.get('media_url')
+                    )
+                
+                # Extraire hashtags et mentions depuis caption ou colonne hashtags
+                hashtags_list = post.hashtags if isinstance(post.hashtags, list) else []
+                if not hashtags_list and post.caption:
+                    # Extraire hashtags depuis caption si colonne hashtags vide
+                    hashtags_list = re.findall(r'#\w+', post.caption)
+                
+                mentions_list = []
+                if post.caption:
+                    mentions_list = re.findall(r'@\w+', post.caption)
+                
+                results.append(ProjectPostResponse(
+                    id=post.id,
+                    author=post.author,
+                    username=post.author,  # Alias pour compatibilité frontend
+                    caption=post.caption,
+                    media_url=media_url,
+                    permalink=permalink,
+                    posted_at=post.posted_at,
+                    fetched_at=post.fetched_at,
+                    platform=post.platform.name if post.platform else None,
+                    like_count=metrics.get('like_count') or metrics.get('likes') or 0,
+                    comment_count=metrics.get('comment_count') or metrics.get('comments_count') or 0,
+                    share_count=metrics.get('share_count') or 0,
+                    view_count=metrics.get('view_count') or 0,
+                    score_trend=post.score_trend,
+                    hashtags=hashtags_list,
+                    mentions=mentions_list,
+                    location=None,  # Pas stocké actuellement dans Post
+                    media_type=api_payload.get('media_type') if api_payload else None,
+                    thumbnail_url=api_payload.get('thumbnail_url') if api_payload else None,
+                    external_id=post.external_id,
+                ))
+            except Exception as e:
+                logger.error(f"Error processing post {post.id} in project {project_id}: {e}", exc_info=True)
+                # Continue avec les autres posts au lieu de faire échouer toute la requête
+                continue
 
-    return results
+        return results
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in list_project_posts for project {project_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error loading project posts: {str(e)}")
 
 @projects_router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 def create_project(
