@@ -280,3 +280,96 @@ jobs:
               console.error('Détails:', JSON.stringify(error, null, 2));
               throw error;
             }
+
+  # Job final : s'assurer que les 2 déploiements existent toujours
+  # Crée les déploiements manquants si les jobs frontend/backend ont été skippés
+  ensure-deployments:
+    runs-on: ubuntu-latest
+    needs: [check-changes, cleanup-deployments, frontend, backend]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - name: Ensure both deployments exist
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              console.log('🔍 Vérification que les 2 déploiements existent...');
+              
+              // Vérifier si le déploiement Production existe
+              const prodDeployments = await github.rest.repos.listDeployments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                environment: 'Production',
+                per_page: 1
+              });
+              
+              // Vérifier si le déploiement Railway existe
+              const railwayEnvName = 'veyl.io (veyl-production / production)';
+              const railwayDeployments = await github.rest.repos.listDeployments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                environment: railwayEnvName,
+                per_page: 1
+              });
+              
+              // Créer le déploiement Production s'il n'existe pas
+              if (prodDeployments.data.length === 0) {
+                console.log('📦 Création du déploiement Production manquant...');
+                const prodDeployment = await github.rest.repos.createDeployment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: context.sha,
+                  environment: 'Production',
+                  auto_merge: false,
+                  required_contexts: [],
+                  description: `Deployed via GitHub Actions - ${context.sha.substring(0, 7)} (no frontend changes)`
+                });
+                
+                await github.rest.repos.createDeploymentStatus({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  deployment_id: prodDeployment.data.id,
+                  state: 'success',
+                  environment_url: 'https://www.veyl.io',
+                  description: 'No frontend changes in this commit'
+                });
+                console.log('✅ Déploiement Production créé');
+              } else {
+                console.log('✅ Déploiement Production existe déjà');
+              }
+              
+              // Créer le déploiement Railway s'il n'existe pas
+              if (railwayDeployments.data.length === 0) {
+                console.log('📦 Création du déploiement Railway manquant...');
+                const railwayDeployment = await github.rest.repos.createDeployment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: context.sha,
+                  environment: railwayEnvName,
+                  auto_merge: false,
+                  required_contexts: [],
+                  description: `Deployed via GitHub Actions - ${context.sha.substring(0, 7)} (no backend changes)`
+                });
+                
+                await github.rest.repos.createDeploymentStatus({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  deployment_id: railwayDeployment.data.id,
+                  state: 'success',
+                  environment_url: 'https://api.veyl.io',
+                  description: 'No backend changes in this commit'
+                });
+                console.log('✅ Déploiement Railway créé');
+              } else {
+                console.log('✅ Déploiement Railway existe déjà');
+              }
+              
+              console.log('🎉 Vérification terminée - 2 déploiements garantis');
+            } catch (error) {
+              console.error('❌ Erreur lors de la vérification:', error.message);
+              // Ne pas faire échouer le workflow
+            }
