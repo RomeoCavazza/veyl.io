@@ -55,9 +55,25 @@ jobs:
               
               console.log(`📦 ${allDeployments.data.length} déploiement(s) trouvé(s) au total`);
               
-              // Supprimer TOUS les anciens déploiements
-              for (const deployment of allDeployments.data) {
+              // Supprimer TOUS les anciens déploiements (sauf ceux en cours de création)
+              // On garde seulement les 2 derniers déploiements actifs (1 Vercel + 1 Railway)
+              const sortedDeployments = allDeployments.data.sort((a, b) => 
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              );
+              
+              // Supprimer tous sauf les 2 plus récents
+              const toDelete = sortedDeployments.slice(2);
+              console.log(`🗑️  Suppression de ${toDelete.length} ancien(s) déploiement(s) (on garde les 2 plus récents)`);
+              
+              for (const deployment of toDelete) {
                 try {
+                  // Marquer comme inactive avant de supprimer
+                  await github.rest.repos.createDeploymentStatus({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    deployment_id: deployment.id,
+                    state: 'inactive'
+                  });
                   await github.rest.repos.deleteDeployment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
@@ -67,6 +83,10 @@ jobs:
                 } catch (error) {
                   console.log(`⚠️  Erreur lors de la suppression du déploiement #${deployment.id}: ${error.message}`);
                 }
+              }
+              
+              if (toDelete.length === 0) {
+                console.log('✅ Aucun ancien déploiement à supprimer (déjà au maximum de 2)');
               }
               
               console.log('✅ Nettoyage terminé');
@@ -227,7 +247,9 @@ jobs:
           # Le working-directory est déjà apps/backend grâce à defaults.run
           echo "📦 Current directory: $(pwd)"
           echo "📦 Deploying to Railway..."
-          npx -y @railway/cli up --service veyl.io --detach --path-as-root && {
+          # Retourner à la racine du repo pour le déploiement Railway
+          cd ${{ github.workspace }}
+          npx -y @railway/cli up --service veyl.io --detach . && {
             echo "✅ Déploiement réussi avec service 'veyl.io'"
             exit 0
           }
