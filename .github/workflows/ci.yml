@@ -55,27 +55,11 @@ jobs:
               
               console.log(`📦 ${allDeployments.data.length} déploiement(s) trouvé(s) au total`);
               
-              // Supprimer TOUS les anciens déploiements sauf 1 par environnement
-              // On garde seulement 1 déploiement Production (Vercel) + 1 déploiement Railway
-              const prodEnv = 'Production';
-              const railwayEnv = 'veyl.io (veyl-production / production)';
+              // Supprimer TOUS les anciens déploiements avant de créer les nouveaux
+              // On va créer 2 nouveaux déploiements (1 Production + 1 Railway), donc on supprime tout
+              console.log(`🗑️  Suppression de TOUS les ${allDeployments.data.length} ancien(s) déploiement(s) avant de créer les nouveaux`);
               
-              // Séparer par environnement
-              const prodDeployments = allDeployments.data.filter(d => d.environment === prodEnv)
-                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-              const railwayDeployments = allDeployments.data.filter(d => d.environment === railwayEnv)
-                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-              
-              // Garder seulement le plus récent de chaque environnement
-              const toKeep = new Set();
-              if (prodDeployments.length > 0) toKeep.add(prodDeployments[0].id);
-              if (railwayDeployments.length > 0) toKeep.add(railwayDeployments[0].id);
-              
-              // Supprimer tous les autres
-              const toDelete = allDeployments.data.filter(d => !toKeep.has(d.id));
-              console.log(`🗑️  Suppression de ${toDelete.length} ancien(s) déploiement(s) (on garde 1 Production + 1 Railway)`);
-              
-              for (const deployment of toDelete) {
+              for (const deployment of allDeployments.data) {
                 try {
                   // Marquer comme inactive avant de supprimer
                   await github.rest.repos.createDeploymentStatus({
@@ -95,9 +79,7 @@ jobs:
                 }
               }
               
-              if (toDelete.length === 0) {
-                console.log('✅ Aucun ancien déploiement à supprimer (déjà au maximum: 1 Production + 1 Railway)');
-              }
+              console.log('✅ Tous les anciens déploiements supprimés - les nouveaux seront créés par les jobs frontend/backend');
               
               console.log('✅ Nettoyage terminé');
             } catch (error) {
