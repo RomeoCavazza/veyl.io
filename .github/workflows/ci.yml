@@ -220,7 +220,7 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     needs: [check-changes, cleanup-deployments]
-    if: always() && github.ref == 'refs/heads/main' && (needs.check-changes.steps.filter.outputs.backend == 'true' || github.event_name == 'workflow_dispatch')
+    if: always() && github.ref == 'refs/heads/main'
     outputs:
       railway-deploy-outcome: ${{ steps.railway-deploy.outcome }}
     defaults:
