@@ -421,11 +421,16 @@ export default function ProjectDetail() {
       fetchPromises.push(
         fetchMetaIGPublic(hashtag, 10)
           .then((response) => {
-            const source = response.meta?.source || 'unknown';
-            if (source === 'instagram_public_content_api') {
-              console.log(`✅ [AUTO-FETCH] Meta API SUCCESS: ${response.data?.length || 0} posts from API`);
+            // L'endpoint renvoie {"data": [...], "source": "meta_api" | "database_fallback"}
+            const source = response?.source || 'unknown';
+            if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
+              if (source === 'meta_api') {
+                console.log(`✅ [AUTO-FETCH] Meta API SUCCESS: ${response.data.length} posts from API`);
+              } else {
+                console.log(`⚠️ [AUTO-FETCH] Meta returned DB fallback: ${response.data.length} posts (source: ${source})`);
+              }
             } else {
-              console.log(`⚠️ [AUTO-FETCH] Meta returned DB fallback: ${response.data?.length || 0} posts (source: ${source})`);
+              console.log(`⚠️ [AUTO-FETCH] Meta returned 0 posts for #${hashtag} (source: ${source})`);
             }
           })
           .catch((error: unknown) => {
