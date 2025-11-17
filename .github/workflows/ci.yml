@@ -55,15 +55,25 @@ jobs:
               
               console.log(`📦 ${allDeployments.data.length} déploiement(s) trouvé(s) au total`);
               
-              // Supprimer TOUS les anciens déploiements (sauf ceux en cours de création)
-              // On garde seulement les 2 derniers déploiements actifs (1 Vercel + 1 Railway)
-              const sortedDeployments = allDeployments.data.sort((a, b) => 
-                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-              );
+              // Supprimer TOUS les anciens déploiements sauf 1 par environnement
+              // On garde seulement 1 déploiement Production (Vercel) + 1 déploiement Railway
+              const prodEnv = 'Production';
+              const railwayEnv = 'veyl.io (veyl-production / production)';
               
-              // Supprimer tous sauf les 2 plus récents
-              const toDelete = sortedDeployments.slice(2);
-              console.log(`🗑️  Suppression de ${toDelete.length} ancien(s) déploiement(s) (on garde les 2 plus récents)`);
+              // Séparer par environnement
+              const prodDeployments = allDeployments.data.filter(d => d.environment === prodEnv)
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+              const railwayDeployments = allDeployments.data.filter(d => d.environment === railwayEnv)
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+              
+              // Garder seulement le plus récent de chaque environnement
+              const toKeep = new Set();
+              if (prodDeployments.length > 0) toKeep.add(prodDeployments[0].id);
+              if (railwayDeployments.length > 0) toKeep.add(railwayDeployments[0].id);
+              
+              // Supprimer tous les autres
+              const toDelete = allDeployments.data.filter(d => !toKeep.has(d.id));
+              console.log(`🗑️  Suppression de ${toDelete.length} ancien(s) déploiement(s) (on garde 1 Production + 1 Railway)`);
               
               for (const deployment of toDelete) {
                 try {
@@ -86,7 +96,7 @@ jobs:
               }
               
               if (toDelete.length === 0) {
-                console.log('✅ Aucun ancien déploiement à supprimer (déjà au maximum de 2)');
+                console.log('✅ Aucun ancien déploiement à supprimer (déjà au maximum: 1 Production + 1 Railway)');
               }
               
               console.log('✅ Nettoyage terminé');
@@ -210,7 +220,7 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     needs: [check-changes, cleanup-deployments]
-    if: always() && (needs.check-changes.steps.filter.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main')
+    if: always() && github.ref == 'refs/heads/main' && (needs.check-changes.steps.filter.outputs.backend == 'true' || github.event_name == 'workflow_dispatch')
     outputs:
       railway-deploy-outcome: ${{ steps.railway-deploy.outcome }}
     defaults:
@@ -244,12 +254,15 @@ jobs:
         continue-on-error: true
         run: |
           # Railway CLI utilise RAILWAY_TOKEN depuis la variable d'environnement
-          # Le working-directory est déjà apps/backend grâce à defaults.run
           echo "📦 Current directory: $(pwd)"
           echo "📦 Deploying to Railway..."
-          # Retourner à la racine du repo pour le déploiement Railway
+          # Railway.toml est à la racine, donc on déploie depuis la racine
           cd ${{ github.workspace }}
-          npx -y @railway/cli up --service veyl.io --detach . && {
+          echo "📦 Working directory: $(pwd)"
+          echo "📦 Checking railway.toml:"
+          cat railway.toml || echo "⚠️ railway.toml not found"
+          # Utiliser railway up sans --path-as-root car railway.toml définit déjà le buildPath
+          npx -y @railway/cli@latest up --service veyl.io --detach && {
             echo "✅ Déploiement réussi avec service 'veyl.io'"
             exit 0
           }
