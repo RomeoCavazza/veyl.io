@@ -18,7 +18,7 @@ interface Project {
   createdAt: string;
   updatedAt: string;
   status: 'active' | 'archived' | 'draft';
-  creators?: Array<{ id: number; creator_username: string; platform_id: number }>;
+  creators?: Array<{ id: number; creator_username: string; platform_id?: number; platform?: string; added_at?: string }>;
   creatorsCount?: number;
   platforms?: string[];
   scope_query?: string;
