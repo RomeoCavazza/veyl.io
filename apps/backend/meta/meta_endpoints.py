@@ -105,7 +105,18 @@ def _extract_meta_error(meta_error: HTTPException) -> tuple[Optional[int], Optio
 
 
 async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]], retry_transient: bool = True) -> dict:
-    """Essaie de récupérer oEmbed avec une liste de tokens"""
+    """
+    Essaie de récupérer oEmbed avec une liste de tokens.
+    
+    Stratégie :
+    1. Essayer tous les tokens dans l'ordre de priorité
+    2. Retry automatique (3x) pour les erreurs transitoires (code 2)
+    3. Si un token fonctionne → retourner 200 OK
+    4. Si tous échouent → retourner l'erreur la plus pertinente :
+       - Code 10 (permission) → 400 (priorité car plus explicite)
+       - Code 2 (transitoire) → 502 (après retries)
+       - Autres → 400
+    """
     import asyncio
     
     cleaned_url = url.split('?')[0].split('#')[0]
@@ -123,18 +134,20 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]], ret
     
     # Collecter toutes les erreurs pour choisir la plus pertinente
     errors_by_code = {}  # {error_code: (error, token_source)}
-    last_error = None
+    all_errors = []  # Liste de toutes les erreurs pour debug
     
     for token_source, access_token in tokens:
         # Retry jusqu'à 3 fois pour les erreurs transitoires (code 2)
         max_retries = 3 if retry_transient else 1
+        token_succeeded = False
+        
         for attempt in range(max_retries):
             try:
                 if attempt > 0:
-                    # Attendre avant de retry (backoff exponentiel)
+                    # Attendre avant de retry (backoff exponentiel: 0.5s, 1s, 2s)
                     wait_time = 0.5 * (2 ** (attempt - 1))
                     await asyncio.sleep(wait_time)
-                    logger.info(f"Retry attempt {attempt} for {token_source} (waited {wait_time}s)")
+                    logger.info(f"🔄 Retry attempt {attempt} for {token_source} (waited {wait_time}s)")
                 
                 logger.debug(f"Trying token {token_source} (attempt {attempt + 1}/{max_retries})")
                 oembed_data = await call_meta(
@@ -145,75 +158,92 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]], ret
                 )
                 logger.info(f"✅ oEmbed retrieved successfully using {token_source}")
                 return oembed_data
+                
             except HTTPException as meta_error:
                 error_code, error_message = _extract_meta_error(meta_error)
+                all_errors.append((token_source, error_code, error_message))
                 logger.warning(f"❌ Token {token_source} failed (attempt {attempt + 1}/{max_retries}): code={error_code}, message={error_message[:100]}")
                 
                 # Si erreur transitoire (code 2) et qu'on peut retry, continuer la boucle
                 if error_code == 2 and attempt < max_retries - 1:
-                    logger.info(f"🔄 Retrying {token_source} due to transient error (code 2)")
+                    logger.info(f"🔄 Will retry {token_source} due to transient error (code 2)")
                     continue
                 
-                # Sauvegarder l'erreur par code (prioriser code 10 sur code 2)
+                # Sauvegarder l'erreur par code (garder la première occurrence de chaque code)
                 if error_code not in errors_by_code:
                     errors_by_code[error_code] = (meta_error, token_source)
                     logger.info(f"📝 Saved error code {error_code} from {token_source}")
-                last_error = meta_error
-                break
+                
+                # Si ce n'est pas une erreur transitoire, passer au token suivant
+                if error_code != 2:
+                    break
+        
+        # Si on arrive ici, le token a échoué après tous les retries
+        if not token_succeeded:
+            logger.warning(f"⚠️ Token {token_source} exhausted all retries")
     
     # Tous les tokens ont échoué
-    if not last_error:
-        raise HTTPException(status_code=500, detail="No tokens available")
+    if not errors_by_code:
+        logger.error(f"🚫 All {len(tokens)} token(s) failed but no error codes collected")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "All tokens failed but no error information available",
+                "tokens_tried": len(tokens),
+                "url": cleaned_url
+            }
+        )
     
     # Prioriser les erreurs : code 10 (permission) est plus informatif que code 2 (transitoire)
-    # Si on a eu les deux, retourner code 10 car c'est plus explicite pour l'app review
+    # Logique : Si au moins un token retourne code 10, c'est plus explicite pour l'app review
     if 10 in errors_by_code:
         last_error, token_source = errors_by_code[10]
-        logger.warning(f"⚠️ All tokens failed. Returning code 10 (permission) from {token_source} (most informative)")
-    elif 2 in errors_by_code:
-        last_error, token_source = errors_by_code[2]
-        logger.error(f"⚠️ All tokens failed. Returning code 2 (transient) from {token_source}")
-    else:
-        token_source = "unknown"
-        logger.error(f"⚠️ All tokens failed. Unknown error codes: {list(errors_by_code.keys())}")
-    
-    error_code, error_message = _extract_meta_error(last_error)
-    logger.error(f"🚫 Final error: code={error_code}, source={token_source}, message={error_message[:100]}")
-    
-    # Code 10 = Permission non approuvée → 400 (normal pendant app review)
-    if error_code == 10:
-        logger.warning(f"Meta oEmbed permission not approved (code 10) - this is expected during app review")
+        logger.warning(f"⚠️ All tokens failed. Returning code 10 (permission) from {token_source} (most informative for app review)")
+        error_code, error_message = _extract_meta_error(last_error)
         raise HTTPException(
             status_code=400,
             detail={
                 "error_code": error_code,
                 "error_message": error_message,
-                "message": "Meta oEmbed permission not approved yet. Requires Meta App Review approval."
+                "message": "Meta oEmbed permission not approved yet. Requires Meta App Review approval.",
+                "tokens_tried": len(tokens),
+                "all_errors": [{"token": t[0], "code": t[1], "message": t[2][:100]} for t in all_errors]
             }
         )
     
-    # Code 2 = Erreur transitoire → 502 (même après retry)
-    if error_code == 2:
-        logger.error(f"Meta API transient error (code 2) after retries - Meta API may be down")
+    elif 2 in errors_by_code:
+        last_error, token_source = errors_by_code[2]
+        logger.error(f"⚠️ All tokens failed. Returning code 2 (transient) from {token_source} after {max_retries} retries each")
+        error_code, error_message = _extract_meta_error(last_error)
         raise HTTPException(
             status_code=502,
             detail={
                 "error_code": error_code,
                 "error_message": error_message,
-                "message": "Meta API temporarily unavailable. Please try again later."
+                "message": "Meta API temporarily unavailable. Please try again later.",
+                "tokens_tried": len(tokens),
+                "retries_per_token": max_retries,
+                "all_errors": [{"token": t[0], "code": t[1], "message": t[2][:100]} for t in all_errors]
             }
         )
     
-    # Autres erreurs → 400
-    logger.error(f"Meta API error (code {error_code}): {error_message}")
-    raise HTTPException(
-        status_code=400,
-        detail={
-            "error_code": error_code,
-            "error_message": error_message,
-            "message": f"Unable to fetch oEmbed: {error_message or 'Unknown error'}"
-        }
-    )
+    else:
+        # Autres erreurs (codes inconnus)
+        error_codes = list(errors_by_code.keys())
+        last_error, token_source = errors_by_code[error_codes[0]]
+        error_code, error_message = _extract_meta_error(last_error)
+        logger.error(f"⚠️ All tokens failed. Unknown error codes: {error_codes}")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": error_code,
+                "error_message": error_message,
+                "message": f"Unable to fetch oEmbed: {error_message or 'Unknown error'}",
+                "tokens_tried": len(tokens),
+                "all_error_codes": error_codes,
+                "all_errors": [{"token": t[0], "code": t[1], "message": t[2][:100]} for t in all_errors]
+            }
+        )
 
 
 @router.get("/oembed")
