@@ -26,12 +26,22 @@ export default function OEmbedDemo() {
     setOembedData(null);
 
     try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+      // Use direct API URL in production, proxy in development
+      const isProduction = window.location.hostname === 'veyl.io' || window.location.hostname === 'www.veyl.io';
+      const apiBase = isProduction 
+        ? 'https://api.veyl.io'
+        : (import.meta.env.VITE_API_BASE_URL || '');
+      
       const endpoint = apiBase 
         ? `${apiBase}/api/v1/meta/oembed/public?url=${encodeURIComponent(url)}`
         : `/api/v1/meta/oembed/public?url=${encodeURIComponent(url)}`;
       
-      const response = await fetch(endpoint);
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
