@@ -72,6 +72,10 @@ export function EmbedDialog({ post, open, onOpenChange }: EmbedDialogProps) {
             if (errorDetails.note) {
               errorMessage += `\n\n${errorDetails.note}`;
             }
+            // Si c'est l'erreur code 10, c'est normal et attendu (permission non approuvée)
+            if (errorDetails.error_code === 10) {
+              errorMessage = `⚠️ Permission "Meta oEmbed Read" not approved yet.\n\n${errorDetails.error_message || errorMessage}\n\nThis is expected during the Meta App Review process. The endpoint is correctly implemented and calling Meta's API, but requires approval from Meta.\n\n${errorDetails.note || ''}`;
+            }
           } else if (typeof errorDetails === 'string') {
             errorMessage = errorDetails;
           }

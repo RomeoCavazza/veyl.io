@@ -112,7 +112,7 @@ async def get_oembed(
             access_token = _get_meta_token(db, current_user)
             token_source = "user OAuth token"
         
-        logger.info(f"Fetching oEmbed for URL: {cleaned_url} (original: {url}, token: {token_source})")
+        logger.info(f"Fetching oEmbed for URL: {cleaned_url} (original: {url}, token: {token_source}, token_length: {len(access_token) if access_token else 0})")
         
         # Appeler l'API Meta avec l'URL nettoyée
         try:
