@@ -465,26 +465,32 @@ def list_project_posts(
                 permalink = None
                 platform_name = post.platform.name if post.platform else 'instagram'
                 
-                if post.external_id and isinstance(post.external_id, str):
+                # PRIORITÉ 1: Chercher permalink dans api_payload (le plus fiable, contient le vrai permalink)
+                if api_payload:
+                    permalink_candidate = (
+                        api_payload.get('permalink')
+                        or api_payload.get('share_url')
+                        or api_payload.get('url')
+                        or (api_payload.get('media_details') or {}).get('permalink')
+                    )
+                    if isinstance(permalink_candidate, str) and permalink_candidate.startswith('http'):
+                        permalink = permalink_candidate
+                
+                # PRIORITÉ 2: Construire depuis external_id seulement si pas de permalink
+                if not permalink and post.external_id and isinstance(post.external_id, str):
                     if post.external_id.startswith('http'):
                         permalink = post.external_id
                     elif platform_name == 'tiktok':
                         # TikTok: external_id est le video_id, construire l'URL
                         permalink = f"https://www.tiktok.com/@{(post.author or 'user')}/video/{post.external_id}"
-                    else:
-                        # Instagram par défaut
-                        permalink = f"https://www.instagram.com/p/{post.external_id.strip('/')}/"
-                elif api_payload:
-                    # Chercher permalink dans api_payload (support Meta et TikTok)
-                    permalink_candidate = (
-                        api_payload.get('share_url')
-                        or api_payload.get('permalink')
-                        or api_payload.get('url')
-                        or (api_payload.get('media_details') or {}).get('permalink')
-                        or api_payload.get('author_url')
-                    )
-                    if isinstance(permalink_candidate, str) and permalink_candidate.startswith('http'):
-                        permalink = permalink_candidate
+                    elif platform_name == 'instagram':
+                        # Instagram : vérifier si c'est un ID numérique (ne fonctionne pas avec oEmbed)
+                        external_id_clean = post.external_id.strip('/')
+                        if not external_id_clean.isdigit():
+                            # Code court valide - construire l'URL
+                            permalink = f"https://www.instagram.com/p/{external_id_clean}/"
+                        # Si c'est un ID numérique, ne pas créer de permalink (oEmbed ne le supporte pas)
+                        # Le permalink restera None, ce qui empêchera l'appel oEmbed avec une URL invalide
 
                 # Pour TikTok, extraire cover_image_url ou thumbnail_url depuis api_payload si media_url manquant
                 media_url = post.media_url

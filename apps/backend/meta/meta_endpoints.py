@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime
+import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -109,22 +109,54 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]], ret
     Essaie de récupérer oEmbed avec une liste de tokens.
     
     Stratégie :
-    1. Essayer tous les tokens dans l'ordre de priorité
-    2. Retry automatique (3x) pour les erreurs transitoires (code 2)
-    3. Si un token fonctionne → retourner 200 OK
-    4. Si tous échouent → retourner l'erreur la plus pertinente :
-       - Code 10 (permission) → 400 (priorité car plus explicite)
-       - Code 2 (transitoire) → 502 (après retries)
-       - Autres → 400
+    1. Validation stricte de l'URL (rejette les IDs numériques)
+    2. Essayer tous les tokens dans l'ordre de priorité
+    3. Retry automatique (3x) pour les erreurs transitoires (code 2)
+    4. Si un token fonctionne → retourner 200 OK
+    5. Si tous échouent → retourner l'erreur appropriée :
+       - Code 10 (permission) → 400 (erreur client)
+       - Code 2 (transitoire) → 502 (erreur serveur Meta)
+       - Autres → 400 (erreur client)
     """
     import asyncio
     
-    cleaned_url = url.split('?')[0].split('#')[0]
+    cleaned_url = url.split('?')[0].split('#')[0].rstrip('/')
     
+    # Validation basique du préfixe
     if not cleaned_url.startswith(('https://www.instagram.com/', 'https://instagram.com/')):
         raise HTTPException(
             status_code=400,
-            detail="Invalid Instagram URL. URL must start with https://www.instagram.com/ or https://instagram.com/"
+            detail={
+                "error_code": "INVALID_URL",
+                "message": "Invalid Instagram URL. URL must start with https://www.instagram.com/ or https://instagram.com/",
+                "url": url
+            }
+        )
+    
+    # Validation stricte : extraire et vérifier le code du post
+    match = re.search(r'/p/([^/]+)/?$', cleaned_url)
+    if not match:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": "INVALID_URL_FORMAT",
+                "message": "Invalid Instagram post URL format. Expected: https://www.instagram.com/p/{SHORT_CODE}/",
+                "url": url
+            }
+        )
+    
+    post_code = match.group(1)
+    
+    # CRITIQUE : Rejeter les IDs numériques (ne fonctionnent pas avec oEmbed)
+    # C'est le seul check vraiment nécessaire - Meta API rejette les IDs numériques
+    if post_code.isdigit():
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": "NUMERIC_ID_NOT_SUPPORTED",
+                "message": f"Instagram numeric IDs are not supported by Meta oEmbed API. Please use the short code URL.",
+                "url": url
+            }
         )
     
     if not tokens:
@@ -139,7 +171,6 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]], ret
     for token_source, access_token in tokens:
         # Retry jusqu'à 3 fois pour les erreurs transitoires (code 2)
         max_retries = 3 if retry_transient else 1
-        token_succeeded = False
         
         for attempt in range(max_retries):
             try:
@@ -177,10 +208,6 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]], ret
                 # Si ce n'est pas une erreur transitoire, passer au token suivant
                 if error_code != 2:
                     break
-        
-        # Si on arrive ici, le token a échoué après tous les retries
-        if not token_succeeded:
-            logger.warning(f"⚠️ Token {token_source} exhausted all retries")
     
     # Tous les tokens ont échoué
     if not errors_by_code:
@@ -266,7 +293,6 @@ async def get_oembed(
             status_code=500,
             detail="No Meta access token available. Please configure META_LONG_TOKEN or IG_ACCESS_TOKEN, or connect your Instagram/Facebook account."
         )
-    
     return await _fetch_oembed_with_tokens(url, tokens)
 
 
@@ -277,21 +303,14 @@ async def get_oembed_public(
 ):
     """
     Public endpoint for oEmbed demo (no authentication required).
-    
-    APP REVIEW NOTES:
-    1. App Feature: Social media monitoring platform that embeds Instagram posts in user dashboards
-    2. Permission: Meta oEmbed Read enables fetching oEmbed data (thumbnails, HTML, metadata)
-    3. End-User Benefit: Users can preview Instagram content directly in veyl.io without leaving the platform
-    
-    This endpoint uses system tokens only (no user authentication required).
+    Uses system tokens only (no user authentication required).
     """
-    tokens = _get_all_meta_tokens(db, None)  # Pas d'utilisateur pour endpoint public
+    tokens = _get_all_meta_tokens(db, None)
     if not tokens:
         raise HTTPException(
             status_code=500,
             detail="No Meta access token configured. Please set META_LONG_TOKEN or IG_ACCESS_TOKEN."
         )
-    
     return await _fetch_oembed_with_tokens(url, tokens)
 
 
