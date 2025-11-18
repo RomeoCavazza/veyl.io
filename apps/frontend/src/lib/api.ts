@@ -128,16 +128,32 @@ export async function fetchMetaIGPublic(tag: string, limit: number = 12): Promis
 }
 
 export async function fetchMetaOEmbed(permalink: string): Promise<any> {
-  const apiBase = getApiBase();
-  const url = apiBase ? `${apiBase}/api/v1/meta/oembed?url=${encodeURIComponent(permalink)}` : `/api/v1/meta/oembed?url=${encodeURIComponent(permalink)}`;
+  // En production, utiliser directement l'URL Railway pour éviter les problèmes de proxy Vercel
+  // En dev, utiliser le proxy Vite
+  let apiBase: string;
+  if (import.meta.env.DEV) {
+    apiBase = ''; // Proxy Vite
+  } else {
+    // Production : utiliser VITE_API_URL si défini, sinon URL directe Railway
+    apiBase = import.meta.env.VITE_API_URL || 'https://api.veyl.io';
+    if (apiBase.endsWith('/')) {
+      apiBase = apiBase.slice(0, -1);
+    }
+  }
+  
+  const url = `${apiBase}/api/v1/meta/oembed?url=${encodeURIComponent(permalink)}`;
 
   const response = await fetch(url, {
     headers: withAuthHeaders(),
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP_${response.status}`);
+    const errorText = await response.text().catch(() => '');
+    if (import.meta.env.DEV) {
+      console.error('oEmbed error:', errorText);
     }
+    throw new Error(`HTTP_${response.status}`);
+  }
 
   return response.json();
 }
