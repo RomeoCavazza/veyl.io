@@ -26,7 +26,13 @@ async def get_oembed(
 ):
     """
     Récupère les données oEmbed pour un post Instagram.
-    Prouve l'intégration Meta oEmbed API pour App Review.
+    
+    APP REVIEW NOTES:
+    1. App Feature: Social media monitoring platform that embeds Instagram posts in user dashboards
+    2. Permission: Meta oEmbed Read enables fetching oEmbed data (thumbnails, HTML, metadata)
+    3. End-User Benefit: Users can preview Instagram content directly in veyl.io without leaving the platform
+    
+    This endpoint uses the Meta Graph API instagram_oembed endpoint to fetch embeddable content.
     """
     try:
         oembed_data = await call_meta(
@@ -35,6 +41,47 @@ async def get_oembed(
             params={"url": url},
         )
         return oembed_data
+    except Exception as e:
+        logger.error(f"Error fetching oEmbed for {url}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching oEmbed: {e}")
+
+
+@router.get("/oembed/public")
+async def get_oembed_public(
+    url: str = Query(..., description="URL publique IG/FB à embarquer"),
+):
+    """
+    Public endpoint for oEmbed demo (no authentication required).
+    
+    This endpoint is used for Meta App Review demonstration purposes.
+    It allows reviewers to test the oEmbed functionality without authentication.
+    
+    APP REVIEW NOTES:
+    1. App Feature: Social media monitoring platform that embeds Instagram posts in user dashboards
+    2. Permission: Meta oEmbed Read enables fetching oEmbed data (thumbnails, HTML, metadata)
+    3. End-User Benefit: Users can preview Instagram content directly in veyl.io without leaving the platform
+    
+    Demo URL: https://veyl.io/demo/oembed?url=INSTAGRAM_POST_URL
+    """
+    try:
+        # Use system user token or app token for public demo
+        # For App Review: This endpoint should work with app token or system user token
+        access_token = settings.META_ACCESS_TOKEN or settings.IG_ACCESS_TOKEN
+        if not access_token:
+            raise HTTPException(
+                status_code=500, 
+                detail="Meta access token not configured. This endpoint requires a system user token or app token."
+            )
+        
+        oembed_data = await call_meta(
+            method="GET",
+            endpoint="v21.0/instagram_oembed",
+            params={"url": url},
+            access_token=access_token,
+        )
+        return oembed_data
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching oEmbed for {url}: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching oEmbed: {e}")
@@ -50,7 +97,12 @@ async def get_instagram_public_content(
 ):
     """
     Récupère du contenu public Instagram via hashtag.
-    Prouve l'intégration Instagram Public Content Access pour App Review.
+    
+    APP REVIEW NOTES:
+    1. App Feature: Hashtag search and monitoring for Instagram content discovery
+    2. Permission: Instagram Public Content Access enables searching public Instagram posts by hashtag
+    3. End-User Benefit: Users can discover and monitor trending Instagram content by hashtag, 
+       enabling content research and trend analysis for their projects.
     
     STRATÉGIE: 1. Essayer Meta API d'abord → 2. Fallback DB si échec
     """
@@ -195,7 +247,12 @@ async def get_page_public_posts(
 ):
     """
     Récupère les posts publics d'une page Facebook.
-    Prouve l'intégration Facebook Public Content Access pour App Review.
+    
+    APP REVIEW NOTES:
+    1. App Feature: Facebook Page content monitoring and analysis
+    2. Permission: Page Public Content Access enables reading public posts from Facebook Pages
+    3. End-User Benefit: Users can monitor and analyze public content from Facebook Pages 
+       they manage or follow, enabling comprehensive social media monitoring across platforms.
     """
     try:
         posts = await call_meta(
@@ -221,7 +278,18 @@ async def get_insights(
 ):
     """
     Récupère les insights (métriques) pour un compte Instagram Business ou une page Facebook.
-    Prouve l'intégration Insights API pour App Review.
+    
+    APP REVIEW NOTES:
+    1. App Feature: Analytics dashboard for Instagram creators to track performance metrics
+    2. Permissions: 
+       - instagram_manage_insights: Allows fetching Instagram Business account insights
+       - read_insights: Allows reading insights data for Facebook Pages
+    3. End-User Benefit: Creators can monitor their Instagram performance (followers, reach, impressions) 
+       directly in veyl.io analytics dashboard, enabling data-driven content strategy decisions.
+    
+    This endpoint uses the Meta Graph API insights endpoint to fetch metrics like:
+    - followers_count, media_count (account metrics)
+    - impressions, reach, engagement (post metrics)
     """
     try:
         insights = await call_meta(

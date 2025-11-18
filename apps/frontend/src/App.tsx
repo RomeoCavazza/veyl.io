@@ -22,6 +22,7 @@ import Projects from "./pages/Projects";
 import ProjectsNew from "./pages/ProjectsNew";
 import ProjectDetail from "./pages/ProjectDetail";
 import CreatorDetail from "./pages/CreatorDetail";
+import OEmbedDemo from "./pages/OEmbedDemo";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/docs" element={<Docs />} />
+              <Route path="/demo/oembed" element={<OEmbedDemo />} />
               {/* Projects Routes */}
               <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
               <Route path="/projects/new" element={<ProtectedRoute><ProjectsNew /></ProtectedRoute>} />
