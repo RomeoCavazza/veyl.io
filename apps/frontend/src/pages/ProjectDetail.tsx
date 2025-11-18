@@ -818,7 +818,7 @@ export default function ProjectDetail() {
                 )}
               </Button>
               
-              {/* Fetch oEmbed Button - pour les posts Instagram */}
+              {/* Fetch Meta Embedding Button - pour les posts Instagram */}
               {sortedPosts.some(p => p.platform === 'instagram' && p.permalink) && (
                 <Button
                   onClick={async () => {
@@ -836,18 +836,13 @@ export default function ProjectDetail() {
                     const firstPost = instagramPosts[0];
                     setSelectedPost(firstPost);
                     setEmbedDialogOpen(true);
-                    
-                    toast({
-                      title: 'Embed dialog opened',
-                      description: `Click "Embed" on any Instagram post to fetch oEmbed data, or use the dialog to view embed code.`,
-                    });
                   }}
                   variant="outline"
                   size="sm"
                   className="gap-1.5 h-8 text-xs"
                 >
                   <Code2 className="h-3 w-3" />
-                  Fetch oEmbed
+                  Fetch Meta Embedding
                 </Button>
               )}
             </div>
