@@ -127,6 +127,7 @@ app.add_middleware(
         "https://veyl.io",
         "https://www.veyl.io",
         "https://api.veyl.io",
+
         "http://localhost:3000",  # Dev uniquement
         "http://localhost:5173",  # Dev uniquement
         "http://localhost:8081",  # Dev uniquement - Frontend Insider
