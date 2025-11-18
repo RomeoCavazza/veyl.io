@@ -119,7 +119,7 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]], ret
     if not tokens:
         raise HTTPException(status_code=500, detail="No tokens available")
     
-    logger.info(f"Fetching oEmbed for {cleaned_url} with {len(tokens)} token(s)")
+    logger.info(f"Fetching oEmbed for {cleaned_url} with {len(tokens)} token(s): {[t[0] for t in tokens]}")
     
     # Collecter toutes les erreurs pour choisir la plus pertinente
     errors_by_code = {}  # {error_code: (error, token_source)}
@@ -132,28 +132,32 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]], ret
             try:
                 if attempt > 0:
                     # Attendre avant de retry (backoff exponentiel)
-                    await asyncio.sleep(0.5 * (2 ** (attempt - 1)))
-                    logger.info(f"Retry attempt {attempt} for {token_source}")
+                    wait_time = 0.5 * (2 ** (attempt - 1))
+                    await asyncio.sleep(wait_time)
+                    logger.info(f"Retry attempt {attempt} for {token_source} (waited {wait_time}s)")
                 
+                logger.debug(f"Trying token {token_source} (attempt {attempt + 1}/{max_retries})")
                 oembed_data = await call_meta(
                     method="GET",
                     endpoint="v21.0/instagram_oembed",
                     params={"url": cleaned_url},
                     access_token=access_token,
                 )
-                logger.info(f"oEmbed retrieved successfully using {token_source}")
+                logger.info(f"✅ oEmbed retrieved successfully using {token_source}")
                 return oembed_data
             except HTTPException as meta_error:
                 error_code, error_message = _extract_meta_error(meta_error)
-                logger.warning(f"Token {token_source} failed (attempt {attempt + 1}/{max_retries}): code={error_code}, message={error_message}")
+                logger.warning(f"❌ Token {token_source} failed (attempt {attempt + 1}/{max_retries}): code={error_code}, message={error_message[:100]}")
                 
                 # Si erreur transitoire (code 2) et qu'on peut retry, continuer la boucle
                 if error_code == 2 and attempt < max_retries - 1:
+                    logger.info(f"🔄 Retrying {token_source} due to transient error (code 2)")
                     continue
                 
                 # Sauvegarder l'erreur par code (prioriser code 10 sur code 2)
                 if error_code not in errors_by_code:
                     errors_by_code[error_code] = (meta_error, token_source)
+                    logger.info(f"📝 Saved error code {error_code} from {token_source}")
                 last_error = meta_error
                 break
     
@@ -165,12 +169,16 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]], ret
     # Si on a eu les deux, retourner code 10 car c'est plus explicite pour l'app review
     if 10 in errors_by_code:
         last_error, token_source = errors_by_code[10]
+        logger.warning(f"⚠️ All tokens failed. Returning code 10 (permission) from {token_source} (most informative)")
     elif 2 in errors_by_code:
         last_error, token_source = errors_by_code[2]
+        logger.error(f"⚠️ All tokens failed. Returning code 2 (transient) from {token_source}")
     else:
         token_source = "unknown"
+        logger.error(f"⚠️ All tokens failed. Unknown error codes: {list(errors_by_code.keys())}")
     
     error_code, error_message = _extract_meta_error(last_error)
+    logger.error(f"🚫 Final error: code={error_code}, source={token_source}, message={error_message[:100]}")
     
     # Code 10 = Permission non approuvée → 400 (normal pendant app review)
     if error_code == 10:
