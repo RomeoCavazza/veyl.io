@@ -46,6 +46,16 @@ export function EmbedDialog({ post, open, onOpenChange }: EmbedDialogProps) {
 
     try {
       const data = await fetchMetaOEmbed(post.permalink);
+      
+      // Si la réponse contient un champ "error", c'est une erreur mais avec status 200
+      if (data && data.error) {
+        setError(data.message || data.error_message || 'Failed to fetch embed data');
+        if (data.note) {
+          setError((prev) => prev + '\n\n' + data.note);
+        }
+        return;
+      }
+      
       setOembedData(data);
     } catch (err: unknown) {
       let errorMessage = 'Failed to fetch embed data';
