@@ -125,41 +125,11 @@ export function PostDetailDialog({ post, projectId, open, onOpenChange }: PostDe
 
               <div className="pt-4 border-t border-border space-y-3">
                 <h4 className="font-semibold text-sm mb-3">Comments</h4>
-                {[
-                  {
-                    id: '1',
-                    user: 'fashionlover23',
-                    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user1',
-                    comment: 'Love this collection! When will it be available? 😍',
-                    timestamp: '2h',
-                    likes: 24,
-                  },
-                  {
-                    id: '2',
-                    user: 'styleicon',
-                    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user2',
-                    comment: 'Amazing quality! Just received my order 🎉',
-                    timestamp: '5h',
-                    likes: 18,
-                  },
-                ].map((comment) => (
-                  <div key={comment.id} className="flex items-start gap-3">
-                    <img src={comment.avatar} alt={comment.user} className="w-8 h-8 rounded-full flex-shrink-0" />
-                    <div className="flex-1">
-                      <div className="mb-1">
-                        <span className="font-semibold text-sm">{comment.user}</span>
-                      </div>
-                      <div className="text-sm mb-2">{comment.comment}</div>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>{comment.timestamp}</span>
-                        <div className="flex items-center gap-1 cursor-pointer hover:opacity-80">
-                          <Heart className="h-3 w-3" />
-                          <span>{comment.likes}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  Comments are not available through the Meta API. 
+                  <br />
+                  <span className="text-xs">View comments directly on {post.platform === 'instagram' ? 'Instagram' : post.platform}.</span>
+                </div>
               </div>
             </div>
           </div>

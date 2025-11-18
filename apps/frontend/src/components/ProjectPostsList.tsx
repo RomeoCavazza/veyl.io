@@ -84,17 +84,18 @@ export function ProjectPostsList({
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <img
-                      src={`https://unavatar.io/instagram/${post.author || post.username || 'instagram'}`}
-                      alt={post.author || post.username || 'creator'}
+                      src={`https://unavatar.io/instagram/${post.username || post.author || 'instagram'}`}
+                      alt={post.username || post.author || 'creator'}
                       className="w-8 h-8 rounded-full object-cover bg-muted"
                       onError={(event) => {
-                        (event.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${post.author || post.username || 'IG'}`;
+                        const username = post.username || post.author || 'IG';
+                        (event.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${username}`;
                       }}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{post.author || post.username || 'Unknown User'}</p>
+                      <p className="font-semibold text-sm truncate">{post.username || post.author || 'Unknown User'}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        @{post.author || post.username || 'unknown'}
+                        @{post.username || post.author || 'unknown'}
                       </p>
                     </div>
                   </div>
@@ -102,14 +103,18 @@ export function ProjectPostsList({
                   <p className="text-sm line-clamp-2">{post.caption}</p>
 
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Heart className="h-4 w-4" />
-                      <span>{(post.like_count ?? 0) > 0 ? formatNumber(post.like_count) : '—'}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MessageCircle className="h-4 w-4" />
-                      <span>{(post.comment_count ?? 0) > 0 ? formatNumber(post.comment_count) : '—'}</span>
-                    </div>
+                    {post.like_count !== null && post.like_count !== undefined && (
+                      <div className="flex items-center gap-1">
+                        <Heart className="h-4 w-4" />
+                        <span>{formatNumber(post.like_count)}</span>
+                      </div>
+                    )}
+                    {post.comment_count !== null && post.comment_count !== undefined && (
+                      <div className="flex items-center gap-1">
+                        <MessageCircle className="h-4 w-4" />
+                        <span>{formatNumber(post.comment_count)}</span>
+                      </div>
+                    )}
                     {post.score_trend !== undefined && (
                       <div className="flex items-center gap-1 text-success">
                         <TrendingUp className="h-4 w-4" />

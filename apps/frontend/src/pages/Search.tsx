@@ -55,14 +55,14 @@ export default function Search() {
         let filteredPosts = dbPosts.map((post) => ({
           id: post.id || post.external_id,
           platform: post.platform || 'instagram',
-          username: post.author || 'unknown',
+          username: post.username || post.author || 'unknown',
           caption: post.caption,
           media_type: post.media_type || 'image',
           media_url: post.media_url,
           permalink: post.permalink,
           posted_at: post.posted_at,
-          like_count: post.like_count || 0,
-          comment_count: post.comment_count || 0,
+          like_count: post.like_count ?? null,
+          comment_count: post.comment_count ?? null,
           score_trend: post.score_trend || 0,
         }));
         
@@ -203,8 +203,8 @@ export default function Search() {
               media_url: item.cover_image_url || item.thumbnail_url,
               permalink: item.share_url || `https://www.tiktok.com/@${item.creator_username || 'user'}/video/${item.id}`,
               posted_at: item.create_time,
-              like_count: item.like_count || 0,
-              comment_count: item.comment_count || 0,
+              like_count: item.like_count ?? null,
+              comment_count: item.comment_count ?? null,
               view_count: item.view_count || 0,
               score_trend: item.like_count ?? 0,
             }));
@@ -404,8 +404,8 @@ export default function Search() {
               media_url: item.cover_image_url || item.thumbnail_url,
               permalink: item.share_url || `https://www.tiktok.com/@${item.creator_username || 'user'}/video/${item.id}`,
               posted_at: item.create_time,
-              like_count: item.like_count || 0,
-              comment_count: item.comment_count || 0,
+              like_count: item.like_count ?? null,
+              comment_count: item.comment_count ?? null,
               view_count: item.view_count || 0,
               score_trend: item.like_count ?? 0,
             }));
@@ -546,32 +546,78 @@ export default function Search() {
                     {/* Media Display - Instagram Embed or TikTok Thumbnail */}
                     {post.platform === 'instagram' && post.permalink && (
                       <div className="aspect-square bg-muted relative">
-                        <iframe
-                          src={`https://www.instagram.com/p/${post.permalink.split('/p/')[1]?.replace('/', '')}/embed`}
-                          className="w-full h-full border-0"
-                          scrolling="no"
-                          allowTransparency
-                        />
+                        {post.media_url ? (
+                          <img
+                            src={post.media_url}
+                            alt={post.caption || 'Instagram post'}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Si l'image échoue, essayer l'iframe embed
+                              const img = e.target as HTMLImageElement;
+                              img.style.display = 'none';
+                              const container = img.parentElement;
+                              if (container) {
+                                const postCode = post.permalink.split('/p/')[1]?.split('/')[0]?.split('?')[0];
+                                if (postCode) {
+                                  const iframe = document.createElement('iframe');
+                                  iframe.src = `https://www.instagram.com/p/${postCode}/embed`;
+                                  iframe.className = 'w-full h-full border-0';
+                                  iframe.setAttribute('scrolling', 'no');
+                                  iframe.setAttribute('allowTransparency', 'true');
+                                  container.appendChild(iframe);
+                                }
+                              }
+                            }}
+                          />
+                        ) : (
+                          <iframe
+                            src={`https://www.instagram.com/p/${post.permalink.split('/p/')[1]?.split('/')[0]?.split('?')[0]}/embed`}
+                            className="w-full h-full border-0"
+                            scrolling="no"
+                            allowTransparency
+                            onError={(e) => {
+                              // Si l'iframe échoue, afficher un placeholder
+                              const iframe = e.target as HTMLIFrameElement;
+                              iframe.style.display = 'none';
+                              const container = iframe.parentElement;
+                              if (container) {
+                                container.innerHTML = '<div class="w-full h-full flex items-center justify-center text-muted-foreground text-sm">Image unavailable</div>';
+                              }
+                            }}
+                          />
+                        )}
                       </div>
                     )}
                     {post.platform === 'tiktok' && (
                       <div className="aspect-square bg-gradient-to-br from-pink-500 via-red-500 to-blue-500 relative overflow-hidden cursor-pointer group">
-                    {post.media_url ? (
-                      <img
-                        src={post.media_url}
+                        {(post.media_url || post.thumbnail_url) ? (
+                          <img
+                            src={post.thumbnail_url || post.media_url}
                             alt={post.caption || 'TikTok video'}
                             className="w-full h-full object-cover"
-                        onError={(e) => {
+                            loading="lazy"
+                            onError={(e) => {
                               // Si l'image échoue, afficher le placeholder
                               const img = e.target as HTMLImageElement;
                               img.style.display = 'none';
                               const placeholder = img.parentElement?.querySelector('.tiktok-placeholder') as HTMLElement;
-                              if (placeholder) placeholder.style.display = 'flex';
+                              if (placeholder) {
+                                placeholder.style.display = 'flex';
+                              } else {
+                                // Créer le placeholder si il n'existe pas
+                                const container = img.parentElement;
+                                if (container) {
+                                  const placeholderDiv = document.createElement('div');
+                                  placeholderDiv.className = 'tiktok-placeholder w-full h-full flex flex-col items-center justify-center text-white';
+                                  placeholderDiv.innerHTML = '<svg class="w-16 h-16 mb-2" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg><span class="text-sm font-medium">TikTok Video</span>';
+                                  container.appendChild(placeholderDiv);
+                                }
+                              }
                             }}
                           />
                         ) : null}
                         {/* Placeholder TikTok si pas de media_url ou si image échoue */}
-                        <div className={`tiktok-placeholder w-full h-full flex flex-col items-center justify-center text-white ${post.media_url ? 'hidden' : ''}`}>
+                        <div className={`tiktok-placeholder w-full h-full flex flex-col items-center justify-center text-white ${(post.media_url || post.thumbnail_url) ? 'hidden' : ''}`}>
                           <svg className="w-16 h-16 mb-2" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
                           </svg>
@@ -608,16 +654,16 @@ export default function Search() {
 
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex gap-4">
-                          {post.like_count !== undefined && (
+                          {post.like_count !== null && post.like_count !== undefined && (
                             <span className="flex items-center gap-1">
                         <Heart className="h-4 w-4" />
-                              {post.like_count}
+                              {post.like_count.toLocaleString()}
                             </span>
                           )}
-                          {post.comment_count !== undefined && (
+                          {post.comment_count !== null && post.comment_count !== undefined && (
                             <span className="flex items-center gap-1">
                         <MessageCircle className="h-4 w-4" />
-                              {post.comment_count}
+                              {post.comment_count.toLocaleString()}
                             </span>
                           )}
                     </div>

@@ -152,7 +152,7 @@ export default function CreatorDetail() {
           const baseCreator = {
             handle: matchedCreator.creator_username,
             platform: creatorPlatform,
-            profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${matchedCreator.creator_username}`,
+            profile_picture: `https://unavatar.io/instagram/${matchedCreator.creator_username}`,
             followers: matchedCreator.followers || 0,
             following: matchedCreator.following || 0,
             avg_engagement: matchedCreator.avg_engagement || 0,
@@ -165,10 +165,19 @@ export default function CreatorDetail() {
           // Si c'est Instagram, essayer d'enrichir avec Meta API
           if (creatorPlatform === 'instagram' && matchedCreator.creator_username) {
             try {
-              // Note: On ne peut pas récupérer le profil par username directement
-              // Il faudrait l'IG Business Account ID. Pour l'instant, on garde les données du projet
-              // TODO: Si on a l'IG Business Account ID stocké, l'utiliser ici
-              setCreator(baseCreator);
+              // Essayer de récupérer le profil Instagram Business
+              const profile = await fetchInstagramBusinessProfile('me');
+              if (profile && profile.username) {
+                // Enrichir avec les données Meta API
+                setCreator({
+                  ...baseCreator,
+                  profile_picture: profile.profile_picture_url || baseCreator.profile_picture,
+                  followers: profile.followers_count || baseCreator.followers,
+                  bio: profile.biography || baseCreator.bio,
+                });
+              } else {
+                setCreator(baseCreator);
+              }
             } catch (error) {
               // Si l'API échoue, utiliser les données du projet
               console.warn('Failed to fetch Instagram Business profile, using project data:', error);
@@ -187,13 +196,31 @@ export default function CreatorDetail() {
 
         if (fallbackHandle) {
           const cleanHandle = fallbackHandle.replace('@', '');
+          const creatorPlatform = projectData.platforms?.[0] || 'instagram';
+          
+          // Calculer les stats depuis les posts du créateur
+          const creatorPosts = await getProjectPosts(id);
+          const filteredCreatorPosts = creatorPosts.filter((post: any) => {
+            const postAuthor = (post.author || post.username || '').toLowerCase();
+            return postAuthor === cleanHandle.toLowerCase();
+          });
+          
+          const totalLikes = filteredCreatorPosts.reduce((sum: number, p: any) => sum + (p.like_count || 0), 0);
+          const totalComments = filteredCreatorPosts.reduce((sum: number, p: any) => sum + (p.comment_count || 0), 0);
+          const avgEngagement = filteredCreatorPosts.length > 0 
+            ? ((totalLikes + totalComments) / filteredCreatorPosts.length).toFixed(1)
+            : 0;
+          
           setCreator({
             handle: cleanHandle,
-            platform: projectData.platforms?.[0] || 'instagram',
-            profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanHandle}`,
-            followers: 0,
-            following: 0,
-            avg_engagement: 0,
+            platform: creatorPlatform,
+            profile_picture: `https://unavatar.io/instagram/${cleanHandle}`,
+            followers: 0, // Pas disponible sans API
+            following: 0, // Pas disponible sans API
+            avg_engagement: parseFloat(avgEngagement as string),
+            posts_count: filteredCreatorPosts.length,
+            total_likes: totalLikes,
+            total_comments: totalComments,
           });
           return;
         }
@@ -226,10 +253,27 @@ export default function CreatorDetail() {
         
         // Filter posts by creator username
         const creatorPostsFiltered = allPosts.filter((post: any) => {
-          const postAuthor = (post.author || post.username || '').toLowerCase();
+          const postAuthor = (post.username || post.author || '').toLowerCase();
           const creatorHandle = creator.handle.toLowerCase();
           return postAuthor === creatorHandle;
         });
+        
+        // Calculer les stats depuis les posts
+        if (creatorPostsFiltered.length > 0 && creator) {
+          const totalLikes = creatorPostsFiltered.reduce((sum: number, p: any) => sum + (p.like_count || 0), 0);
+          const totalComments = creatorPostsFiltered.reduce((sum: number, p: any) => sum + (p.comment_count || 0), 0);
+          const avgEngagement = creatorPostsFiltered.length > 0 
+            ? ((totalLikes + totalComments) / creatorPostsFiltered.length).toFixed(1)
+            : 0;
+          
+          setCreator({
+            ...creator,
+            posts_count: creatorPostsFiltered.length,
+            total_likes: totalLikes,
+            total_comments: totalComments,
+            avg_engagement: creator.avg_engagement || parseFloat(avgEngagement as string),
+          });
+        }
 
         setCreatorPosts(creatorPostsFiltered);
       } catch (error) {
@@ -277,9 +321,12 @@ export default function CreatorDetail() {
                 {/* Photo de profil à gauche */}
                 <div className="flex-shrink-0">
                   <img
-                    src={creator.profile_picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.handle}`}
+                    src={creator.profile_picture || `https://unavatar.io/instagram/${creator.handle}`}
                     alt={creator.handle}
-                    className="w-32 h-32 rounded-full border-2 border-border"
+                    className="w-32 h-32 rounded-full border-2 border-border object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${creator.handle}`;
+                    }}
                   />
                 </div>
 
@@ -310,22 +357,22 @@ export default function CreatorDetail() {
                         <p className="text-xs text-muted-foreground">Following</p>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-primary">{filteredPosts.length}</p>
+                        <p className="text-2xl font-bold text-primary">{creator.posts_count || filteredPosts.length}</p>
                         <p className="text-xs text-muted-foreground">Posts</p>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-primary">{creator.avg_engagement || 0}%</p>
+                        <p className="text-2xl font-bold text-primary">{creator.avg_engagement?.toFixed(1) || '0.0'}%</p>
                         <p className="text-xs text-muted-foreground">Avg Engagement</p>
                       </div>
                       <div>
                         <p className="text-2xl font-bold text-primary">
-                          {filteredPosts.reduce((sum, p) => sum + (p.like_count || 0), 0).toLocaleString()}
+                          {(creator.total_likes ?? filteredPosts.reduce((sum, p) => sum + (p.like_count || 0), 0)).toLocaleString()}
                         </p>
                         <p className="text-xs text-muted-foreground">Total Likes</p>
                       </div>
                       <div>
                         <p className="text-2xl font-bold text-primary">
-                          {filteredPosts.reduce((sum, p) => sum + (p.comment_count || 0), 0).toLocaleString()}
+                          {(creator.total_comments ?? filteredPosts.reduce((sum, p) => sum + (p.comment_count || 0), 0)).toLocaleString()}
                         </p>
                         <p className="text-xs text-muted-foreground">Total Comments</p>
                       </div>
@@ -824,41 +871,11 @@ export default function CreatorDetail() {
                       {/* Commentaires */}
                       <div className="pt-4 border-t border-border space-y-3">
                         <h4 className="font-semibold text-sm mb-3">Commentaires</h4>
-                        {[
-                          {
-                            id: '1',
-                            user: 'fashionlover23',
-                            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user1',
-                            comment: 'Love this collection! When will it be available? 😍',
-                            timestamp: '2h',
-                            likes: 24,
-                          },
-                          {
-                            id: '2',
-                            user: 'styleicon',
-                            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user2',
-                            comment: 'Amazing quality! Just received my order 🎉',
-                            timestamp: '5h',
-                            likes: 18,
-                          },
-                        ].map((comment) => (
-                          <div key={comment.id} className="flex items-start gap-3">
-                            <img src={comment.avatar} alt={comment.user} className="w-8 h-8 rounded-full flex-shrink-0" />
-                            <div className="flex-1">
-                              <div className="mb-1">
-                                <span className="font-semibold text-sm">{comment.user}</span>
-                              </div>
-                              <div className="text-sm mb-2">{comment.comment}</div>
-                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                                <span>{comment.timestamp}</span>
-                                <div className="flex items-center gap-1 cursor-pointer hover:opacity-80">
-                                  <Heart className="h-3 w-3" />
-                                  <span>{comment.likes}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                        <div className="text-sm text-muted-foreground text-center py-4">
+                          Les commentaires ne sont pas disponibles via l'API Meta.
+                          <br />
+                          <span className="text-xs">Consultez les commentaires directement sur Instagram.</span>
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -77,7 +77,7 @@ export default function ProjectDetail() {
     const creatorCards: CreatorCard[] = projectCreators.map((c: CreatorLink) => ({
       handle: c.creator_username,
       platform: c.platform || projectData.platforms?.[0] || 'instagram',
-      profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.creator_username}`,
+      profile_picture: `https://unavatar.io/instagram/${c.creator_username}`,
       linkId: c.id,
     }));
     if (creatorCards.length === 0 && projectData.scope_query) {
@@ -90,7 +90,7 @@ export default function ProjectDetail() {
         queryUsers.map((username: string) => ({
           handle: username,
           platform: projectData.platforms?.[0] || 'instagram',
-          profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+          profile_picture: `https://unavatar.io/instagram/${username}`,
         }))
       );
     } else {
@@ -817,6 +817,39 @@ export default function ProjectDetail() {
                   </>
                 )}
               </Button>
+              
+              {/* Fetch oEmbed Button - pour les posts Instagram */}
+              {sortedPosts.some(p => p.platform === 'instagram' && p.permalink) && (
+                <Button
+                  onClick={async () => {
+                    const instagramPosts = sortedPosts.filter(p => p.platform === 'instagram' && p.permalink);
+                    if (instagramPosts.length === 0) {
+                      toast({
+                        title: 'No Instagram posts',
+                        description: 'No Instagram posts with permalinks found in this project.',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+                    
+                    // Ouvrir le dialog pour le premier post Instagram
+                    const firstPost = instagramPosts[0];
+                    setSelectedPost(firstPost);
+                    setEmbedDialogOpen(true);
+                    
+                    toast({
+                      title: 'Embed dialog opened',
+                      description: `Click "Embed" on any Instagram post to fetch oEmbed data, or use the dialog to view embed code.`,
+                    });
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-8 text-xs"
+                >
+                  <Code2 className="h-3 w-3" />
+                  Fetch oEmbed
+                </Button>
+              )}
             </div>
           </div>
 
