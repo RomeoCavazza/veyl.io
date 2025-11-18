@@ -18,6 +18,52 @@ router = APIRouter(prefix="/api/v1/meta", tags=["meta"])
 logger = logging.getLogger(__name__)
 
 
+def _get_meta_token(db: Session, current_user: Optional[User]) -> str:
+    """Récupère le token Meta/Instagram depuis OAuthAccount pour l'utilisateur courant, ou token système"""
+    from db.models import OAuthAccount
+    
+    # 1. Essayer le token de l'utilisateur connecté (Instagram ou Facebook)
+    if current_user:
+        # Essayer Instagram d'abord
+        oauth_account = (
+            db.query(OAuthAccount)
+            .filter(
+                OAuthAccount.user_id == current_user.id,
+                OAuthAccount.provider == "instagram",
+            )
+            .first()
+        )
+        if oauth_account and oauth_account.access_token:
+            logger.info(f"Using Instagram OAuth token for user {current_user.id}")
+            return oauth_account.access_token
+        
+        # Essayer Facebook (peut aussi accéder à Instagram)
+        oauth_account = (
+            db.query(OAuthAccount)
+            .filter(
+                OAuthAccount.user_id == current_user.id,
+                OAuthAccount.provider == "facebook",
+            )
+            .first()
+        )
+        if oauth_account and oauth_account.access_token:
+            logger.info(f"Using Facebook OAuth token for user {current_user.id}")
+            return oauth_account.access_token
+    
+    # 2. Fallback: token système
+    if settings.META_LONG_TOKEN:
+        logger.info("Using system META_LONG_TOKEN")
+        return settings.META_LONG_TOKEN
+    if settings.IG_ACCESS_TOKEN:
+        logger.info("Using system IG_ACCESS_TOKEN")
+        return settings.IG_ACCESS_TOKEN
+    
+    raise HTTPException(
+        status_code=500,
+        detail="Meta access token not found. Please connect your Instagram/Facebook account via OAuth, or configure META_LONG_TOKEN/IG_ACCESS_TOKEN in environment variables."
+    )
+
+
 @router.get("/oembed")
 async def get_oembed(
     url: str = Query(..., description="URL publique IG/FB à embarquer"),
@@ -33,17 +79,25 @@ async def get_oembed(
     3. End-User Benefit: Users can preview Instagram content directly in veyl.io without leaving the platform
     
     This endpoint uses the Meta Graph API instagram_oembed endpoint to fetch embeddable content.
+    It uses the user's OAuth token if available, otherwise falls back to system token.
     """
     try:
+        # Récupérer le token (user OAuth ou système)
+        access_token = _get_meta_token(db, current_user)
+        
+        # Appeler l'API Meta avec le token
         oembed_data = await call_meta(
             method="GET",
             endpoint="v21.0/instagram_oembed",
             params={"url": url},
+            access_token=access_token,
         )
         return oembed_data
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error fetching oEmbed for {url}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching oEmbed: {e}")
+        logger.error(f"Error fetching oEmbed for {url}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error fetching oEmbed: {str(e)}")
 
 
 @router.get("/oembed/public")
