@@ -96,21 +96,36 @@ async def call_meta(
             detail = {"error": response.text}
 
         logger.error(
-            "META API ERROR | %s %s | Status: %d | Duration: %.2fs",
+            "META API ERROR | %s %s | Status: %d | Duration: %.2fs | Detail: %s",
             method_upper,
             url,
             response.status_code,
             duration,
+            str(detail)[:200],  # Limiter la taille du log
         )
 
-        raise MetaAPIError(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail={
-                "message": "Meta API error",
-                "status_code": response.status_code,
-                "detail": detail,
-            },
-        )
+        # Pour les erreurs 4xx (client errors), utiliser le code d'erreur réel
+        # Pour les erreurs 5xx (server errors), utiliser 502 (bad gateway)
+        if 400 <= response.status_code < 500:
+            # Erreur client (400, 401, 403, 404, etc.) → propager le code réel
+            raise MetaAPIError(
+                status_code=response.status_code,
+                detail={
+                    "message": "Meta API error",
+                    "status_code": response.status_code,
+                    "detail": detail,
+                },
+            )
+        else:
+            # Erreur serveur Meta (500+) → 502 bad gateway
+            raise MetaAPIError(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail={
+                    "message": "Meta API error",
+                    "status_code": response.status_code,
+                    "detail": detail,
+                },
+            )
 
     # Log succès seulement si HTTP 200-399
     logger.info(

@@ -143,19 +143,44 @@ export async function fetchMetaOEmbed(permalink: string): Promise<any> {
   
   const url = `${apiBase}/api/v1/meta/oembed?url=${encodeURIComponent(permalink)}`;
 
-  const response = await fetch(url, {
-    headers: withAuthHeaders(),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    if (import.meta.env.DEV) {
-      console.error('oEmbed error:', errorText);
-    }
-    throw new Error(`HTTP_${response.status}`);
+  if (import.meta.env.DEV) {
+    console.log('Fetching oEmbed from:', url);
   }
 
-  return response.json();
+  try {
+    const response = await fetch(url, {
+      headers: withAuthHeaders(),
+      // Ajouter un timeout explicite
+      signal: AbortSignal.timeout(30000), // 30 secondes
+    });
+
+    if (!response.ok) {
+      let errorDetail = '';
+      try {
+        const errorData = await response.json();
+        errorDetail = JSON.stringify(errorData);
+      } catch {
+        errorDetail = await response.text().catch(() => '');
+      }
+      
+      if (import.meta.env.DEV) {
+        console.error('oEmbed error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          detail: errorDetail,
+        });
+      }
+      
+      throw new Error(`HTTP_${response.status}`);
+    }
+
+    return response.json();
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('HTTP_504'); // Gateway Timeout
+    }
+    throw err;
+  }
 }
 
 export async function fetchPagePublicPosts(pageId: string, limit = 10): Promise<any> {

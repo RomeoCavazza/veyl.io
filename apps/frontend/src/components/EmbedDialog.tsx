@@ -48,8 +48,30 @@ export function EmbedDialog({ post, open, onOpenChange }: EmbedDialogProps) {
       const data = await fetchMetaOEmbed(post.permalink);
       setOembedData(data);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch embed data';
+      let errorMessage = 'Failed to fetch embed data';
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        // Si c'est une erreur HTTP, essayer d'extraire plus d'infos
+        if (errorMessage.includes('HTTP_')) {
+          const statusCode = errorMessage.replace('HTTP_', '');
+          if (statusCode === '502') {
+            errorMessage = 'Bad Gateway: The server could not reach Meta API. Please try again later or check if Meta API is available.';
+          } else if (statusCode === '401') {
+            errorMessage = 'Unauthorized: Please connect your Instagram/Facebook account via OAuth.';
+          } else if (statusCode === '400') {
+            errorMessage = 'Bad Request: Invalid Instagram URL or Meta API error.';
+          } else if (statusCode === '403') {
+            errorMessage = 'Forbidden: Meta API access denied. The oEmbed permission may not be approved yet.';
+          }
+        }
+      }
+      
       setError(errorMessage);
+      
+      if (import.meta.env.DEV) {
+        console.error('oEmbed fetch error:', err);
+      }
     } finally {
       setLoading(false);
     }

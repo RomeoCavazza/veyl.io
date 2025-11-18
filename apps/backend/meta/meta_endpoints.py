@@ -83,7 +83,9 @@ async def get_oembed(
     """
     try:
         # Récupérer le token (user OAuth ou système)
+        logger.info(f"Fetching oEmbed for URL: {url} (user: {current_user.id if current_user else 'anonymous'})")
         access_token = _get_meta_token(db, current_user)
+        logger.info(f"Token retrieved successfully (length: {len(access_token) if access_token else 0})")
         
         # Appeler l'API Meta avec le token
         oembed_data = await call_meta(
@@ -92,11 +94,14 @@ async def get_oembed(
             params={"url": url},
             access_token=access_token,
         )
+        logger.info(f"oEmbed data retrieved successfully for {url}")
         return oembed_data
-    except HTTPException:
+    except HTTPException as http_exc:
+        # Propager les HTTPException telles quelles (incluant MetaAPIError qui hérite de HTTPException)
+        logger.error(f"HTTPException in oEmbed endpoint for {url}: {http_exc.status_code} - {http_exc.detail}")
         raise
     except Exception as e:
-        logger.error(f"Error fetching oEmbed for {url}: {e}", exc_info=True)
+        logger.error(f"Unexpected error fetching oEmbed for {url}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error fetching oEmbed: {str(e)}")
 
 
