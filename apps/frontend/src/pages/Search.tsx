@@ -169,7 +169,7 @@ export default function Search() {
               permalink: item.permalink,
               posted_at: item.timestamp || item.posted_at,
               like_count: item.like_count ?? null,
-              comment_count: item.comments_count || item.comment_count ?? null,
+              comment_count: (item.comments_count ?? item.comment_count) ?? null,
               score_trend: item.like_count ?? 0,
             }));
             allPosts.push(...metaPosts);
