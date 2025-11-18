@@ -130,6 +130,7 @@ export async function fetchMetaIGPublic(tag: string, limit: number = 12): Promis
 export async function fetchMetaOEmbed(permalink: string): Promise<any> {
   // En production, utiliser directement l'URL Railway pour éviter les problèmes de proxy Vercel
   // En dev, utiliser le proxy Vite
+  // Utiliser /oembed/public pour être cohérent avec la page démo (sans authentification)
   let apiBase: string;
   if (import.meta.env.DEV) {
     apiBase = ''; // Proxy Vite
@@ -141,7 +142,7 @@ export async function fetchMetaOEmbed(permalink: string): Promise<any> {
     }
   }
   
-  const url = `${apiBase}/api/v1/meta/oembed?url=${encodeURIComponent(permalink)}`;
+  const url = `${apiBase}/api/v1/meta/oembed/public?url=${encodeURIComponent(permalink)}`;
 
   if (import.meta.env.DEV) {
     console.log('Fetching oEmbed from:', url);
@@ -149,7 +150,7 @@ export async function fetchMetaOEmbed(permalink: string): Promise<any> {
 
   try {
     const response = await fetch(url, {
-      headers: withAuthHeaders(),
+      // Pas besoin d'auth pour /oembed/public
       // Ajouter un timeout explicite
       signal: AbortSignal.timeout(30000), // 30 secondes
     });
