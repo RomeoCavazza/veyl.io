@@ -64,6 +64,113 @@ def _get_meta_token(db: Session, current_user: Optional[User]) -> str:
     )
 
 
+def _get_all_meta_tokens(db: Session, current_user: Optional[User]) -> list[tuple[str, str]]:
+    """Récupère tous les tokens Meta disponibles dans l'ordre de priorité"""
+    tokens = []
+    
+    # 1. Token système META_LONG_TOKEN (priorité 1)
+    if settings.META_LONG_TOKEN:
+        tokens.append(("system META_LONG_TOKEN", settings.META_LONG_TOKEN))
+    
+    # 2. Token système IG_ACCESS_TOKEN (priorité 2)
+    if settings.IG_ACCESS_TOKEN:
+        tokens.append(("system IG_ACCESS_TOKEN", settings.IG_ACCESS_TOKEN))
+    
+    # 3. Token utilisateur Instagram (priorité 3)
+    if current_user:
+        try:
+            user_token = _get_meta_token(db, current_user)
+            if user_token and user_token not in [t[1] for t in tokens]:
+                tokens.append(("user OAuth", user_token))
+        except:
+            pass
+    
+    return tokens
+
+
+def _extract_meta_error(meta_error: HTTPException) -> tuple[Optional[int], Optional[str]]:
+    """Extrait le code et message d'erreur depuis une MetaAPIError"""
+    error_code = None
+    error_message = None
+    
+    if isinstance(meta_error.detail, dict) and "detail" in meta_error.detail:
+        meta_error_detail = meta_error.detail.get("detail", {})
+        if isinstance(meta_error_detail, dict) and "error" in meta_error_detail:
+            error_info = meta_error_detail["error"]
+            if isinstance(error_info, dict):
+                error_code = error_info.get("code")
+                error_message = error_info.get("message")
+    
+    return error_code, error_message
+
+
+async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]]) -> dict:
+    """Essaie de récupérer oEmbed avec une liste de tokens"""
+    cleaned_url = url.split('?')[0].split('#')[0]
+    
+    if not cleaned_url.startswith(('https://www.instagram.com/', 'https://instagram.com/')):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid Instagram URL. URL must start with https://www.instagram.com/ or https://instagram.com/"
+        )
+    
+    last_error = None
+    for token_source, access_token in tokens:
+        try:
+            oembed_data = await call_meta(
+                method="GET",
+                endpoint="v21.0/instagram_oembed",
+                params={"url": cleaned_url},
+                access_token=access_token,
+            )
+            logger.info(f"oEmbed retrieved successfully using {token_source}")
+            return oembed_data
+        except HTTPException as meta_error:
+            last_error = meta_error
+            error_code, _ = _extract_meta_error(meta_error)
+            logger.warning(f"Token {token_source} failed: code={error_code}")
+            # Continuer avec le token suivant
+            continue
+    
+    # Tous les tokens ont échoué
+    if not last_error:
+        raise HTTPException(status_code=500, detail="No tokens available")
+    
+    error_code, error_message = _extract_meta_error(last_error)
+    
+    # Code 10 = Permission non approuvée → 400
+    if error_code == 10:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": error_code,
+                "error_message": error_message,
+                "message": "Meta oEmbed permission not approved yet. Requires Meta App Review approval."
+            }
+        )
+    
+    # Code 2 = Erreur transitoire → 502
+    if error_code == 2:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error_code": error_code,
+                "error_message": error_message,
+                "message": "Meta API temporarily unavailable. Please try again later."
+            }
+        )
+    
+    # Autres erreurs → 400
+    raise HTTPException(
+        status_code=400,
+        detail={
+            "error_code": error_code,
+            "error_message": error_message,
+            "message": f"Unable to fetch oEmbed: {error_message or 'Unknown error'}"
+        }
+    )
+
+
 @router.get("/oembed")
 async def get_oembed(
     url: str = Query(..., description="URL publique IG/FB à embarquer"),
@@ -77,202 +184,40 @@ async def get_oembed(
     1. App Feature: Social media monitoring platform that embeds Instagram posts in user dashboards
     2. Permission: Meta oEmbed Read enables fetching oEmbed data (thumbnails, HTML, metadata)
     3. End-User Benefit: Users can preview Instagram content directly in veyl.io without leaving the platform
-    
-    This endpoint uses the Meta Graph API instagram_oembed endpoint to fetch embeddable content.
-    It uses the user's OAuth token if available, otherwise falls back to system token.
     """
-    try:
-        # Nettoyer et valider l'URL Instagram
-        # Enlever les paramètres de requête et fragments
-        cleaned_url = url.split('?')[0].split('#')[0]
-        
-        # S'assurer que c'est une URL Instagram valide
-        if not cleaned_url.startswith(('https://www.instagram.com/', 'https://instagram.com/')):
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid Instagram URL. URL must start with https://www.instagram.com/ or https://instagram.com/"
-            )
-        
-        # Essayer tous les tokens disponibles dans l'ordre de priorité
-        tokens_to_try = []
-        
-        # 1. Token système META_LONG_TOKEN (priorité 1)
-        if settings.META_LONG_TOKEN:
-            tokens_to_try.append(("system META_LONG_TOKEN", settings.META_LONG_TOKEN))
-        
-        # 2. Token système IG_ACCESS_TOKEN (priorité 2)
-        if settings.IG_ACCESS_TOKEN:
-            tokens_to_try.append(("system IG_ACCESS_TOKEN", settings.IG_ACCESS_TOKEN))
-        
-        # 3. Token utilisateur Instagram (priorité 3)
-        if current_user:
-            try:
-                user_ig_token = _get_meta_token(db, current_user)
-                if user_ig_token and user_ig_token not in [t[1] for t in tokens_to_try]:
-                    tokens_to_try.append(("user Instagram OAuth", user_ig_token))
-            except:
-                pass
-        
-        if not tokens_to_try:
-            raise HTTPException(
-                status_code=500,
-                detail="No Meta access token available. Please configure META_LONG_TOKEN or IG_ACCESS_TOKEN, or connect your Instagram/Facebook account."
-            )
-        
-        logger.info(f"Fetching oEmbed for URL: {cleaned_url} (original: {url}), will try {len(tokens_to_try)} token(s)")
-        
-        # Essayer chaque token jusqu'à ce qu'un fonctionne
-        last_error = None
-        for token_source, access_token in tokens_to_try:
-            try:
-                logger.info(f"Trying token: {token_source} (length: {len(access_token) if access_token else 0})")
-                oembed_data = await call_meta(
-                    method="GET",
-                    endpoint="v21.0/instagram_oembed",
-                    params={"url": cleaned_url},
-                    access_token=access_token,
-                )
-                logger.info(f"oEmbed data retrieved successfully for {cleaned_url} using {token_source}")
-                return oembed_data
-            except HTTPException as meta_error:
-                last_error = meta_error
-                error_code = None
-                error_message = None
-                
-                # Extraire le code d'erreur Meta
-                if isinstance(meta_error.detail, dict) and "detail" in meta_error.detail:
-                    meta_error_detail = meta_error.detail.get("detail", {})
-                    if isinstance(meta_error_detail, dict) and "error" in meta_error_detail:
-                        error_info = meta_error_detail["error"]
-                        if isinstance(error_info, dict):
-                            error_code = error_info.get("code")
-                            error_message = error_info.get("message")
-                
-                logger.warning(f"Token {token_source} failed: status={meta_error.status_code}, code={error_code}, message={error_message}")
-                
-                # Si erreur transitoire (code 2), continuer avec le token suivant
-                if error_code == 2:
-                    logger.info(f"Transient error (code 2) with {token_source}, trying next token...")
-                    continue
-                
-                # Si erreur de permission (code 10), continuer avec le token suivant
-                if error_code == 10:
-                    logger.info(f"Permission error (code 10) with {token_source}, trying next token...")
-                    continue
-                
-                # Pour les autres erreurs, continuer quand même avec le token suivant
-                continue
-        
-        # Si tous les tokens ont échoué, retourner 200 avec un message d'erreur informatif
-        error_code = None
-        error_message = "Meta API error"
-        
-        if last_error and isinstance(last_error.detail, dict) and "detail" in last_error.detail:
-            meta_error_detail = last_error.detail.get("detail", {})
-            if isinstance(meta_error_detail, dict) and "error" in meta_error_detail:
-                error_info = meta_error_detail["error"]
-                if isinstance(error_info, dict):
-                    error_code = error_info.get("code")
-                    error_message = error_info.get("message", "Meta API error")
-        
-        # Retourner 200 avec un message d'erreur dans le body (pour que le frontend puisse l'afficher)
-        logger.warning(f"All tokens failed for {cleaned_url}, returning 200 with error message")
-        return {
-            "error": True,
-            "error_code": error_code,
-            "error_message": error_message,
-            "message": f"Unable to fetch oEmbed data: {error_message}",
-            "url": cleaned_url,
-            "note": "This may be due to Meta API permissions not being approved yet, or a temporary API issue. Please try again later."
-        }
-    except HTTPException as http_exc:
-        # Propager les HTTPException telles quelles (incluant MetaAPIError qui hérite de HTTPException)
-        logger.error(f"HTTPException in oEmbed endpoint for {url}: {http_exc.status_code} - {http_exc.detail}")
-        
-        # Si c'est une MetaAPIError, extraire le détail de l'erreur Meta pour le retourner
-        if isinstance(http_exc.detail, dict) and "detail" in http_exc.detail:
-            meta_error = http_exc.detail.get("detail", {})
-            if isinstance(meta_error, dict) and "error" in meta_error:
-                error_info = meta_error["error"]
-                error_message = error_info.get("message", "Meta API error") if isinstance(error_info, dict) else str(meta_error)
-                error_code = error_info.get("code") if isinstance(error_info, dict) else None
-                
-                # Si c'est l'erreur code 10 (permission non approuvée), c'est attendu
-                if error_code == 10:
-                    raise HTTPException(
-                        status_code=http_exc.status_code,
-                        detail={
-                            "message": "Meta oEmbed permission not approved yet",
-                            "error_code": error_code,
-                            "error_message": error_message,
-                            "note": "This endpoint requires Meta App Review approval for 'Meta oEmbed Read' permission."
-                        }
-                    )
-                
-                # Pour les autres erreurs, retourner le détail complet
-                raise HTTPException(
-                    status_code=http_exc.status_code,
-                    detail={
-                        "message": "Meta API error",
-                        "error_code": error_code,
-                        "error_message": error_message,
-                        "meta_response": meta_error
-                    }
-                )
-        
-        # Sinon, propager l'exception telle quelle
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error fetching oEmbed for {url}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error fetching oEmbed: {str(e)}")
+    tokens = _get_all_meta_tokens(db, current_user)
+    if not tokens:
+        raise HTTPException(
+            status_code=500,
+            detail="No Meta access token available. Please configure META_LONG_TOKEN or IG_ACCESS_TOKEN, or connect your Instagram/Facebook account."
+        )
+    
+    return await _fetch_oembed_with_tokens(url, tokens)
 
 
 @router.get("/oembed/public")
 async def get_oembed_public(
     url: str = Query(..., description="URL publique IG/FB à embarquer"),
+    db: Session = Depends(get_db),
 ):
     """
     Public endpoint for oEmbed demo (no authentication required).
-    
-    This endpoint is used for Meta App Review demonstration purposes.
-    It allows reviewers to test the oEmbed functionality without authentication.
-    
-    IMPORTANT FOR APP REVIEW:
-    This endpoint calls the real Meta Graph API. If you see error code 10, it means
-    the endpoint is correctly implemented and calling Meta's API, but requires approval.
-    This is expected behavior during the review process.
     
     APP REVIEW NOTES:
     1. App Feature: Social media monitoring platform that embeds Instagram posts in user dashboards
     2. Permission: Meta oEmbed Read enables fetching oEmbed data (thumbnails, HTML, metadata)
     3. End-User Benefit: Users can preview Instagram content directly in veyl.io without leaving the platform
     
-    Demo URL: https://veyl.io/demo/oembed?url=INSTAGRAM_POST_URL
+    This endpoint uses system tokens only (no user authentication required).
     """
-    try:
-        # Use system user token or app token for public demo
-        # For App Review: This endpoint should work with app token or system user token
-        access_token = settings.META_LONG_TOKEN or settings.IG_ACCESS_TOKEN
-        if not access_token:
-            raise HTTPException(
-                status_code=500, 
-                detail="Meta access token not configured. This endpoint requires a system user token or app token. Please set META_LONG_TOKEN or IG_ACCESS_TOKEN in environment variables."
-            )
-        
-        # Call the real Meta API - if it returns error 10, that's expected and shows the implementation is correct
-        oembed_data = await call_meta(
-            method="GET",
-            endpoint="v21.0/instagram_oembed",
-            params={"url": url},
-            access_token=access_token,
+    tokens = _get_all_meta_tokens(db, None)  # Pas d'utilisateur pour endpoint public
+    if not tokens:
+        raise HTTPException(
+            status_code=500,
+            detail="No Meta access token configured. Please set META_LONG_TOKEN or IG_ACCESS_TOKEN."
         )
-        return oembed_data
-    except HTTPException:
-        # Re-raise HTTP exceptions (including error 10 from Meta) - this shows the real API call
-        raise
-    except Exception as e:
-        logger.error(f"Error fetching oEmbed for {url}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching oEmbed: {e}")
+    
+    return await _fetch_oembed_with_tokens(url, tokens)
 
 
 @router.get("/ig-public")
