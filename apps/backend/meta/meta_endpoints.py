@@ -375,14 +375,28 @@ async def get_instagram_public_content(
         # Stocker les posts dans la DB
         results = []
         for item in posts:
+            # Extraire username depuis permalink si disponible
+            author = None
+            permalink = item.get("permalink")
+            if permalink:
+                # Format: https://www.instagram.com/p/{code}/ ou https://www.instagram.com/{username}/p/{code}/
+                permalink_match = re.search(r'instagram\.com/([^/]+)/', permalink)
+                if permalink_match:
+                    potential_username = permalink_match.group(1)
+                    # Ignorer les patterns spéciaux comme 'p', 'reel', etc.
+                    if potential_username not in ['p', 'reel', 'tv', 'stories']:
+                        author = potential_username
+            
             defaults = {
-                "author": None,
+                "author": author,
                 "caption": item.get("caption", ""),
                 "media_url": item.get("media_url"),
                 "posted_at": parse_timestamp(item.get("timestamp")),
                 "metrics": json.dumps({
                     "likes": item.get("like_count", 0),
                     "comments": item.get("comments_count", 0),
+                    "like_count": item.get("like_count", 0),  # Ajouter aussi pour compatibilité
+                    "comment_count": item.get("comments_count", 0),  # Ajouter aussi pour compatibilité
                 }),
             }
             post = upsert_post(

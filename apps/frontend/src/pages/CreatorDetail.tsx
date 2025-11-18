@@ -141,9 +141,32 @@ export default function CreatorDetail() {
         const normalizedUsername = username.toLowerCase();
         const projectCreators = projectData.creators || [];
 
-        const matchedCreator = projectCreators.find(
+        // Chercher le créateur dans la liste des créateurs du projet
+        let matchedCreator = projectCreators.find(
           (c: any) => (c.creator_username || '').toLowerCase() === normalizedUsername
         );
+        
+        // Si pas trouvé, chercher dans les posts pour trouver le username réel
+        if (!matchedCreator) {
+          try {
+            const allPosts = await getProjectPosts(id);
+            // Chercher un post avec ce username
+            const postWithUsername = allPosts.find((p: any) => {
+              const postAuthor = (p.username || p.author || '').toLowerCase();
+              return postAuthor === normalizedUsername;
+            });
+            
+            if (postWithUsername) {
+              // Créer un créateur fictif depuis le post
+              matchedCreator = {
+                creator_username: postWithUsername.username || postWithUsername.author || username,
+                platform: postWithUsername.platform || projectData.platforms?.[0] || 'instagram',
+              };
+            }
+          } catch (error) {
+            console.warn('Error searching for creator in posts:', error);
+          }
+        }
 
         if (matchedCreator) {
           const creatorPlatform = projectData.platforms?.[0] || 'instagram';

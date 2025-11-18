@@ -511,21 +511,56 @@ def list_project_posts(
                 if post.caption:
                     mentions_list = re.findall(r'@\w+', post.caption)
                 
+                # Extraire username depuis api_payload si author est vide
+                author = post.author
+                if not author and api_payload:
+                    # Essayer plusieurs champs possibles
+                    author = (
+                        api_payload.get('username')
+                        or api_payload.get('owner_username')
+                        or api_payload.get('from', {}).get('username')
+                        or api_payload.get('creator', {}).get('username')
+                    )
+                    # Si toujours pas trouvé, essayer depuis permalink
+                    if not author and permalink:
+                        permalink_match = re.search(r'instagram\.com/([^/]+)/', permalink)
+                        if permalink_match:
+                            potential_username = permalink_match.group(1)
+                            if potential_username not in ['p', 'reel', 'tv', 'stories']:
+                                author = potential_username
+                
+                # Extraire metrics avec fallback sur plusieurs clés
+                like_count = (
+                    metrics.get('like_count')
+                    or metrics.get('likes')
+                    or api_payload.get('like_count')
+                    or api_payload.get('likes')
+                    or 0
+                )
+                comment_count = (
+                    metrics.get('comment_count')
+                    or metrics.get('comments_count')
+                    or metrics.get('comments')
+                    or api_payload.get('comment_count')
+                    or api_payload.get('comments_count')
+                    or 0
+                )
+                
                 # S'assurer que tous les champs sont valides avant de créer ProjectPostResponse
                 post_data = {
                     "id": str(post.id) if post.id else "",
-                    "author": post.author,
-                    "username": post.author,  # Alias pour compatibilité frontend
+                    "author": author,
+                    "username": author,  # Alias pour compatibilité frontend
                     "caption": post.caption,
                     "media_url": media_url,
                     "permalink": permalink,
                     "posted_at": post.posted_at,
                     "fetched_at": post.fetched_at,
                     "platform": post.platform.name if post.platform else None,
-                    "like_count": int(metrics.get('like_count') or metrics.get('likes') or 0),
-                    "comment_count": int(metrics.get('comment_count') or metrics.get('comments_count') or 0),
-                    "share_count": int(metrics.get('share_count') or 0),
-                    "view_count": int(metrics.get('view_count') or 0),
+                    "like_count": int(like_count) if like_count else None,
+                    "comment_count": int(comment_count) if comment_count else None,
+                    "share_count": int(metrics.get('share_count') or api_payload.get('share_count') or 0) if (metrics.get('share_count') or api_payload.get('share_count')) else None,
+                    "view_count": int(metrics.get('view_count') or api_payload.get('view_count') or 0) if (metrics.get('view_count') or api_payload.get('view_count')) else None,
                     "score_trend": float(post.score_trend) if post.score_trend is not None else None,
                     "hashtags": hashtags_list or [],
                     "mentions": mentions_list or [],

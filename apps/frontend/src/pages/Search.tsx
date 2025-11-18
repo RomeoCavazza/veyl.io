@@ -52,19 +52,30 @@ export default function Search() {
         const dbPosts = await getProjectPosts(matchingProject.id);
         
         // Convertir ProjectPost[] en PostHit[] et filtrer par plateforme
-        let filteredPosts = dbPosts.map((post) => ({
-          id: post.id || post.external_id,
-          platform: post.platform || 'instagram',
-          username: post.username || post.author || 'unknown',
-          caption: post.caption,
-          media_type: post.media_type || 'image',
-          media_url: post.media_url,
-          permalink: post.permalink,
-          posted_at: post.posted_at,
-          like_count: post.like_count ?? null,
-          comment_count: post.comment_count ?? null,
-          score_trend: post.score_trend || 0,
-        }));
+        let filteredPosts = dbPosts.map((post) => {
+          // Extraire username depuis permalink si author/username manquant
+          let username = post.username || post.author;
+          if (!username && post.permalink) {
+            const permalinkMatch = post.permalink.match(/instagram\.com\/([^/]+)/);
+            if (permalinkMatch && !['p', 'reel', 'tv', 'stories'].includes(permalinkMatch[1])) {
+              username = permalinkMatch[1];
+            }
+          }
+          
+          return {
+            id: post.id || post.external_id,
+            platform: post.platform || 'instagram',
+            username: username || undefined, // undefined plutôt que 'unknown'
+            caption: post.caption,
+            media_type: post.media_type || 'image',
+            media_url: post.media_url,
+            permalink: post.permalink,
+            posted_at: post.posted_at,
+            like_count: post.like_count ?? null,
+            comment_count: post.comment_count ?? null,
+            score_trend: post.score_trend || 0,
+          };
+        });
         
         // Filtrer par plateforme si spécifiée
         if (platforms && platforms.length > 0) {
@@ -641,8 +652,8 @@ export default function Search() {
                         <Badge variant="secondary" className="text-xs">
                           {post.platform || 'instagram'}
                         </Badge>
-                        {post.username && (
-                          <span className="text-sm font-medium">@{post.username}</span>
+                        {(post.username || post.author) && (
+                          <span className="text-sm font-medium">@{post.username || post.author}</span>
                         )}
                     </div>
 
@@ -670,18 +681,18 @@ export default function Search() {
 
                         <div className="flex items-center gap-2">
                           {post.platform === 'instagram' && post.permalink && (
-                      <Button
+                            <Button
                               variant="ghost"
-                        size="sm"
+                              size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedPostForEmbed(post);
-                          setEmbedDialogOpen(true);
-                        }}
+                                setEmbedDialogOpen(true);
+                              }}
                               className="h-8 px-2"
-                      >
+                            >
                               <Code2 className="h-4 w-4" />
-                      </Button>
+                            </Button>
                           )}
                           {post.permalink && (
                             <a
@@ -689,6 +700,7 @@ export default function Search() {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-primary hover:underline"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <ExternalLink className="h-4 w-4" />
                             </a>

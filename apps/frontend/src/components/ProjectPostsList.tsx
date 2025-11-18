@@ -93,10 +93,16 @@ export function ProjectPostsList({
                       }}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{post.username || post.author || 'Unknown User'}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        @{post.username || post.author || 'unknown'}
-                      </p>
+                      {(post.username || post.author) ? (
+                        <>
+                          <p className="font-semibold text-sm truncate">{post.username || post.author}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            @{post.username || post.author}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-muted-foreground truncate">Unknown creator</p>
+                      )}
                     </div>
                   </div>
 
@@ -123,33 +129,30 @@ export function ProjectPostsList({
                     )}
                   </div>
 
-                  <div className="pt-2 border-t flex flex-wrap gap-2">
-                    {post.permalink && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        asChild
-                      >
-                        <a href={post.permalink} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          View post
-                        </a>
-                      </Button>
-                    )}
+                  <div className="flex items-center gap-2 pt-2">
                     {post.platform === 'instagram' && post.permalink && (
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        className="flex-1"
+                        className="h-8 px-2"
                         onClick={(e) => {
                           e.stopPropagation();
                           onEmbedClick(post);
                         }}
                       >
-                        <Code2 className="h-3 w-3 mr-1" />
-                        Embed
+                        <Code2 className="h-4 w-4" />
                       </Button>
+                    )}
+                    {post.permalink && (
+                      <a
+                        href={post.permalink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
                     )}
                   </div>
                 </CardContent>
