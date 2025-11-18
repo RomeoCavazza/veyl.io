@@ -66,11 +66,11 @@ async def get_oembed_public(
     try:
         # Use system user token or app token for public demo
         # For App Review: This endpoint should work with app token or system user token
-        access_token = settings.META_ACCESS_TOKEN or settings.IG_ACCESS_TOKEN
+        access_token = settings.META_LONG_TOKEN or settings.IG_ACCESS_TOKEN
         if not access_token:
             raise HTTPException(
                 status_code=500, 
-                detail="Meta access token not configured. This endpoint requires a system user token or app token."
+                detail="Meta access token not configured. This endpoint requires a system user token or app token. Please set META_LONG_TOKEN or IG_ACCESS_TOKEN in environment variables."
             )
         
         oembed_data = await call_meta(
