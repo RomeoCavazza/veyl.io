@@ -418,12 +418,9 @@ async def get_instagram_public_content(
         db.commit()
         return {"data": results, "source": "meta_api"}
     except HTTPException as http_exc:
-        # Si c'est une erreur 404 (hashtag non trouvé), faire le fallback DB
-        if http_exc.status_code == 404:
-            logger.warning(f"Meta API returned 404 for #{tag}, falling back to DB")
-        else:
-            # Pour les autres erreurs HTTP (401, 403, 500, etc.), relancer l'exception
-            raise
+        # Pour toutes les erreurs Meta API (400, 401, 403, 404, 500, etc.), faire le fallback DB
+        logger.warning(f"Meta API returned {http_exc.status_code} for #{tag}, falling back to DB: {http_exc.detail}")
+        # Ne pas relancer l'exception, continuer vers le fallback DB
     except Exception as e:
         logger.exception(f"API failed for #{tag}, falling back to DB: {e}")
     
