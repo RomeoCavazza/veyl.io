@@ -155,23 +155,27 @@ export async function fetchMetaOEmbed(permalink: string): Promise<any> {
     });
 
     if (!response.ok) {
-      let errorDetail = '';
+      let errorData: any = null;
       try {
-        const errorData = await response.json();
-        errorDetail = JSON.stringify(errorData);
+        errorData = await response.json();
       } catch {
-        errorDetail = await response.text().catch(() => '');
+        const errorText = await response.text().catch(() => '');
+        errorData = { detail: errorText };
       }
       
       if (import.meta.env.DEV) {
         console.error('oEmbed error response:', {
           status: response.status,
           statusText: response.statusText,
-          detail: errorDetail,
+          detail: errorData,
         });
       }
       
-      throw new Error(`HTTP_${response.status}`);
+      // Créer une erreur avec les détails pour pouvoir les récupérer
+      const error = new Error(`HTTP_${response.status}`) as any;
+      error.status = response.status;
+      error.detail = errorData?.detail || errorData;
+      throw error;
     }
 
     return response.json();

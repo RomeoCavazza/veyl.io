@@ -82,23 +82,67 @@ async def get_oembed(
     It uses the user's OAuth token if available, otherwise falls back to system token.
     """
     try:
+        # Nettoyer et valider l'URL Instagram
+        # Enlever les paramètres de requête et fragments
+        cleaned_url = url.split('?')[0].split('#')[0]
+        
+        # S'assurer que c'est une URL Instagram valide
+        if not cleaned_url.startswith(('https://www.instagram.com/', 'https://instagram.com/')):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid Instagram URL. URL must start with https://www.instagram.com/ or https://instagram.com/"
+            )
+        
         # Récupérer le token (user OAuth ou système)
-        logger.info(f"Fetching oEmbed for URL: {url} (user: {current_user.id if current_user else 'anonymous'})")
+        logger.info(f"Fetching oEmbed for URL: {cleaned_url} (original: {url}, user: {current_user.id if current_user else 'anonymous'})")
         access_token = _get_meta_token(db, current_user)
         logger.info(f"Token retrieved successfully (length: {len(access_token) if access_token else 0})")
         
-        # Appeler l'API Meta avec le token
+        # Appeler l'API Meta avec l'URL nettoyée
         oembed_data = await call_meta(
             method="GET",
             endpoint="v21.0/instagram_oembed",
-            params={"url": url},
+            params={"url": cleaned_url},
             access_token=access_token,
         )
-        logger.info(f"oEmbed data retrieved successfully for {url}")
+        logger.info(f"oEmbed data retrieved successfully for {cleaned_url}")
         return oembed_data
     except HTTPException as http_exc:
         # Propager les HTTPException telles quelles (incluant MetaAPIError qui hérite de HTTPException)
         logger.error(f"HTTPException in oEmbed endpoint for {url}: {http_exc.status_code} - {http_exc.detail}")
+        
+        # Si c'est une MetaAPIError, extraire le détail de l'erreur Meta pour le retourner
+        if isinstance(http_exc.detail, dict) and "detail" in http_exc.detail:
+            meta_error = http_exc.detail.get("detail", {})
+            if isinstance(meta_error, dict) and "error" in meta_error:
+                error_info = meta_error["error"]
+                error_message = error_info.get("message", "Meta API error") if isinstance(error_info, dict) else str(meta_error)
+                error_code = error_info.get("code") if isinstance(error_info, dict) else None
+                
+                # Si c'est l'erreur code 10 (permission non approuvée), c'est attendu
+                if error_code == 10:
+                    raise HTTPException(
+                        status_code=http_exc.status_code,
+                        detail={
+                            "message": "Meta oEmbed permission not approved yet",
+                            "error_code": error_code,
+                            "error_message": error_message,
+                            "note": "This endpoint requires Meta App Review approval for 'Meta oEmbed Read' permission."
+                        }
+                    )
+                
+                # Pour les autres erreurs, retourner le détail complet
+                raise HTTPException(
+                    status_code=http_exc.status_code,
+                    detail={
+                        "message": "Meta API error",
+                        "error_code": error_code,
+                        "error_message": error_message,
+                        "meta_response": meta_error
+                    }
+                )
+        
+        # Sinon, propager l'exception telle quelle
         raise
     except Exception as e:
         logger.error(f"Unexpected error fetching oEmbed for {url}: {e}", exc_info=True)

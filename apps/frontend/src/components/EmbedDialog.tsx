@@ -49,20 +49,45 @@ export function EmbedDialog({ post, open, onOpenChange }: EmbedDialogProps) {
       setOembedData(data);
     } catch (err: unknown) {
       let errorMessage = 'Failed to fetch embed data';
+      let errorDetails: any = null;
+      
+      // Extraire les détails de l'erreur si disponibles
+      if (err && typeof err === 'object' && 'detail' in err) {
+        errorDetails = (err as any).detail;
+      }
       
       if (err instanceof Error) {
         errorMessage = err.message;
-        // Si c'est une erreur HTTP, essayer d'extraire plus d'infos
-        if (errorMessage.includes('HTTP_')) {
-          const statusCode = errorMessage.replace('HTTP_', '');
-          if (statusCode === '502') {
-            errorMessage = 'Bad Gateway: The server could not reach Meta API. Please try again later or check if Meta API is available.';
-          } else if (statusCode === '401') {
-            errorMessage = 'Unauthorized: Please connect your Instagram/Facebook account via OAuth.';
-          } else if (statusCode === '400') {
-            errorMessage = 'Bad Request: Invalid Instagram URL or Meta API error.';
-          } else if (statusCode === '403') {
-            errorMessage = 'Forbidden: Meta API access denied. The oEmbed permission may not be approved yet.';
+        
+        // Si on a des détails d'erreur depuis la réponse API
+        if (errorDetails) {
+          if (typeof errorDetails === 'object') {
+            // Message d'erreur Meta
+            if (errorDetails.error_message) {
+              errorMessage = errorDetails.error_message;
+            } else if (errorDetails.message) {
+              errorMessage = errorDetails.message;
+            }
+            // Note additionnelle (ex: pour erreur code 10)
+            if (errorDetails.note) {
+              errorMessage += `\n\n${errorDetails.note}`;
+            }
+          } else if (typeof errorDetails === 'string') {
+            errorMessage = errorDetails;
+          }
+        } else {
+          // Messages par défaut selon le code HTTP
+          if (errorMessage.includes('HTTP_')) {
+            const statusCode = errorMessage.replace('HTTP_', '');
+            if (statusCode === '502') {
+              errorMessage = 'Bad Gateway: The server could not reach Meta API. Please try again later or check if Meta API is available.';
+            } else if (statusCode === '401') {
+              errorMessage = 'Unauthorized: Please connect your Instagram/Facebook account via OAuth.';
+            } else if (statusCode === '400') {
+              errorMessage = 'Bad Request: Invalid Instagram URL or Meta API error.';
+            } else if (statusCode === '403') {
+              errorMessage = 'Forbidden: Meta API access denied. The oEmbed permission may not be approved yet.';
+            }
           }
         }
       }
@@ -70,7 +95,7 @@ export function EmbedDialog({ post, open, onOpenChange }: EmbedDialogProps) {
       setError(errorMessage);
       
       if (import.meta.env.DEV) {
-        console.error('oEmbed fetch error:', err);
+        console.error('oEmbed fetch error:', err, errorDetails);
       }
     } finally {
       setLoading(false);
