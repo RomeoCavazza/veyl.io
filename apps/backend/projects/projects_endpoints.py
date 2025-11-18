@@ -530,21 +530,26 @@ def list_project_posts(
                                 author = potential_username
                 
                 # Extraire metrics avec fallback sur plusieurs clés
+                # Utiliser get() avec None comme défaut pour distinguer 0 de None
                 like_count = (
-                    metrics.get('like_count')
-                    or metrics.get('likes')
-                    or api_payload.get('like_count')
-                    or api_payload.get('likes')
-                    or 0
+                    metrics.get('like_count') if 'like_count' in metrics else
+                    metrics.get('likes') if 'likes' in metrics else
+                    api_payload.get('like_count') if api_payload and 'like_count' in api_payload else
+                    api_payload.get('likes') if api_payload and 'likes' in api_payload else
+                    None
                 )
                 comment_count = (
-                    metrics.get('comment_count')
-                    or metrics.get('comments_count')
-                    or metrics.get('comments')
-                    or api_payload.get('comment_count')
-                    or api_payload.get('comments_count')
-                    or 0
+                    metrics.get('comment_count') if 'comment_count' in metrics else
+                    metrics.get('comments_count') if 'comments_count' in metrics else
+                    metrics.get('comments') if 'comments' in metrics else
+                    api_payload.get('comment_count') if api_payload and 'comment_count' in api_payload else
+                    api_payload.get('comments_count') if api_payload and 'comments_count' in api_payload else
+                    None
                 )
+                
+                # Convertir en int si présent, sinon None (pour distinguer 0 de None)
+                like_count_int = int(like_count) if like_count is not None else None
+                comment_count_int = int(comment_count) if comment_count is not None else None
                 
                 # S'assurer que tous les champs sont valides avant de créer ProjectPostResponse
                 post_data = {
@@ -557,8 +562,8 @@ def list_project_posts(
                     "posted_at": post.posted_at,
                     "fetched_at": post.fetched_at,
                     "platform": post.platform.name if post.platform else None,
-                    "like_count": int(like_count) if like_count else None,
-                    "comment_count": int(comment_count) if comment_count else None,
+                    "like_count": like_count_int,
+                    "comment_count": comment_count_int,
                     "share_count": int(metrics.get('share_count') or api_payload.get('share_count') or 0) if (metrics.get('share_count') or api_payload.get('share_count')) else None,
                     "view_count": int(metrics.get('view_count') or api_payload.get('view_count') or 0) if (metrics.get('view_count') or api_payload.get('view_count')) else None,
                     "score_trend": float(post.score_trend) if post.score_trend is not None else None,

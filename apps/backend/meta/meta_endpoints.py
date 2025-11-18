@@ -359,7 +359,7 @@ async def get_instagram_public_content(
             endpoint=f"v21.0/{hashtag_id}/recent_media",
             params={
                 "user_id": ig_user_id,
-                "fields": "id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count",
+                "fields": "id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count,username",
                 "limit": limit,
             },
         )
@@ -375,17 +375,20 @@ async def get_instagram_public_content(
         # Stocker les posts dans la DB
         results = []
         for item in posts:
-            # Extraire username depuis permalink si disponible
-            author = None
-            permalink = item.get("permalink")
-            if permalink:
-                # Format: https://www.instagram.com/p/{code}/ ou https://www.instagram.com/{username}/p/{code}/
-                permalink_match = re.search(r'instagram\.com/([^/]+)/', permalink)
-                if permalink_match:
-                    potential_username = permalink_match.group(1)
-                    # Ignorer les patterns spéciaux comme 'p', 'reel', etc.
-                    if potential_username not in ['p', 'reel', 'tv', 'stories']:
-                        author = potential_username
+            # PRIORITÉ 1: Extraire username depuis l'API response (le plus fiable)
+            author = item.get("username")
+            
+            # PRIORITÉ 2: Extraire username depuis permalink si pas dans API response
+            if not author:
+                permalink = item.get("permalink")
+                if permalink:
+                    # Format: https://www.instagram.com/p/{code}/ ou https://www.instagram.com/{username}/p/{code}/
+                    permalink_match = re.search(r'instagram\.com/([^/]+)/', permalink)
+                    if permalink_match:
+                        potential_username = permalink_match.group(1)
+                        # Ignorer les patterns spéciaux comme 'p', 'reel', etc.
+                        if potential_username not in ['p', 'reel', 'tv', 'stories']:
+                            author = potential_username
             
             defaults = {
                 "author": author,
