@@ -66,6 +66,7 @@ export default function Search() {
             id: post.id || post.external_id,
             platform: post.platform || 'instagram',
             username: username || undefined, // undefined plutôt que 'unknown'
+            author: username || undefined, // Alias pour compatibilité
             caption: post.caption,
             media_type: post.media_type || 'image',
             media_url: post.media_url,

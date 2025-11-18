@@ -70,6 +70,7 @@ export interface PostHit {
   id: string;
   platform: string;
   username?: string;
+  author?: string; // Alias pour compatibilité avec ProjectPost
   caption?: string;
   hashtags?: string[];
   media_type?: string;
