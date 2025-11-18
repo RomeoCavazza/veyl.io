@@ -12,9 +12,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Copy, Check, ExternalLink } from 'lucide-react';
 import { fetchMetaOEmbed } from '@/lib/api';
 import type { ProjectPost } from '@/types/project';
+import type { PostHit } from '@/lib/api';
+
+// Type compatible pour les posts (ProjectPost ou PostHit)
+type PostForEmbed = ProjectPost | PostHit;
 
 interface EmbedDialogProps {
-  post: ProjectPost | null;
+  post: PostForEmbed | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }

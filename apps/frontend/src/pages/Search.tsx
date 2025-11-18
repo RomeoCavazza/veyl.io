@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, ExternalLink, RefreshCcw, Sparkles } from 'lucide-react';
+import { Heart, MessageCircle, ExternalLink, RefreshCcw, Sparkles, Code2 } from 'lucide-react';
 import { fetchMetaIGPublic, fetchTikTokVideos, getProjects, getProjectPosts, type PostHit } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { AISearchBar, type SearchMode } from '@/components/AISearchBar';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { EmbedDialog } from '@/components/EmbedDialog';
 
 export default function Search() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -16,6 +17,8 @@ export default function Search() {
   const [hasSearched, setHasSearched] = useState(false);
   const [isTestingAPI, setIsTestingAPI] = useState(false);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
+  const [selectedPostForEmbed, setSelectedPostForEmbed] = useState<PostHit | null>(null);
   const { toast } = useToast();
 
   // Charger posts depuis PostgreSQL - cherche dans tous les projets qui matchent la query
@@ -619,16 +622,32 @@ export default function Search() {
                           )}
                         </div>
 
-                        {post.permalink && (
-                          <a
-                            href={post.permalink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {post.platform === 'instagram' && post.permalink && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedPostForEmbed(post);
+                                setEmbedDialogOpen(true);
+                              }}
+                              className="h-8 px-2"
+                            >
+                              <Code2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {post.permalink && (
+                            <a
+                              href={post.permalink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -645,6 +664,12 @@ export default function Search() {
           )}
         </section>
       ) : null}
+
+      <EmbedDialog
+        post={selectedPostForEmbed}
+        open={embedDialogOpen}
+        onOpenChange={setEmbedDialogOpen}
+      />
 
       <Footer />
     </div>
