@@ -9,13 +9,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Globe, Instagram, Facebook, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { TikTokIcon } from '@/components/icons/TikTokIcon';
-import { getApiBase, type ConnectedAccount } from '@/lib/api';
+import { getApiBase, type ConnectedAccount, fetchInstagramBusinessProfile } from '@/lib/api';
 
 export default function Profile() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [instagramProfiles, setInstagramProfiles] = useState<Record<string, any>>({});
 
   useEffect(() => {
     fetchConnectedAccounts();
@@ -36,6 +37,18 @@ export default function Profile() {
       const { getConnectedAccounts } = await import('@/lib/api');
       const data = await getConnectedAccounts();
       setConnectedAccounts(data.accounts || []);
+      
+      // Si un compte Instagram/Facebook est connecté, récupérer le profil Instagram Business
+      const instagramAccount = data.accounts?.find(acc => acc.provider === 'instagram' || acc.provider === 'facebook');
+      if (instagramAccount) {
+        try {
+          const profile = await fetchInstagramBusinessProfile('me');
+          setInstagramProfiles({ [instagramAccount.provider]: profile });
+        } catch (error) {
+          // Silently fail - pas de compte Instagram Business ou pas de permission
+          console.warn('Could not fetch Instagram Business profile:', error);
+        }
+      }
     } catch (error) {
       console.error('Error fetching connected accounts:', error);
     } finally {
@@ -129,21 +142,42 @@ export default function Profile() {
                 {['instagram', 'facebook', 'tiktok'].map((provider) => {
                   const account = connectedAccounts.find(acc => acc.provider === provider);
                   const isConnected = !!account;
+                  const profile = instagramProfiles[provider];
                   
                   return (
                     <div
                       key={provider}
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4 flex-1">
                         <div className="flex-shrink-0">
                           {getProviderIcon(provider)}
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <p className="text-sm font-medium">{getProviderName(provider)}</p>
                           <p className={`text-xs mt-0.5 ${isConnected ? 'text-green-500' : 'text-muted-foreground'}`}>
                             {isConnected ? 'Connected' : 'Not connected'}
                           </p>
+                          {/* Afficher les infos Instagram Business si disponibles */}
+                          {isConnected && profile && (provider === 'instagram' || provider === 'facebook') && (
+                            <div className="mt-2 space-y-1">
+                              {profile.username && (
+                                <p className="text-xs text-muted-foreground">
+                                  @{profile.username}
+                                </p>
+                              )}
+                              {(profile.followers_count !== undefined || profile.media_count !== undefined) && (
+                                <div className="flex gap-3 text-xs text-muted-foreground">
+                                  {profile.followers_count !== undefined && (
+                                    <span>{profile.followers_count.toLocaleString()} followers</span>
+                                  )}
+                                  {profile.media_count !== undefined && (
+                                    <span>{profile.media_count} posts</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                       {isConnected ? (

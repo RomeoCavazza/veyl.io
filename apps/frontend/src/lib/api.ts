@@ -202,17 +202,26 @@ export async function fetchPagePublicPosts(pageId: string, limit = 10): Promise<
   });
   
   if (!response.ok) {
-    throw new Error(`HTTP_${response.status}`);
+    let errorData: any = null;
+    try {
+      errorData = await response.json();
+    } catch {
+      errorData = { detail: `HTTP ${response.status}` };
+    }
+    
+    const error = new Error(errorData?.detail?.message || errorData?.detail || `HTTP ${response.status}`);
+    (error as any).status = response.status;
+    (error as any).detail = errorData?.detail;
+    throw error;
   }
 
   return response.json();
 }
 
-export async function fetchMetaInsights(resourceId: string, platform: 'instagram' | 'facebook', metrics: string): Promise<any> {
+export async function fetchMetaInsights(resourceId: string, metrics: string): Promise<any> {
   const apiBase = getApiBase();
   const params = new URLSearchParams({
     resource_id: resourceId,
-    platform,
     metrics,
   });
 
@@ -223,7 +232,45 @@ export async function fetchMetaInsights(resourceId: string, platform: 'instagram
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP_${response.status}`);
+    let errorData: any = null;
+    try {
+      errorData = await response.json();
+    } catch {
+      errorData = { detail: `HTTP ${response.status}` };
+    }
+    
+    const error = new Error(errorData?.detail?.message || errorData?.detail || `HTTP ${response.status}`);
+    (error as any).status = response.status;
+    (error as any).detail = errorData?.detail;
+    throw error;
+  }
+  
+  return response.json();
+}
+
+// Instagram Business Profile API function
+export async function fetchInstagramBusinessProfile(igBusinessAccountId: string = 'me'): Promise<any> {
+  const apiBase = getApiBase();
+  const url = apiBase 
+    ? `${apiBase}/api/v1/meta/ig-business-profile?ig_business_account_id=${encodeURIComponent(igBusinessAccountId)}` 
+    : `/api/v1/meta/ig-business-profile?ig_business_account_id=${encodeURIComponent(igBusinessAccountId)}`;
+
+  const response = await fetch(url, {
+    headers: withAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    let errorData: any = null;
+    try {
+      errorData = await response.json();
+    } catch {
+      errorData = { detail: `HTTP ${response.status}` };
+    }
+    
+    const error = new Error(errorData?.detail?.message || errorData?.detail || `HTTP ${response.status}`);
+    (error as any).status = response.status;
+    (error as any).detail = errorData?.detail;
+    throw error;
   }
   
   return response.json();

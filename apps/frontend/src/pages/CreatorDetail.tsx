@@ -27,7 +27,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import { getProjectPosts } from '@/lib/api';
+import { getProjectPosts, fetchInstagramBusinessProfile } from '@/lib/api';
 
 export default function CreatorDetail() {
   const engagementTrendData: Array<{ date: string; engagement: number }> = [];
@@ -146,9 +146,12 @@ export default function CreatorDetail() {
         );
 
         if (matchedCreator) {
-          setCreator({
+          const creatorPlatform = projectData.platforms?.[0] || 'instagram';
+          
+          // Base creator data from project
+          const baseCreator = {
             handle: matchedCreator.creator_username,
-            platform: projectData.platforms?.[0] || 'instagram',
+            platform: creatorPlatform,
             profile_picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${matchedCreator.creator_username}`,
             followers: matchedCreator.followers || 0,
             following: matchedCreator.following || 0,
@@ -157,7 +160,23 @@ export default function CreatorDetail() {
             category: matchedCreator.category,
             verified: matchedCreator.verified || false,
             full_name: matchedCreator.full_name,
-          });
+          };
+          
+          // Si c'est Instagram, essayer d'enrichir avec Meta API
+          if (creatorPlatform === 'instagram' && matchedCreator.creator_username) {
+            try {
+              // Note: On ne peut pas récupérer le profil par username directement
+              // Il faudrait l'IG Business Account ID. Pour l'instant, on garde les données du projet
+              // TODO: Si on a l'IG Business Account ID stocké, l'utiliser ici
+              setCreator(baseCreator);
+            } catch (error) {
+              // Si l'API échoue, utiliser les données du projet
+              console.warn('Failed to fetch Instagram Business profile, using project data:', error);
+              setCreator(baseCreator);
+            }
+          } else {
+            setCreator(baseCreator);
+          }
           return;
         }
 

@@ -467,8 +467,8 @@ async def get_instagram_hashtag_media(
 
 @router.get("/page-public")
 async def get_page_public_posts(
-    page_id: str = Query(..., min_length=1),
-    limit: int = Query(10, ge=1, le=50),
+    page_id: str = Query(..., min_length=1, description="Facebook Page ID"),
+    limit: int = Query(10, ge=1, le=50, description="Nombre de posts à récupérer"),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
@@ -476,40 +476,159 @@ async def get_page_public_posts(
     Récupère les posts publics d'une page Facebook.
     
     APP REVIEW NOTES:
-    1. App Feature: Facebook Page content monitoring and analysis
-    2. Permission: Page Public Content Access enables reading public posts from Facebook Pages
+    1. App Feature: Facebook Page content monitoring and analysis for social media intelligence
+    2. Permission: pages_read_user_content - Allows reading user-generated content on Facebook Pages (posts, comments, ratings)
     3. End-User Benefit: Users can monitor and analyze public content from Facebook Pages 
-       they manage or follow, enabling comprehensive social media monitoring across platforms.
+       they manage or follow, enabling comprehensive social media monitoring across platforms (Instagram + Facebook).
+       This helps users track brand mentions, competitor activity, and industry trends.
+    
+    This endpoint uses the Meta Graph API to fetch public posts from Facebook Pages:
+    - Post content (message, created_time, permalink_url)
+    - Engagement metrics (reactions, comments)
+    - Media attachments if available
     """
+    from services.meta_client import MetaAPIError
+    
     try:
-        posts = await call_meta(
+        # Appeler Meta API pour récupérer les posts de la Page
+        # Fields disponibles: id, message, created_time, permalink_url, reactions, comments, attachments, etc.
+        posts_response = await call_meta(
             method="GET",
             endpoint=f"v21.0/{page_id}/posts",
             params={
-                "fields": "id,message,created_time,permalink_url,reactions.summary(true),comments.summary(true)",
+                "fields": "id,message,created_time,permalink_url,reactions.summary(true),comments.summary(true),attachments{media,subattachments}",
                 "limit": limit,
             },
+            access_token=_get_meta_token(db, current_user) if current_user else None,
         )
-        return posts
+        
+        # Meta API retourne: {"data": [...], "paging": {...}}
+        posts_data = posts_response.get("data", [])
+        
+        # Transformer les posts pour un format plus cohérent avec Instagram
+        transformed_posts = []
+        for post in posts_data:
+            # Extraire les métriques d'engagement
+            reactions = post.get("reactions", {}).get("summary", {})
+            comments = post.get("comments", {}).get("summary", {})
+            
+            # Extraire les médias si disponibles
+            attachments = post.get("attachments", {}).get("data", [])
+            media_url = None
+            if attachments and len(attachments) > 0:
+                # Prendre le premier média
+                first_attachment = attachments[0]
+                if first_attachment.get("media"):
+                    media_url = first_attachment["media"].get("image", {}).get("src")
+                elif first_attachment.get("subattachments"):
+                    subattachments = first_attachment["subattachments"].get("data", [])
+                    if subattachments and len(subattachments) > 0:
+                        media_url = subattachments[0].get("media", {}).get("image", {}).get("src")
+            
+            transformed_posts.append({
+                "id": post.get("id"),
+                "message": post.get("message"),
+                "created_time": post.get("created_time"),
+                "permalink_url": post.get("permalink_url"),
+                "like_count": reactions.get("total_count", 0),
+                "comment_count": comments.get("total_count", 0),
+                "media_url": media_url,
+                "platform": "facebook",
+            })
+        
+        return {
+            "page_id": page_id,
+            "data": transformed_posts,
+            "total": len(transformed_posts),
+            "raw_data": posts_data,  # Garder les données brutes pour debug
+        }
+        
+    except MetaAPIError as e:
+        logger.error(f"Meta API error fetching page posts for {page_id}: {e}")
+        raise HTTPException(
+            status_code=e.status_code if hasattr(e, 'status_code') else 500,
+            detail={
+                "error": "Meta API error",
+                "message": str(e),
+                "page_id": page_id,
+            }
+        )
     except Exception as e:
         logger.error(f"Error fetching page posts for {page_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching page posts: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Internal error",
+                "message": f"Error fetching page posts: {str(e)}",
+                "page_id": page_id,
+            }
+        )
+
+
+async def _get_ig_business_account_id(db: Session, current_user: Optional[User], access_token: str) -> Optional[str]:
+    """Récupère l'Instagram Business Account ID depuis les Pages Facebook de l'utilisateur"""
+    import httpx
+    
+    try:
+        # Récupérer les Pages Facebook de l'utilisateur
+        async with httpx.AsyncClient(timeout=20) as client:
+            pages_response = await client.get(
+                "https://graph.facebook.com/v21.0/me/accounts",
+                params={"access_token": access_token}
+            )
+            if pages_response.status_code != 200:
+                logger.warning(f"Failed to fetch pages: {pages_response.status_code}")
+                return None
+            
+            pages_data = pages_response.json().get("data", [])
+            
+            # Pour chaque Page, chercher l'IG Business Account
+            for page in pages_data:
+                page_id = page.get("id")
+                if not page_id:
+                    continue
+                
+                try:
+                    page_response = await client.get(
+                        f"https://graph.facebook.com/v21.0/{page_id}",
+                        params={
+                            "fields": "instagram_business_account{id}",
+                            "access_token": access_token
+                        }
+                    )
+                    if page_response.status_code == 200:
+                        ig_account = page_response.json().get("instagram_business_account")
+                        if ig_account and ig_account.get("id"):
+                            ig_business_id = ig_account["id"]
+                            logger.info(f"Found IG Business Account ID: {ig_business_id}")
+                            return ig_business_id
+                except Exception as e:
+                    logger.warning(f"Error fetching IG Business Account for page {page_id}: {e}")
+                    continue
+        
+        return None
+    except Exception as e:
+        logger.error(f"Error in _get_ig_business_account_id: {e}")
+        return None
 
 
 @router.get("/insights")
 async def get_insights(
-    resource_id: str = Query(..., description="IG Business ID ou Page ID"),
-    metrics: str = Query(..., description="Liste metrics Graph API"),
+    resource_id: str = Query(..., description="IG Business ID, Page ID, ou 'me' pour utiliser le compte connecté"),
+    metrics: str = Query(..., description="Liste metrics Graph API (comma-separated)"),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     """
     Récupère les insights (métriques) pour un compte Instagram Business ou une page Facebook.
     
+    Si resource_id='me', récupère automatiquement l'IG Business Account ID de l'utilisateur connecté.
+    
     APP REVIEW NOTES:
     1. App Feature: Analytics dashboard for Instagram creators to track performance metrics
     2. Permissions: 
        - instagram_manage_insights: Allows fetching Instagram Business account insights
+       - instagram_business_manage_insights: Allows fetching Instagram professional account insights
        - read_insights: Allows reading insights data for Facebook Pages
     3. End-User Benefit: Creators can monitor their Instagram performance (followers, reach, impressions) 
        directly in veyl.io analytics dashboard, enabling data-driven content strategy decisions.
@@ -517,17 +636,288 @@ async def get_insights(
     This endpoint uses the Meta Graph API insights endpoint to fetch metrics like:
     - followers_count, media_count (account metrics)
     - impressions, reach, engagement (post metrics)
+    - profile_views, website_clicks (account metrics)
     """
+    from services.meta_client import MetaAPIError
+    
+    # Si resource_id='me', récupérer l'IG Business Account ID de l'utilisateur
+    actual_resource_id = resource_id
+    if resource_id == "me":
+        if not current_user:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required when using resource_id='me'. Please log in or provide a specific resource_id."
+            )
+        
+        # Récupérer le token de l'utilisateur
+        try:
+            access_token = _get_meta_token(db, current_user)
+        except HTTPException:
+            raise HTTPException(
+                status_code=400,
+                detail="No Meta/Instagram account connected. Please connect your Instagram or Facebook account in Profile settings."
+            )
+        
+        # Récupérer l'IG Business Account ID
+        ig_business_id = await _get_ig_business_account_id(db, current_user, access_token)
+        if not ig_business_id:
+            raise HTTPException(
+                status_code=404,
+                detail="Instagram Business Account not found. Please ensure your Facebook Page is connected to an Instagram Business account."
+            )
+        
+        actual_resource_id = ig_business_id
+        logger.info(f"Using IG Business Account ID for user {current_user.id}: {actual_resource_id}")
+    
+    # Parser les metrics (peut être comma-separated ou déjà un array)
+    metrics_list = [m.strip() for m in metrics.split(",")] if isinstance(metrics, str) else metrics
+    
     try:
-        insights = await call_meta(
+        # Appeler Meta API pour récupérer les insights
+        # Note: Meta API retourne un objet avec 'data' array contenant les métriques
+        insights_response = await call_meta(
             method="GET",
-            endpoint=f"v21.0/{resource_id}/insights",
-            params={"metric": metrics},
+            endpoint=f"v21.0/{actual_resource_id}/insights",
+            params={"metric": ",".join(metrics_list)},
+            access_token=_get_meta_token(db, current_user) if current_user else None,
         )
-        return insights
+        
+        # Meta API retourne: {"data": [{"name": "followers_count", "values": [...]}, ...]}
+        # On transforme en format plus simple pour le frontend
+        insights_data = insights_response.get("data", [])
+        
+        # Extraire les valeurs des métriques
+        result = {}
+        for metric_data in insights_data:
+            metric_name = metric_data.get("name")
+            values = metric_data.get("values", [])
+            # Prendre la dernière valeur (ou la somme si plusieurs périodes)
+            if values:
+                if len(values) == 1:
+                    result[metric_name] = values[0].get("value", 0)
+                else:
+                    # Pour les métriques avec plusieurs périodes, prendre la somme ou la dernière
+                    result[metric_name] = sum(v.get("value", 0) for v in values)
+            else:
+                result[metric_name] = 0
+        
+        # Ajouter les métriques de compte si disponibles (via endpoint account)
+        # Note: followers_count et media_count ne sont pas dans insights, mais dans le profil
+        # On peut les récupérer séparément si nécessaire
+        
+        return {
+            "resource_id": actual_resource_id,
+            "metrics": result,
+            "raw_data": insights_data,  # Garder les données brutes pour debug
+        }
+        
+    except MetaAPIError as e:
+        logger.error(f"Meta API error fetching insights for {actual_resource_id}: {e}")
+        raise HTTPException(
+            status_code=e.status_code if hasattr(e, 'status_code') else 500,
+            detail={
+                "error": "Meta API error",
+                "message": str(e),
+                "resource_id": actual_resource_id,
+            }
+        )
     except Exception as e:
-        logger.error(f"Error fetching insights for {resource_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching insights: {e}")
+        logger.error(f"Error fetching insights for {actual_resource_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Internal error",
+                "message": f"Error fetching insights: {str(e)}",
+                "resource_id": actual_resource_id,
+            }
+        )
+
+
+@router.get("/ig-business-profile")
+async def get_instagram_business_profile(
+    ig_business_account_id: str = Query(..., description="IG Business Account ID ou 'me' pour utiliser le compte connecté"),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """
+    Récupère le profil d'un compte Instagram Business.
+    
+    Si ig_business_account_id='me', récupère automatiquement l'IG Business Account ID de l'utilisateur connecté.
+    
+    APP REVIEW NOTES:
+    1. App Feature: Creator profile display in projects and analytics dashboards
+    2. Permission: instagram_business_basic - Allows reading Instagram Business account profile information
+    3. End-User Benefit: Users can view detailed creator profiles (username, followers, media count, bio) 
+       directly in veyl.io without leaving the platform, enabling better creator discovery and analysis.
+    
+    This endpoint uses the Meta Graph API to fetch Instagram Business account information:
+    - username, profile_picture_url
+    - followers_count, media_count
+    - website, biography
+    """
+    from services.meta_client import MetaAPIError
+    
+    # Si ig_business_account_id='me', récupérer l'IG Business Account ID de l'utilisateur
+    actual_ig_business_id = ig_business_account_id
+    if ig_business_account_id == "me":
+        if not current_user:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required when using ig_business_account_id='me'. Please log in or provide a specific IG Business Account ID."
+            )
+        
+        # Récupérer le token de l'utilisateur
+        try:
+            access_token = _get_meta_token(db, current_user)
+        except HTTPException:
+            raise HTTPException(
+                status_code=400,
+                detail="No Meta/Instagram account connected. Please connect your Instagram or Facebook account in Profile settings."
+            )
+        
+        # Récupérer l'IG Business Account ID
+        ig_business_id = await _get_ig_business_account_id(db, current_user, access_token)
+        if not ig_business_id:
+            raise HTTPException(
+                status_code=404,
+                detail="Instagram Business Account not found. Please ensure your Facebook Page is connected to an Instagram Business account."
+            )
+        
+        actual_ig_business_id = ig_business_id
+        logger.info(f"Using IG Business Account ID for user {current_user.id}: {actual_ig_business_id}")
+    
+    try:
+        # Appeler Meta API pour récupérer le profil Instagram Business
+        # Fields disponibles: username, profile_picture_url, followers_count, media_count, website, biography
+        profile_data = await call_meta(
+            method="GET",
+            endpoint=f"v21.0/{actual_ig_business_id}",
+            params={
+                "fields": "username,profile_picture_url,followers_count,media_count,website,biography"
+            },
+            access_token=_get_meta_token(db, current_user) if current_user else None,
+        )
+        
+        return {
+            "ig_business_account_id": actual_ig_business_id,
+            "username": profile_data.get("username"),
+            "profile_picture_url": profile_data.get("profile_picture_url"),
+            "followers_count": profile_data.get("followers_count", 0),
+            "media_count": profile_data.get("media_count", 0),
+            "website": profile_data.get("website"),
+            "biography": profile_data.get("biography"),
+            "raw_data": profile_data,  # Garder les données brutes pour debug
+        }
+        
+    except MetaAPIError as e:
+        logger.error(f"Meta API error fetching IG Business profile for {actual_ig_business_id}: {e}")
+        raise HTTPException(
+            status_code=e.status_code if hasattr(e, 'status_code') else 500,
+            detail={
+                "error": "Meta API error",
+                "message": str(e),
+                "ig_business_account_id": actual_ig_business_id,
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error fetching IG Business profile for {actual_ig_business_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Internal error",
+                "message": f"Error fetching Instagram Business profile: {str(e)}",
+                "ig_business_account_id": actual_ig_business_id,
+            }
+        )
+
+
+@router.get("/ig-profile")
+async def get_instagram_profile(
+    username: Optional[str] = Query(None, description="Instagram username (sans @)"),
+    user_id: Optional[str] = Query(None, description="Instagram user ID"),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """
+    Récupère le profil d'un compte Instagram (personnel ou Business).
+    
+    Utilise instagram_basic pour les comptes personnels ou instagram_business_basic pour les comptes Business.
+    
+    APP REVIEW NOTES:
+    1. App Feature: Creator profile display in projects and analytics dashboards
+    2. Permission: instagram_basic - Allows reading Instagram personal account profile information
+    3. End-User Benefit: Users can view Instagram creator profiles (username, profile picture, bio) 
+       directly in veyl.io, enabling better creator discovery and analysis for both personal and business accounts.
+    
+    This endpoint uses the Meta Graph API to fetch Instagram account information:
+    - username, profile_picture_url
+    - biography (if available)
+    - followers_count, media_count (if Business account)
+    """
+    from services.meta_client import MetaAPIError
+    
+    if not username and not user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Either username or user_id must be provided"
+        )
+    
+    try:
+        # Si on a un username, essayer de récupérer le profil
+        # Note: Meta Graph API nécessite un user_id pour récupérer le profil
+        # Pour instagram_basic, on peut utiliser l'endpoint /{user-id} avec les champs de base
+        
+        # Si user_id fourni, l'utiliser directement
+        if user_id:
+            profile_data = await call_meta(
+                method="GET",
+                endpoint=f"v21.0/{user_id}",
+                params={
+                    "fields": "username,profile_picture_url,biography"
+                },
+                access_token=_get_meta_token(db, current_user) if current_user else None,
+            )
+        else:
+            # Si seulement username fourni, on ne peut pas récupérer directement via Graph API
+            # Il faudrait d'abord chercher le user_id via hashtag search ou autre méthode
+            # Pour l'instant, on retourne une erreur explicative
+            raise HTTPException(
+                status_code=400,
+                detail="Instagram user_id is required. Username lookup is not directly supported by Meta Graph API. Please provide the Instagram user ID."
+            )
+        
+        return {
+            "user_id": user_id,
+            "username": profile_data.get("username") or username,
+            "profile_picture_url": profile_data.get("profile_picture_url"),
+            "biography": profile_data.get("biography"),
+            "raw_data": profile_data,  # Garder les données brutes pour debug
+        }
+        
+    except MetaAPIError as e:
+        logger.error(f"Meta API error fetching IG profile for {user_id or username}: {e}")
+        raise HTTPException(
+            status_code=e.status_code if hasattr(e, 'status_code') else 500,
+            detail={
+                "error": "Meta API error",
+                "message": str(e),
+                "user_id": user_id,
+                "username": username,
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching IG profile for {user_id or username}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Internal error",
+                "message": f"Error fetching Instagram profile: {str(e)}",
+                "user_id": user_id,
+                "username": username,
+            }
+        )
 
 
 @router.post("/link-posts-to-hashtag")

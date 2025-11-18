@@ -31,7 +31,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { fetchMetaInsights } from '@/lib/api';
+import { fetchMetaInsights, fetchPagePublicPosts } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Analytics() {
@@ -41,39 +41,74 @@ export default function Analytics() {
   const [metrics, setMetrics] = useState('impressions,reach,profile_views');
   const [insightsResponse, setInsightsResponse] = useState<any>(null);
   const [isFetchingInsights, setIsFetchingInsights] = useState(false);
+  
+  // Pour Page Posts
+  const [pageId, setPageId] = useState('');
+  const [pagePostsResponse, setPagePostsResponse] = useState<any>(null);
+  const [isFetchingPagePosts, setIsFetchingPagePosts] = useState(false);
 
+  // Note: Ces données sont vides car elles doivent être calculées depuis les vraies données Meta API
+  // Pour Meta App Review, on affiche uniquement les données réelles récupérées via les endpoints
   const pieData: Array<{ name: string; value: number; color: string }> = [];
   const reachData: Array<{ date: string; organic: number; paid: number }> = [];
   const engagementTrendData: Array<{ date: string; engagement: number; reach: number; impressions: number }> = [];
   const topPerformingCreators: Array<{ username: string; posts: number; avg_engagement: number; total_reach: number }> = [];
 
   const handleFetchInsights = async () => {
-    if (!resourceId.trim()) {
-      toast({
-        title: 'Resource ID required',
-        description: 'Provide an Instagram Business ID or Facebook Page ID before fetching insights.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    // Si resourceId est vide, utiliser "me" pour le compte connecté
+    const actualResourceId = resourceId.trim() || 'me';
+    
     setIsFetchingInsights(true);
     try {
-      const data = await fetchMetaInsights(resourceId.trim(), platform, metrics.trim());
+      const data = await fetchMetaInsights(actualResourceId, metrics.trim());
       setInsightsResponse(data);
       toast({
         title: 'Insights fetched',
         description: 'Live insights retrieved from Meta Graph API.',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Fetch insights error:', error);
+      const errorMessage = error?.detail?.message || error?.message || 'Unable to fetch insights from Meta.';
       toast({
         title: 'Fetch failed',
-        description: 'Unable to fetch insights from Meta. Check logs and credentials.',
+        description: errorMessage,
         variant: 'destructive',
       });
       setInsightsResponse(null);
     } finally {
       setIsFetchingInsights(false);
+    }
+  };
+
+  const handleFetchPagePosts = async () => {
+    if (!pageId.trim()) {
+      toast({
+        title: 'Page ID required',
+        description: 'Provide a Facebook Page ID before fetching posts.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setIsFetchingPagePosts(true);
+    try {
+      const data = await fetchPagePublicPosts(pageId.trim(), 10);
+      setPagePostsResponse(data);
+      toast({
+        title: 'Page posts fetched',
+        description: `Retrieved ${data.total || 0} posts from Facebook Page.`,
+      });
+    } catch (error: any) {
+      console.error('Fetch page posts error:', error);
+      const errorMessage = error?.detail?.message || error?.message || 'Unable to fetch page posts from Meta.';
+      toast({
+        title: 'Fetch failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      setPagePostsResponse(null);
+    } finally {
+      setIsFetchingPagePosts(false);
     }
   };
 
@@ -106,10 +141,13 @@ export default function Analytics() {
                 <Label htmlFor="resourceId">Resource ID</Label>
                 <Input
                   id="resourceId"
-                  placeholder="e.g. 1784140xxxxxx (IG Business ID)"
+                  placeholder="Leave empty for 'me' (your connected account)"
                   value={resourceId}
                   onChange={(event) => setResourceId(event.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Leave empty to use your connected Instagram Business account, or enter a specific IG Business ID or Page ID
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="platform">Platform</Label>
@@ -141,76 +179,186 @@ export default function Analytics() {
             <div className="rounded-lg border bg-muted/40 p-4 text-sm">
               <p className="font-medium mb-2">Meta API Response</p>
               {insightsResponse ? (
-                <pre className="max-h-64 overflow-auto text-xs bg-background p-3 rounded-md border">
-                  {JSON.stringify(insightsResponse, null, 2)}
-                </pre>
+                <div className="space-y-4">
+                  {/* Afficher les métriques de manière lisible */}
+                  {insightsResponse.metrics && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {Object.entries(insightsResponse.metrics).map(([key, value]) => (
+                        <div key={key} className="p-3 rounded-md bg-background border">
+                          <p className="text-xs text-muted-foreground mb-1">{key.replace(/_/g, ' ')}</p>
+                          <p className="text-lg font-bold">{typeof value === 'number' ? value.toLocaleString() : String(value)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Raw JSON pour debug */}
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                      View raw JSON response
+                    </summary>
+                    <pre className="max-h-64 overflow-auto text-xs bg-background p-3 rounded-md border mt-2">
+                      {JSON.stringify(insightsResponse, null, 2)}
+                    </pre>
+                  </details>
+                </div>
               ) : (
                 <p className="text-muted-foreground">
-                  No insights fetched yet. Use the form above and click “Fetch Insights” to trigger a live Meta Graph API call.
+                  No insights fetched yet. Use the form above and click "Fetch Insights" to trigger a live Meta Graph API call.
                 </p>
               )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Quick Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Reach</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">892.4K</div>
-              <p className="text-xs text-success flex items-center gap-1 mt-1">
-                <TrendingUp className="h-3 w-3" />
-                +24.3% vs last week
+        {/* Facebook Page Posts Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Facebook Page Posts (pages_read_user_content)</CardTitle>
+            <CardDescription>
+              Fetch public posts from a Facebook Page using pages_read_user_content permission.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="pageId">Facebook Page ID</Label>
+              <Input
+                id="pageId"
+                placeholder="e.g. 123456789012345 (Facebook Page ID)"
+                value={pageId}
+                onChange={(event) => setPageId(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter a Facebook Page ID to fetch public posts from that page
               </p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleFetchPagePosts} disabled={isFetchingPagePosts}>
+                {isFetchingPagePosts ? 'Fetching…' : 'Fetch Page Posts'}
+              </Button>
+            </div>
+            <div className="rounded-lg border bg-muted/40 p-4 text-sm">
+              <p className="font-medium mb-2">Page Posts Response</p>
+              {pagePostsResponse ? (
+                <div className="space-y-4">
+                  {/* Afficher les posts de manière lisible */}
+                  {pagePostsResponse.data && pagePostsResponse.data.length > 0 ? (
+                    <div className="space-y-3">
+                      <p className="text-xs text-muted-foreground">
+                        Found {pagePostsResponse.total} post(s) from page {pagePostsResponse.page_id}
+                      </p>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {pagePostsResponse.data.map((post: any, index: number) => (
+                          <div key={post.id || index} className="p-3 rounded-md bg-background border">
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <p className="text-xs text-muted-foreground">
+                                {post.created_time ? new Date(post.created_time).toLocaleString() : 'N/A'}
+                              </p>
+                              <div className="flex gap-3 text-xs text-muted-foreground">
+                                {post.like_count !== undefined && (
+                                  <span>❤️ {post.like_count}</span>
+                                )}
+                                {post.comment_count !== undefined && (
+                                  <span>💬 {post.comment_count}</span>
+                                )}
+                              </div>
+                            </div>
+                            {post.message && (
+                              <p className="text-sm line-clamp-3">{post.message}</p>
+                            )}
+                            {post.permalink_url && (
+                              <a
+                                href={post.permalink_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline mt-2 inline-block"
+                              >
+                                View on Facebook →
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">No posts found</p>
+                  )}
+                  
+                  {/* Raw JSON pour debug */}
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                      View raw JSON response
+                    </summary>
+                    <pre className="max-h-64 overflow-auto text-xs bg-background p-3 rounded-md border mt-2">
+                      {JSON.stringify(pagePostsResponse, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">
+                  No page posts fetched yet. Enter a Facebook Page ID and click "Fetch Page Posts" to retrieve posts.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Engagement Rate</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">4.2%</div>
-              <p className="text-xs text-success flex items-center gap-1 mt-1">
-                <TrendingUp className="h-3 w-3" />
-                +0.8% vs last week
-              </p>
-            </CardContent>
-          </Card>
+        {/* Quick Stats - Afficher les métriques depuis insightsResponse si disponible */}
+        {insightsResponse?.metrics && (
+          <div className="grid gap-4 md:grid-cols-4">
+            {insightsResponse.metrics.reach !== undefined && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Reach</CardTitle>
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{insightsResponse.metrics.reach.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground mt-1">From Meta Insights API</p>
+                </CardContent>
+              </Card>
+            )}
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Impressions</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">1.2M</div>
-              <p className="text-xs text-success flex items-center gap-1 mt-1">
-                <TrendingUp className="h-3 w-3" />
-                +18.7% vs last week
-              </p>
-            </CardContent>
-          </Card>
+            {insightsResponse.metrics.impressions !== undefined && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Impressions</CardTitle>
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{insightsResponse.metrics.impressions.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground mt-1">From Meta Insights API</p>
+                </CardContent>
+              </Card>
+            )}
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Followers Growth</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">+2,847</div>
-              <p className="text-xs text-success flex items-center gap-1 mt-1">
-                <TrendingUp className="h-3 w-3" />
-                +34.2% vs last week
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+            {insightsResponse.metrics.profile_views !== undefined && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Profile Views</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{insightsResponse.metrics.profile_views.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground mt-1">From Meta Insights API</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {insightsResponse.metrics.website_clicks !== undefined && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Website Clicks</CardTitle>
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{insightsResponse.metrics.website_clicks.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground mt-1">From Meta Insights API</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
 
         {/* Tabs */}
         <Tabs defaultValue="engagement" className="space-y-4">
@@ -223,13 +371,13 @@ export default function Analytics() {
           </TabsList>
 
           <TabsContent value="engagement" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Engagement Trends</CardTitle>
-                  <CardDescription>Daily engagement rate over time</CardDescription>
-                </CardHeader>
-                <CardContent>
+            <Card>
+              <CardHeader>
+                <CardTitle>Engagement Trends</CardTitle>
+                <CardDescription>Daily engagement rate over time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {engagementTrendData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={engagementTrendData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -251,27 +399,13 @@ export default function Analytics() {
                       />
                     </AreaChart>
                   </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Top Performing Creators</CardTitle>
-                  <CardDescription>By average engagement rate</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={topPerformingCreators} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis dataKey="username" type="category" width={100} />
-                      <Tooltip />
-                      <Bar dataKey="avg_engagement" fill="hsl(var(--accent))" name="Avg Engagement (%)" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
+                ) : (
+                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                    <p className="text-sm">No engagement data available. Fetch insights to see trends.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="reach" className="space-y-4">
@@ -281,38 +415,44 @@ export default function Analytics() {
                 <CardDescription>Organic vs Paid reach over time</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <AreaChart data={reachData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="date"
-                      tickFormatter={(value) =>
-                        new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                      }
-                    />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Area
-                      type="monotone"
-                      dataKey="organic"
-                      stackId="1"
-                      stroke="hsl(var(--primary))"
-                      fill="hsl(var(--primary))"
-                      fillOpacity={0.8}
-                      name="Organic Reach"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="paid"
-                      stackId="1"
-                      stroke="hsl(var(--accent))"
-                      fill="hsl(var(--accent))"
-                      fillOpacity={0.8}
-                      name="Paid Reach"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {reachData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={400}>
+                    <AreaChart data={reachData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(value) =>
+                          new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        }
+                      />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Area
+                        type="monotone"
+                        dataKey="organic"
+                        stackId="1"
+                        stroke="hsl(var(--primary))"
+                        fill="hsl(var(--primary))"
+                        fillOpacity={0.8}
+                        name="Organic Reach"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="paid"
+                        stackId="1"
+                        stroke="hsl(var(--accent))"
+                        fill="hsl(var(--accent))"
+                        fillOpacity={0.8}
+                        name="Paid Reach"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+                    <p className="text-sm">No reach data available. Fetch insights to see trends.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -325,25 +465,31 @@ export default function Analytics() {
                   <CardDescription>Breakdown by media type</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {pieData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                      <p className="text-sm">No content data available. Fetch insights to see distribution.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -353,23 +499,23 @@ export default function Analytics() {
                   <CardDescription>Top 5 by engagement rate</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {[
-                      { title: 'Summer collection launch', engagement: 8.2, reach: 245000 },
-                      { title: 'Behind the scenes shoot', engagement: 7.9, reach: 198000 },
-                      { title: 'Product reveal teaser', engagement: 7.5, reach: 234000 },
-                      { title: 'Customer testimonial', engagement: 6.8, reach: 187000 },
-                      { title: 'Influencer collaboration', engagement: 6.5, reach: 215000 },
-                    ].map((post, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">{post.title}</p>
-                          <p className="text-xs text-muted-foreground">{post.reach.toLocaleString()} reach</p>
+                  {topPerformingCreators.length > 0 ? (
+                    <div className="space-y-4">
+                      {topPerformingCreators.map((creator, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">@{creator.username}</p>
+                            <p className="text-xs text-muted-foreground">{creator.posts} posts</p>
+                          </div>
+                          <Badge variant="secondary">{creator.avg_engagement.toFixed(1)}%</Badge>
                         </div>
-                        <Badge variant="secondary">{post.engagement}%</Badge>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                      <p className="text-sm">No creator data available. Fetch insights to see top performers.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -385,72 +531,40 @@ export default function Analytics() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="p-4 rounded-lg border">
-                    <p className="text-sm text-muted-foreground">Story Views</p>
-                    <p className="text-2xl font-bold mt-1">24.5K</p>
-                    <p className="text-xs text-success mt-1">+18.2% vs last week</p>
+                {insightsResponse?.metrics ? (
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {insightsResponse.metrics.impressions !== undefined && (
+                      <div className="p-4 rounded-lg border">
+                        <p className="text-sm text-muted-foreground">Impressions</p>
+                        <p className="text-2xl font-bold mt-1">{insightsResponse.metrics.impressions.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground mt-1">From Meta Insights API</p>
+                      </div>
+                    )}
+                    {insightsResponse.metrics.reach !== undefined && (
+                      <div className="p-4 rounded-lg border">
+                        <p className="text-sm text-muted-foreground">Reach</p>
+                        <p className="text-2xl font-bold mt-1">{insightsResponse.metrics.reach.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground mt-1">From Meta Insights API</p>
+                      </div>
+                    )}
+                    {insightsResponse.metrics.profile_views !== undefined && (
+                      <div className="p-4 rounded-lg border">
+                        <p className="text-sm text-muted-foreground">Profile Views</p>
+                        <p className="text-2xl font-bold mt-1">{insightsResponse.metrics.profile_views.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground mt-1">From Meta Insights API</p>
+                      </div>
+                    )}
                   </div>
-                  <div className="p-4 rounded-lg border">
-                    <p className="text-sm text-muted-foreground">Saves</p>
-                    <p className="text-2xl font-bold mt-1">3.2K</p>
-                    <p className="text-xs text-success mt-1">+24.7% vs last week</p>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-sm">No Instagram insights data available.</p>
+                    <p className="text-xs mt-2">Use the "Live Insights Fetch" section above to fetch insights from Meta API.</p>
                   </div>
-                  <div className="p-4 rounded-lg border">
-                    <p className="text-sm text-muted-foreground">Shares</p>
-                    <p className="text-2xl font-bold mt-1">1.8K</p>
-                    <p className="text-xs text-success mt-1">+31.4% vs last week</p>
-                  </div>
-                </div>
+                )}
 
-                <div className="grid gap-4 md:grid-cols-2 mt-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Audience Demographics</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">18-24 years</span>
-                        <span className="text-sm font-semibold">34%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">25-34 years</span>
-                        <span className="text-sm font-semibold">42%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">35-44 years</span>
-                        <span className="text-sm font-semibold">18%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">45+ years</span>
-                        <span className="text-sm font-semibold">6%</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Top Locations</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">United States</span>
-                        <span className="text-sm font-semibold">45%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">United Kingdom</span>
-                        <span className="text-sm font-semibold">22%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">France</span>
-                        <span className="text-sm font-semibold">15%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Germany</span>
-                        <span className="text-sm font-semibold">12%</span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <div className="mt-4 text-center py-4 text-muted-foreground">
+                  <p className="text-sm">Demographics and location data require additional Meta API calls.</p>
+                  <p className="text-xs mt-2">These metrics are available via the Meta Insights API with appropriate permissions.</p>
                 </div>
               </CardContent>
             </Card>
@@ -466,37 +580,42 @@ export default function Analytics() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4">
-                  {[
-                    { name: 'Insider Trends Official', category: 'Analytics', likes: 45200, followers: 48900, posts: 1247 },
-                    { name: 'Fashion Insights Hub', category: 'Fashion', likes: 128500, followers: 132000, posts: 2894 },
-                    { name: 'Trend Analytics Pro', category: 'Business', likes: 67800, followers: 72100, posts: 1567 },
-                  ].map((page, index) => (
-                    <div key={index} className="p-4 rounded-lg border">
+                {pagePostsResponse?.data && pagePostsResponse.data.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg border">
                       <div className="flex items-center justify-between mb-3">
                         <div>
-                          <p className="font-semibold">{page.name}</p>
-                          <p className="text-sm text-muted-foreground">{page.category}</p>
+                          <p className="font-semibold">Page ID: {pagePostsResponse.page_id}</p>
+                          <p className="text-sm text-muted-foreground">Facebook Page</p>
                         </div>
                         <Badge variant="secondary">Public Data</Badge>
                       </div>
                       <div className="grid grid-cols-3 gap-4 text-center">
                         <div>
-                          <p className="text-lg font-bold">{(page.likes / 1000).toFixed(1)}K</p>
-                          <p className="text-xs text-muted-foreground">Likes</p>
+                          <p className="text-lg font-bold">{pagePostsResponse.total}</p>
+                          <p className="text-xs text-muted-foreground">Posts Retrieved</p>
                         </div>
                         <div>
-                          <p className="text-lg font-bold">{(page.followers / 1000).toFixed(1)}K</p>
-                          <p className="text-xs text-muted-foreground">Followers</p>
+                          <p className="text-lg font-bold">
+                            {pagePostsResponse.data.reduce((sum: number, p: any) => sum + (p.like_count || 0), 0).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Total Likes</p>
                         </div>
                         <div>
-                          <p className="text-lg font-bold">{page.posts.toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground">Posts</p>
+                          <p className="text-lg font-bold">
+                            {pagePostsResponse.data.reduce((sum: number, p: any) => sum + (p.comment_count || 0), 0).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Total Comments</p>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-sm">No page data available.</p>
+                    <p className="text-xs mt-2">Use the "Facebook Page Posts" section above to fetch posts from a Facebook Page.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -504,24 +623,35 @@ export default function Analytics() {
               <CardHeader>
                 <CardTitle>Public Engagement Analytics</CardTitle>
                 <CardDescription>
-                  Aggregated and anonymized insights from public Pages
+                  Aggregated insights from fetched Facebook Page posts
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-lg border">
-                    <span className="text-sm">Average Post Engagement</span>
-                    <span className="text-sm font-semibold">4.2%</span>
+                {pagePostsResponse?.data && pagePostsResponse.data.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 rounded-lg border">
+                      <span className="text-sm">Total Posts Retrieved</span>
+                      <span className="text-sm font-semibold">{pagePostsResponse.total}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg border">
+                      <span className="text-sm">Average Likes per Post</span>
+                      <span className="text-sm font-semibold">
+                        {Math.round(pagePostsResponse.data.reduce((sum: number, p: any) => sum + (p.like_count || 0), 0) / pagePostsResponse.data.length).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg border">
+                      <span className="text-sm">Average Comments per Post</span>
+                      <span className="text-sm font-semibold">
+                        {Math.round(pagePostsResponse.data.reduce((sum: number, p: any) => sum + (p.comment_count || 0), 0) / pagePostsResponse.data.length).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg border">
-                    <span className="text-sm">Total Public Reach</span>
-                    <span className="text-sm font-semibold">2.4M</span>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-sm">No engagement data available.</p>
+                    <p className="text-xs mt-2">Fetch page posts to see engagement analytics.</p>
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg border">
-                    <span className="text-sm">Community Growth Rate</span>
-                    <span className="text-sm font-semibold">+18.7%</span>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
