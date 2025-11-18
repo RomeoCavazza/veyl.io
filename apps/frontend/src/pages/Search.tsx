@@ -161,14 +161,15 @@ export default function Search() {
             const metaPosts: PostHit[] = metaResponse.data.map((item: any) => ({
               id: item.id,
               platform: 'instagram',
-              username: item.username || item.author || 'unknown',
+              username: item.username || item.author || undefined,
+              author: item.username || item.author || undefined,
               caption: item.caption,
               media_type: item.media_type,
               media_url: item.media_url,
               permalink: item.permalink,
               posted_at: item.timestamp || item.posted_at,
-              like_count: item.like_count || 0,
-              comment_count: item.comments_count || item.comment_count || 0,
+              like_count: item.like_count ?? null,
+              comment_count: item.comments_count || item.comment_count ?? null,
               score_trend: item.like_count ?? 0,
             }));
             allPosts.push(...metaPosts);
@@ -209,10 +210,12 @@ export default function Search() {
             const tiktokPosts: PostHit[] = tiktokResponse.data.map((item) => ({
               id: item.id,
               platform: 'tiktok',
-              username: item.creator_username || item.creator_display_name || 'unknown',
+              username: item.creator_username || item.creator_display_name || undefined,
+              author: item.creator_username || item.creator_display_name || undefined,
               caption: item.title || item.video_description,
               media_type: 'video',
               media_url: item.cover_image_url || item.thumbnail_url,
+              thumbnail_url: item.thumbnail_url,
               permalink: item.share_url || `https://www.tiktok.com/@${item.creator_username || 'user'}/video/${item.id}`,
               posted_at: item.create_time,
               like_count: item.like_count ?? null,
@@ -273,11 +276,9 @@ export default function Search() {
         if (useTikTok) sources.push('TikTok');
         toast({
           title: `Found ${allPosts.length} posts`,
-          description: allPosts.length > 0 && allPosts[0].platform === 'instagram' && useInstagram
-            ? '✨ Live data from Meta API'
-            : allPosts.length > 0 && allPosts[0].platform === 'tiktok' && useTikTok
-            ? '✨ Live data from TikTok API'
-            : `💾 Loaded from ${sources.join(' + ')} (${allPosts.length > 0 ? 'API + ' : ''}database)`,
+          description: apiSuccess && allPosts.length > 0
+            ? `✨ Live data from ${sources.join(' + ')} API`
+            : `💾 Loaded from database`,
         });
       } else {
         if (import.meta.env.DEV) {
@@ -552,100 +553,67 @@ export default function Search() {
         <section className="container py-8">
           {posts.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {posts.map((post) => (
+              {posts.map((post) => {
+                // Extraire username pour l'affichage
+                let username = post.username || post.author;
+                if (!username && post.permalink) {
+                  const permalinkMatch = post.permalink.match(/instagram\.com\/([^/]+)/);
+                  if (permalinkMatch && !['p', 'reel', 'tv', 'stories'].includes(permalinkMatch[1])) {
+                    username = permalinkMatch[1];
+                  }
+                }
+                
+                // Déterminer si c'est une image
+                const isImage = post.media_url ? /\.(jpg|jpeg|png|gif|webp)$/i.test(post.media_url.split('?')[0]) : false;
+                const embedUrl = post.permalink ? `${post.permalink.replace(/\/$/, '')}/embed` : undefined;
+                
+                return (
                 <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <CardContent className="p-0">
-                    {/* Media Display - Instagram Embed or TikTok Thumbnail */}
-                    {post.platform === 'instagram' && post.permalink && (
-                      <div className="aspect-square bg-muted relative">
-                        {post.media_url ? (
-                          <img
-                            src={post.media_url}
-                            alt={post.caption || 'Instagram post'}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              // Si l'image échoue, essayer l'iframe embed
-                              const img = e.target as HTMLImageElement;
-                              img.style.display = 'none';
-                              const container = img.parentElement;
-                              if (container) {
-                                const postCode = post.permalink.split('/p/')[1]?.split('/')[0]?.split('?')[0];
-                                if (postCode) {
-                                  const iframe = document.createElement('iframe');
-                                  iframe.src = `https://www.instagram.com/p/${postCode}/embed`;
-                                  iframe.className = 'w-full h-full border-0';
-                                  iframe.setAttribute('scrolling', 'no');
-                                  iframe.setAttribute('allowTransparency', 'true');
-                                  container.appendChild(iframe);
-                                }
-                              }
-                            }}
-                          />
-                        ) : (
-                          <iframe
-                            src={`https://www.instagram.com/p/${post.permalink.split('/p/')[1]?.split('/')[0]?.split('?')[0]}/embed`}
-                            className="w-full h-full border-0"
-                            scrolling="no"
-                            allowTransparency
-                            onError={(e) => {
-                              // Si l'iframe échoue, afficher un placeholder
-                              const iframe = e.target as HTMLIFrameElement;
-                              iframe.style.display = 'none';
-                              const container = iframe.parentElement;
-                              if (container) {
-                                container.innerHTML = '<div class="w-full h-full flex items-center justify-center text-muted-foreground text-sm">Image unavailable</div>';
-                              }
-                            }}
-                          />
-                        )}
-                      </div>
-                    )}
-                    {post.platform === 'tiktok' && (
-                      <div className="aspect-square bg-gradient-to-br from-pink-500 via-red-500 to-blue-500 relative overflow-hidden cursor-pointer group">
-                        {(post.media_url || post.thumbnail_url) ? (
+                    {/* Media Display - Aligné avec ProjectPostsList */}
+                    <div className="aspect-square relative overflow-hidden bg-muted">
+                      {post.platform === 'tiktok' ? (
+                        post.media_url || post.thumbnail_url ? (
                           <img
                             src={post.thumbnail_url || post.media_url}
-                            alt={post.caption || 'TikTok video'}
+                            alt={post.caption || username || 'TikTok video'}
                             className="w-full h-full object-cover"
-                            loading="lazy"
                             onError={(e) => {
-                              // Si l'image échoue, afficher le placeholder
                               const img = e.target as HTMLImageElement;
                               img.style.display = 'none';
                               const placeholder = img.parentElement?.querySelector('.tiktok-placeholder') as HTMLElement;
-                              if (placeholder) {
-                                placeholder.style.display = 'flex';
-                              } else {
-                                // Créer le placeholder si il n'existe pas
-                                const container = img.parentElement;
-                                if (container) {
-                                  const placeholderDiv = document.createElement('div');
-                                  placeholderDiv.className = 'tiktok-placeholder w-full h-full flex flex-col items-center justify-center text-white';
-                                  placeholderDiv.innerHTML = '<svg class="w-16 h-16 mb-2" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg><span class="text-sm font-medium">TikTok Video</span>';
-                                  container.appendChild(placeholderDiv);
-                                }
-                              }
+                              if (placeholder) placeholder.style.display = 'flex';
                             }}
                           />
-                        ) : null}
-                        {/* Placeholder TikTok si pas de media_url ou si image échoue */}
-                        <div className={`tiktok-placeholder w-full h-full flex flex-col items-center justify-center text-white ${(post.media_url || post.thumbnail_url) ? 'hidden' : ''}`}>
+                        ) : null
+                      ) : post.media_url && isImage ? (
+                        <img
+                          src={post.media_url}
+                          alt={post.caption || username || 'Instagram post'}
+                          className="object-cover w-full h-full"
+                        />
+                      ) : embedUrl ? (
+                        <iframe
+                          src={embedUrl}
+                          title={post.id}
+                          className="w-full h-full"
+                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+                        />
+                      ) : null}
+                      {post.platform === 'tiktok' && (
+                        <div className={`tiktok-placeholder w-full h-full bg-gradient-to-br from-pink-500 via-red-500 to-blue-500 flex flex-col items-center justify-center text-white ${post.media_url || post.thumbnail_url ? 'hidden' : ''}`}>
                           <svg className="w-16 h-16 mb-2" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
                           </svg>
                           <span className="text-sm font-medium">TikTok Video</span>
                         </div>
-                        <Badge variant="secondary" className="absolute top-2 right-2 bg-black/50 text-white">
-                          <Sparkles className="w-3 h-3 mr-1" />
-                          TikTok
-                        </Badge>
-                      </div>
-                    )}
-                    {!post.platform && !post.permalink && !post.media_url && (
-                      <div className="aspect-square bg-muted flex items-center justify-center">
-                        <span className="text-muted-foreground text-sm">No media</span>
-                  </div>
-                    )}
+                      )}
+                      {!post.media_url && !embedUrl && post.platform !== 'tiktok' && (
+                        <div className="w-full h-full flex items-center justify-center bg-muted/50">
+                          <span className="text-muted-foreground text-sm">No media</span>
+                        </div>
+                      )}
+                    </div>
                   
                     {/* Content */}
                     <div className="p-4 space-y-3">
@@ -721,7 +689,8 @@ export default function Search() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
           </div>
           ) : (
             <div className="text-center py-12">
