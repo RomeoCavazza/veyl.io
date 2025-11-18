@@ -93,20 +93,66 @@ async def get_oembed(
                 detail="Invalid Instagram URL. URL must start with https://www.instagram.com/ or https://instagram.com/"
             )
         
-        # Récupérer le token (user OAuth ou système)
-        logger.info(f"Fetching oEmbed for URL: {cleaned_url} (original: {url}, user: {current_user.id if current_user else 'anonymous'})")
-        access_token = _get_meta_token(db, current_user)
-        logger.info(f"Token retrieved successfully (length: {len(access_token) if access_token else 0})")
+        # Pour l'oEmbed, utiliser le token système en priorité car il nécessite une permission spéciale
+        # qui n'est probablement pas disponible pour les tokens utilisateur
+        access_token = None
+        token_source = None
+        
+        # 1. Essayer le token système d'abord (pour oEmbed, c'est plus fiable)
+        if settings.META_LONG_TOKEN:
+            access_token = settings.META_LONG_TOKEN
+            token_source = "system META_LONG_TOKEN"
+        elif settings.IG_ACCESS_TOKEN:
+            access_token = settings.IG_ACCESS_TOKEN
+            token_source = "system IG_ACCESS_TOKEN"
+        
+        # 2. Si pas de token système, essayer le token utilisateur
+        if not access_token:
+            logger.info(f"No system token found, trying user token (user: {current_user.id if current_user else 'anonymous'})")
+            access_token = _get_meta_token(db, current_user)
+            token_source = "user OAuth token"
+        
+        logger.info(f"Fetching oEmbed for URL: {cleaned_url} (original: {url}, token: {token_source})")
         
         # Appeler l'API Meta avec l'URL nettoyée
-        oembed_data = await call_meta(
-            method="GET",
-            endpoint="v21.0/instagram_oembed",
-            params={"url": cleaned_url},
-            access_token=access_token,
-        )
-        logger.info(f"oEmbed data retrieved successfully for {cleaned_url}")
-        return oembed_data
+        try:
+            oembed_data = await call_meta(
+                method="GET",
+                endpoint="v21.0/instagram_oembed",
+                params={"url": cleaned_url},
+                access_token=access_token,
+            )
+            logger.info(f"oEmbed data retrieved successfully for {cleaned_url} using {token_source}")
+            return oembed_data
+        except HTTPException as meta_error:
+            # Si le token système échoue avec une erreur de permission (400/403), 
+            # et qu'on a un token utilisateur disponible, essayer le token utilisateur
+            if token_source and token_source.startswith("system") and current_user:
+                error_code = None
+                if isinstance(meta_error.detail, dict) and "detail" in meta_error.detail:
+                    meta_error_detail = meta_error.detail.get("detail", {})
+                    if isinstance(meta_error_detail, dict) and "error" in meta_error_detail:
+                        error_code = meta_error_detail["error"].get("code") if isinstance(meta_error_detail["error"], dict) else None
+                
+                # Si erreur 400/403 (permission refusée) avec token système, essayer token utilisateur
+                if meta_error.status_code in (400, 403) or error_code == 10:
+                    logger.warning(f"System token failed with {meta_error.status_code}, trying user token as fallback")
+                    try:
+                        user_token = _get_meta_token(db, current_user)
+                        oembed_data = await call_meta(
+                            method="GET",
+                            endpoint="v21.0/instagram_oembed",
+                            params={"url": cleaned_url},
+                            access_token=user_token,
+                        )
+                        logger.info(f"oEmbed data retrieved successfully using user token fallback")
+                        return oembed_data
+                    except HTTPException:
+                        # Si le token utilisateur échoue aussi, propager l'erreur originale du token système
+                        pass
+            
+            # Propager l'erreur
+            raise
     except HTTPException as http_exc:
         # Propager les HTTPException telles quelles (incluant MetaAPIError qui hérite de HTTPException)
         logger.error(f"HTTPException in oEmbed endpoint for {url}: {http_exc.status_code} - {http_exc.detail}")
