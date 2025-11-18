@@ -132,18 +132,20 @@ export function ProjectPostsList({
                         </a>
                       </Button>
                     )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEmbedClick(post);
-                      }}
-                    >
-                      <Code2 className="h-3 w-3 mr-1" />
-                      Embed
-                    </Button>
+                    {post.platform === 'instagram' && post.permalink && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEmbedClick(post);
+                        }}
+                      >
+                        <Code2 className="h-3 w-3 mr-1" />
+                        Embed
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

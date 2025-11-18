@@ -6,6 +6,7 @@ import { InstagramInsights } from '@/components/InstagramInsights';
 import { ProjectPostsList } from '@/components/ProjectPostsList';
 import { ProjectPostsTable } from '@/components/ProjectPostsTable';
 import { PostDetailDialog } from '@/components/PostDetailDialog';
+import { EmbedDialog } from '@/components/EmbedDialog';
 import { ProjectAnalytics } from '@/components/ProjectAnalytics';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -938,6 +939,12 @@ export default function ProjectDetail() {
             projectId={id || ''}
             open={postDialogOpen}
             onOpenChange={setPostDialogOpen}
+          />
+
+          <EmbedDialog
+            post={selectedPost}
+            open={embedDialogOpen}
+            onOpenChange={setEmbedDialogOpen}
           />
 
           {/* Dialog: Edit project */}
