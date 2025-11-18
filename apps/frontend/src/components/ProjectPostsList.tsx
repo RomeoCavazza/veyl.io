@@ -25,7 +25,16 @@ export function ProjectPostsList({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {posts.length > 0 ? (
           posts.map((post) => {
-            const creator = creators.find(c => c.handle === post.author || c.handle === post.username);
+            // Extraire username depuis permalink si manquant
+            let username = post.username || post.author;
+            if (!username && post.permalink) {
+              const permalinkMatch = post.permalink.match(/instagram\.com\/([^/]+)/);
+              if (permalinkMatch && !['p', 'reel', 'tv', 'stories'].includes(permalinkMatch[1])) {
+                username = permalinkMatch[1];
+              }
+            }
+            
+            const creator = creators.find(c => c.handle === post.author || c.handle === post.username || c.handle === username);
             const isImage = post.media_url ? /\.(jpg|jpeg|png|gif|webp)$/i.test(post.media_url.split('?')[0]) : false;
             const embedUrl = post.permalink ? `${post.permalink.replace(/\/$/, '')}/embed` : undefined;
             return (
@@ -39,7 +48,7 @@ export function ProjectPostsList({
                     post.media_url ? (
                       <img
                         src={post.media_url}
-                        alt={post.caption || post.author || 'TikTok video'}
+                        alt={post.caption || username || 'TikTok video'}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           const img = e.target as HTMLImageElement;
@@ -52,7 +61,7 @@ export function ProjectPostsList({
                   ) : post.media_url && isImage ? (
                     <img
                       src={post.media_url}
-                      alt={post.caption || post.author}
+                      alt={post.caption || username || 'Instagram post'}
                       className="object-cover w-full h-full"
                     />
                   ) : embedUrl ? (
@@ -84,24 +93,24 @@ export function ProjectPostsList({
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <img
-                      src={`https://unavatar.io/instagram/${post.username || post.author || 'instagram'}`}
-                      alt={post.username || post.author || 'creator'}
+                      src={`https://unavatar.io/instagram/${username || 'instagram'}`}
+                      alt={username || 'creator'}
                       className="w-8 h-8 rounded-full object-cover bg-muted"
                       onError={(event) => {
-                        const username = post.username || post.author || 'IG';
-                        (event.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${username}`;
+                        const fallbackUsername = username || 'IG';
+                        (event.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${fallbackUsername}`;
                       }}
                     />
                     <div className="flex-1 min-w-0">
-                      {(post.username || post.author) ? (
+                      {username ? (
                         <>
-                          <p className="font-semibold text-sm truncate">{post.username || post.author}</p>
+                          <p className="font-semibold text-sm truncate">{username}</p>
                           <p className="text-xs text-muted-foreground truncate">
-                            @{post.username || post.author}
+                            @{username}
                           </p>
                         </>
                       ) : (
-                        <p className="text-xs text-muted-foreground truncate">Unknown creator</p>
+                        <p className="text-xs text-muted-foreground truncate">Creator</p>
                       )}
                     </div>
                   </div>
@@ -109,18 +118,22 @@ export function ProjectPostsList({
                   <p className="text-sm line-clamp-2">{post.caption}</p>
 
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    {post.like_count !== null && post.like_count !== undefined && (
-                      <div className="flex items-center gap-1">
-                        <Heart className="h-4 w-4" />
-                        <span>{formatNumber(post.like_count)}</span>
-                      </div>
-                    )}
-                    {post.comment_count !== null && post.comment_count !== undefined && (
-                      <div className="flex items-center gap-1">
-                        <MessageCircle className="h-4 w-4" />
-                        <span>{formatNumber(post.comment_count)}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <Heart className="h-4 w-4" />
+                      <span>
+                        {(post.like_count !== null && post.like_count !== undefined) 
+                          ? formatNumber(post.like_count) 
+                          : '0'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <MessageCircle className="h-4 w-4" />
+                      <span>
+                        {(post.comment_count !== null && post.comment_count !== undefined) 
+                          ? formatNumber(post.comment_count) 
+                          : '0'}
+                      </span>
+                    </div>
                     {post.score_trend !== undefined && (
                       <div className="flex items-center gap-1 text-success">
                         <TrendingUp className="h-4 w-4" />

@@ -19,7 +19,20 @@ export function PostDetailDialog({ post, projectId, open, onOpenChange }: PostDe
 
   if (!post) return null;
 
-  const handle = post.username || post.author || 'instagram';
+  // Extraire username depuis permalink si manquant
+  let handle = post.username || post.author;
+  if (!handle && post.permalink) {
+    const permalinkMatch = post.permalink.match(/instagram\.com\/([^/]+)/);
+    if (permalinkMatch && !['p', 'reel', 'tv', 'stories'].includes(permalinkMatch[1])) {
+      handle = permalinkMatch[1];
+    }
+  }
+  
+  // Fallback seulement si vraiment rien trouvé
+  if (!handle) {
+    handle = 'instagram';
+  }
+  
   const handleSlug = handle.replace('@', '');
   const profilePic = `https://unavatar.io/instagram/${handle}`;
   const relativeTime = formatRelativeTime(post.posted_at, 'fr');
@@ -88,7 +101,7 @@ export function PostDetailDialog({ post, projectId, open, onOpenChange }: PostDe
                       navigate(`/projects/${projectId}/creator/${handleSlug}`);
                     }}
                   >
-                    {post.username}
+                    {handle}
                   </div>
                   {post.location && (
                     <div className="text-xs text-muted-foreground">{post.location}</div>
@@ -99,7 +112,7 @@ export function PostDetailDialog({ post, projectId, open, onOpenChange }: PostDe
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <div className="text-sm whitespace-pre-wrap">
-                <span className="font-semibold mr-2">{post.username}</span>
+                <span className="font-semibold mr-2">{handle}</span>
                 {formatCaption()}
               </div>
 

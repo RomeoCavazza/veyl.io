@@ -653,9 +653,19 @@ export default function Search() {
                         <Badge variant="secondary" className="text-xs">
                           {post.platform || 'instagram'}
                         </Badge>
-                        {(post.username || post.author) && (
-                          <span className="text-sm font-medium">@{post.username || post.author}</span>
-                        )}
+                        {(() => {
+                          // Extraire username depuis permalink si manquant
+                          let displayUsername = post.username || post.author;
+                          if (!displayUsername && post.permalink) {
+                            const permalinkMatch = post.permalink.match(/instagram\.com\/([^/]+)/);
+                            if (permalinkMatch && !['p', 'reel', 'tv', 'stories'].includes(permalinkMatch[1])) {
+                              displayUsername = permalinkMatch[1];
+                            }
+                          }
+                          return displayUsername ? (
+                            <span className="text-sm font-medium">@{displayUsername}</span>
+                          ) : null;
+                        })()}
                     </div>
 
                       {post.caption && (
@@ -666,19 +676,19 @@ export default function Search() {
 
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex gap-4">
-                          {post.like_count !== null && post.like_count !== undefined && (
-                            <span className="flex items-center gap-1">
-                        <Heart className="h-4 w-4" />
-                              {post.like_count.toLocaleString()}
-                            </span>
-                          )}
-                          {post.comment_count !== null && post.comment_count !== undefined && (
-                            <span className="flex items-center gap-1">
-                        <MessageCircle className="h-4 w-4" />
-                              {post.comment_count.toLocaleString()}
-                            </span>
-                          )}
-                    </div>
+                          <span className="flex items-center gap-1">
+                            <Heart className="h-4 w-4" />
+                            {(post.like_count !== null && post.like_count !== undefined) 
+                              ? post.like_count.toLocaleString() 
+                              : '0'}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MessageCircle className="h-4 w-4" />
+                            {(post.comment_count !== null && post.comment_count !== undefined) 
+                              ? post.comment_count.toLocaleString() 
+                              : '0'}
+                          </span>
+                        </div>
 
                         <div className="flex items-center gap-2">
                           {post.platform === 'instagram' && post.permalink && (
