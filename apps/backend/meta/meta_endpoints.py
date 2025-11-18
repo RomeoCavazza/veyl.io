@@ -456,13 +456,37 @@ async def get_instagram_public_content(
     for post in posts:
         payload_data = load_post_payload(post)
         metrics = payload_data["metrics"]
+        api_payload = payload_data["api_payload"]
+        
+        # Extraire username depuis api_payload ou permalink
+        author = post.author
+        if not author and api_payload:
+            author = (
+                api_payload.get('username')
+                or api_payload.get('owner_username')
+                or api_payload.get('from', {}).get('username')
+            )
+        # Si toujours pas trouvé, essayer depuis permalink (si stocké dans api_payload)
+        if not author and api_payload:
+            permalink = api_payload.get('permalink')
+            if permalink:
+                permalink_match = re.search(r'instagram\.com/([^/]+)/', permalink)
+                if permalink_match:
+                    potential_username = permalink_match.group(1)
+                    if potential_username not in ['p', 'reel', 'tv', 'stories']:
+                        author = potential_username
+        
         results.append({
             "id": post.id,
             "caption": post.caption,
             "media_url": post.media_url,
-            "like_count": metrics.get("likes", 0),
-            "comments_count": metrics.get("comments", 0),
+            "permalink": api_payload.get('permalink') if api_payload else None,
+            "username": author,
+            "author": author,
+            "like_count": metrics.get("likes") or metrics.get("like_count") or 0,
+            "comments_count": metrics.get("comments") or metrics.get("comments_count") or metrics.get("comment_count") or 0,
             "timestamp": post.posted_at.isoformat() if post.posted_at else None,
+            "media_type": api_payload.get('media_type') if api_payload else None,
         })
     
     return {"data": results, "source": "database_fallback"}
