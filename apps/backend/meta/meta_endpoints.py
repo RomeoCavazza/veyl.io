@@ -121,9 +121,12 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]], ret
     
     logger.info(f"Fetching oEmbed for {cleaned_url} with {len(tokens)} token(s)")
     
+    # Collecter toutes les erreurs pour choisir la plus pertinente
+    errors_by_code = {}  # {error_code: (error, token_source)}
     last_error = None
+    
     for token_source, access_token in tokens:
-        # Retry jusqu'à 2 fois pour les erreurs transitoires (code 2)
+        # Retry jusqu'à 3 fois pour les erreurs transitoires (code 2)
         max_retries = 3 if retry_transient else 1
         for attempt in range(max_retries):
             try:
@@ -148,13 +151,24 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]], ret
                 if error_code == 2 and attempt < max_retries - 1:
                     continue
                 
-                # Sinon, sauvegarder l'erreur et passer au token suivant
+                # Sauvegarder l'erreur par code (prioriser code 10 sur code 2)
+                if error_code not in errors_by_code:
+                    errors_by_code[error_code] = (meta_error, token_source)
                 last_error = meta_error
                 break
     
     # Tous les tokens ont échoué
     if not last_error:
         raise HTTPException(status_code=500, detail="No tokens available")
+    
+    # Prioriser les erreurs : code 10 (permission) est plus informatif que code 2 (transitoire)
+    # Si on a eu les deux, retourner code 10 car c'est plus explicite pour l'app review
+    if 10 in errors_by_code:
+        last_error, token_source = errors_by_code[10]
+    elif 2 in errors_by_code:
+        last_error, token_source = errors_by_code[2]
+    else:
+        token_source = "unknown"
     
     error_code, error_message = _extract_meta_error(last_error)
     
