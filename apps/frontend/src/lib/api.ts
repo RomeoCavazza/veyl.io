@@ -121,11 +121,33 @@ export async function fetchMetaIGPublic(tag: string, limit: number = 12): Promis
     headers: withAuthHeaders(),
   });
 
-  if (!response.ok) {
+  // Le backend fait toujours le fallback DB, donc même en cas d'erreur Meta API,
+  // il devrait retourner 200 avec {"data": [...], "source": "database_fallback"}
+  // Mais si c'est vraiment une erreur serveur (500+), on la propage
+  if (!response.ok && response.status >= 500) {
     throw new Error(`HTTP_${response.status}`);
   }
 
-  return response.json();
+  // Pour les erreurs 4xx, essayer quand même de parser la réponse
+  // car le backend peut avoir fait le fallback DB
+  try {
+    const data = await response.json();
+    // Si le backend a fait le fallback DB, il retourne toujours {"data": [...], "source": "..."}
+    if (data && typeof data === 'object' && 'data' in data) {
+      return data;
+    }
+    // Sinon, c'est une vraie erreur
+    if (!response.ok) {
+      throw new Error(`HTTP_${response.status}`);
+    }
+    return data;
+  } catch (parseError) {
+    // Si on ne peut pas parser la réponse, c'est une erreur
+    if (!response.ok) {
+      throw new Error(`HTTP_${response.status}`);
+    }
+    throw parseError;
+  }
 }
 
 export async function fetchMetaOEmbed(permalink: string): Promise<any> {
