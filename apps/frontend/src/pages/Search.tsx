@@ -481,9 +481,9 @@ export default function Search() {
       {/* Hero */}
       <section className="container py-8 md:py-12">
         <div className="flex flex-col items-center text-center space-y-6 max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gradient">
-            Search
-          </h1>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gradient">
+              Search
+            </h1>
 
           <div className="w-full">
             <AISearchBar onSearch={(query, platforms, modes) => handleSearch(query, platforms, modes)} />
@@ -556,12 +556,12 @@ export default function Search() {
                     )}
                     {post.platform === 'tiktok' && (
                       <div className="aspect-square bg-gradient-to-br from-pink-500 via-red-500 to-blue-500 relative overflow-hidden cursor-pointer group">
-                        {post.media_url ? (
-                          <img
-                            src={post.media_url}
+                    {post.media_url ? (
+                      <img
+                        src={post.media_url}
                             alt={post.caption || 'TikTok video'}
                             className="w-full h-full object-cover"
-                            onError={(e) => {
+                        onError={(e) => {
                               // Si l'image échoue, afficher le placeholder
                               const img = e.target as HTMLImageElement;
                               img.style.display = 'none';
@@ -586,19 +586,19 @@ export default function Search() {
                     {!post.platform && !post.permalink && !post.media_url && (
                       <div className="aspect-square bg-muted flex items-center justify-center">
                         <span className="text-muted-foreground text-sm">No media</span>
-                      </div>
+                  </div>
                     )}
-
+                  
                     {/* Content */}
                     <div className="p-4 space-y-3">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="text-xs">
                           {post.platform || 'instagram'}
                         </Badge>
                         {post.username && (
                           <span className="text-sm font-medium">@{post.username}</span>
                         )}
-                      </div>
+                    </div>
 
                       {post.caption && (
                         <p className="text-sm text-muted-foreground line-clamp-2">
@@ -610,32 +610,32 @@ export default function Search() {
                         <div className="flex gap-4">
                           {post.like_count !== undefined && (
                             <span className="flex items-center gap-1">
-                              <Heart className="h-4 w-4" />
+                        <Heart className="h-4 w-4" />
                               {post.like_count}
                             </span>
                           )}
                           {post.comment_count !== undefined && (
                             <span className="flex items-center gap-1">
-                              <MessageCircle className="h-4 w-4" />
+                        <MessageCircle className="h-4 w-4" />
                               {post.comment_count}
                             </span>
                           )}
-                        </div>
+                    </div>
 
                         <div className="flex items-center gap-2">
                           {post.platform === 'instagram' && post.permalink && (
-                            <Button
+                      <Button
                               variant="ghost"
-                              size="sm"
+                        size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedPostForEmbed(post);
-                                setEmbedDialogOpen(true);
-                              }}
+                          setEmbedDialogOpen(true);
+                        }}
                               className="h-8 px-2"
-                            >
+                      >
                               <Code2 className="h-4 w-4" />
-                            </Button>
+                      </Button>
                           )}
                           {post.permalink && (
                             <a
@@ -653,7 +653,7 @@ export default function Search() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
+          </div>
           ) : (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No results found</p>
