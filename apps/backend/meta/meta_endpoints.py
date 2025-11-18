@@ -104,8 +104,10 @@ def _extract_meta_error(meta_error: HTTPException) -> tuple[Optional[int], Optio
     return error_code, error_message
 
 
-async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]]) -> dict:
+async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]], retry_transient: bool = True) -> dict:
     """Essaie de récupérer oEmbed avec une liste de tokens"""
+    import asyncio
+    
     cleaned_url = url.split('?')[0].split('#')[0]
     
     if not cleaned_url.startswith(('https://www.instagram.com/', 'https://instagram.com/')):
@@ -114,23 +116,41 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]]) -> 
             detail="Invalid Instagram URL. URL must start with https://www.instagram.com/ or https://instagram.com/"
         )
     
+    if not tokens:
+        raise HTTPException(status_code=500, detail="No tokens available")
+    
+    logger.info(f"Fetching oEmbed for {cleaned_url} with {len(tokens)} token(s)")
+    
     last_error = None
     for token_source, access_token in tokens:
-        try:
-            oembed_data = await call_meta(
-                method="GET",
-                endpoint="v21.0/instagram_oembed",
-                params={"url": cleaned_url},
-                access_token=access_token,
-            )
-            logger.info(f"oEmbed retrieved successfully using {token_source}")
-            return oembed_data
-        except HTTPException as meta_error:
-            last_error = meta_error
-            error_code, _ = _extract_meta_error(meta_error)
-            logger.warning(f"Token {token_source} failed: code={error_code}")
-            # Continuer avec le token suivant
-            continue
+        # Retry jusqu'à 2 fois pour les erreurs transitoires (code 2)
+        max_retries = 3 if retry_transient else 1
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    # Attendre avant de retry (backoff exponentiel)
+                    await asyncio.sleep(0.5 * (2 ** (attempt - 1)))
+                    logger.info(f"Retry attempt {attempt} for {token_source}")
+                
+                oembed_data = await call_meta(
+                    method="GET",
+                    endpoint="v21.0/instagram_oembed",
+                    params={"url": cleaned_url},
+                    access_token=access_token,
+                )
+                logger.info(f"oEmbed retrieved successfully using {token_source}")
+                return oembed_data
+            except HTTPException as meta_error:
+                error_code, error_message = _extract_meta_error(meta_error)
+                logger.warning(f"Token {token_source} failed (attempt {attempt + 1}/{max_retries}): code={error_code}, message={error_message}")
+                
+                # Si erreur transitoire (code 2) et qu'on peut retry, continuer la boucle
+                if error_code == 2 and attempt < max_retries - 1:
+                    continue
+                
+                # Sinon, sauvegarder l'erreur et passer au token suivant
+                last_error = meta_error
+                break
     
     # Tous les tokens ont échoué
     if not last_error:
@@ -138,8 +158,9 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]]) -> 
     
     error_code, error_message = _extract_meta_error(last_error)
     
-    # Code 10 = Permission non approuvée → 400
+    # Code 10 = Permission non approuvée → 400 (normal pendant app review)
     if error_code == 10:
+        logger.warning(f"Meta oEmbed permission not approved (code 10) - this is expected during app review")
         raise HTTPException(
             status_code=400,
             detail={
@@ -149,8 +170,9 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]]) -> 
             }
         )
     
-    # Code 2 = Erreur transitoire → 502
+    # Code 2 = Erreur transitoire → 502 (même après retry)
     if error_code == 2:
+        logger.error(f"Meta API transient error (code 2) after retries - Meta API may be down")
         raise HTTPException(
             status_code=502,
             detail={
@@ -161,6 +183,7 @@ async def _fetch_oembed_with_tokens(url: str, tokens: list[tuple[str, str]]) -> 
         )
     
     # Autres erreurs → 400
+    logger.error(f"Meta API error (code {error_code}): {error_message}")
     raise HTTPException(
         status_code=400,
         detail={
