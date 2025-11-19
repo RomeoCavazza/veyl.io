@@ -671,6 +671,7 @@ async def _get_ig_business_account_id(db: Session, current_user: Optional[User],
 async def get_insights(
     resource_id: str = Query(..., description="IG Business Account ID (ex: '15087023444'), Facebook Page ID, ou 'me' pour utiliser le compte connecté. Pour trouver votre IG Business ID: utiliser 'me' si connecté, ou via Graph API: GET /me/accounts → GET /{page_id}?fields=instagram_business_account{id}"),
     metrics: str = Query(..., description="Métriques d'insights séparées par des VIRGULES (ex: 'impressions,reach,profile_views'). Exemples Instagram: 'impressions,reach,profile_views,website_clicks'. Exemples Facebook Pages: 'page_fans,page_impressions,page_engaged_users'. ⚠️ Ne pas utiliser les permissions OAuth (comme 'read_insights', 'instagram_manage_insights'), mais les noms de métriques réelles."),
+    period: Optional[str] = Query("day", description="Période pour les insights (requis pour certaines métriques Facebook Pages). Valeurs: 'day', 'week', 'days_28', 'lifetime'. Par défaut: 'day'. Pour Instagram Business, ce paramètre est ignoré."),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
@@ -743,10 +744,19 @@ async def get_insights(
     try:
         # Appeler Meta API pour récupérer les insights
         # Note: Meta API retourne un objet avec 'data' array contenant les métriques
+        # Pour Facebook Pages, certaines métriques nécessitent un paramètre 'period'
+        params = {"metric": ",".join(metrics_list)}
+        
+        # Ajouter period pour Facebook Pages (si resource_id ressemble à un Page ID, c'est probablement une Page)
+        # Les Page IDs sont généralement des nombres longs (15+ chiffres)
+        # Les IG Business IDs sont généralement plus courts (10-11 chiffres)
+        if period and len(actual_resource_id) > 12:  # Probablement une Page Facebook
+            params["period"] = period
+        
         insights_response = await call_meta(
             method="GET",
             endpoint=f"v21.0/{actual_resource_id}/insights",
-            params={"metric": ",".join(metrics_list)},
+            params=params,
             access_token=_get_meta_token(db, current_user) if current_user else None,
         )
         
@@ -781,13 +791,30 @@ async def get_insights(
         
     except MetaAPIError as e:
         logger.error(f"Meta API error fetching insights for {actual_resource_id}: {e}")
+        error_detail = {
+            "error": "Meta API error",
+            "message": str(e),
+            "resource_id": actual_resource_id,
+            "metrics_requested": metrics_list,
+            "period": period if period else None,
+        }
+        
+        # Ajouter des suggestions selon le type d'erreur
+        error_str = str(e).lower()
+        if "valid insights metric" in error_str or "invalid metric" in error_str:
+            error_detail["suggestion"] = {
+                "for_facebook_pages": "Try metrics like: page_fans, page_impressions, page_engaged_users, page_fan_adds, page_views",
+                "for_instagram_business": "Try metrics like: impressions, reach, profile_views, website_clicks, follower_count",
+                "note": "Make sure you're using metric names (not OAuth permissions) and that the period parameter is set correctly for Facebook Pages."
+            }
+        elif "permission" in error_str or "access" in error_str:
+            error_detail["suggestion"] = {
+                "note": "Make sure your OAuth token has the required permissions: read_insights for Facebook Pages, or instagram_manage_insights for Instagram Business."
+            }
+        
         raise HTTPException(
             status_code=e.status_code if hasattr(e, 'status_code') else 500,
-            detail={
-                "error": "Meta API error",
-                "message": str(e),
-                "resource_id": actual_resource_id,
-            }
+            detail=error_detail
         )
     except Exception as e:
         logger.error(f"Error fetching insights for {actual_resource_id}: {e}")
