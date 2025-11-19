@@ -53,6 +53,14 @@ export default function Analytics() {
   const [igProfileUserId, setIgProfileUserId] = useState('');
   const [igProfileResponse, setIgProfileResponse] = useState<any>(null);
   const [isFetchingIgProfile, setIsFetchingIgProfile] = useState(false);
+  // Pour TikTok Profile
+  const [tiktokProfileUserId, setTiktokProfileUserId] = useState('');
+  const [tiktokProfileResponse, setTiktokProfileResponse] = useState<any>(null);
+  const [isFetchingTikTokProfile, setIsFetchingTikTokProfile] = useState(false);
+  // Pour TikTok Stats
+  const [tiktokStatsUserId, setTiktokStatsUserId] = useState('');
+  const [tiktokStatsResponse, setTiktokStatsResponse] = useState<any>(null);
+  const [isFetchingTikTokStats, setIsFetchingTikTokStats] = useState(false);
 
   // Note: Ces données sont vides car elles doivent être calculées depuis les vraies données Meta API
   // Pour Meta App Review, on affiche uniquement les données réelles récupérées via les endpoints
