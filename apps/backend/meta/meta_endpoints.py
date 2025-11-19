@@ -517,13 +517,18 @@ async def get_instagram_hashtag_media(
 
 @router.get("/page-public")
 async def get_page_public_posts(
-    page_id: str = Query(..., min_length=1, description="Facebook Page ID"),
+    page_id: str = Query(..., min_length=1, description="Facebook Page ID (numeric ID, e.g. '123456789012345'). To find a Page ID: visit the Facebook Page → About → Page ID, or use Graph API: https://graph.facebook.com/v21.0/{page-username}"),
     limit: int = Query(10, ge=1, le=50, description="Nombre de posts à récupérer"),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     """
     Récupère les posts publics d'une page Facebook.
+    
+    **Comment trouver un Facebook Page ID :**
+    - Méthode 1 : Aller sur la page Facebook → "À propos" → "ID de la page"
+    - Méthode 2 : Utiliser Graph API : `https://graph.facebook.com/v21.0/{page-username}?access_token={token}`
+    - Exemples de pages publiques : nike, cocacola, facebook
     
     APP REVIEW NOTES:
     1. App Feature: Facebook Page content monitoring and analysis for social media intelligence
@@ -664,8 +669,8 @@ async def _get_ig_business_account_id(db: Session, current_user: Optional[User],
 
 @router.get("/insights")
 async def get_insights(
-    resource_id: str = Query(..., description="IG Business ID, Page ID, ou 'me' pour utiliser le compte connecté"),
-    metrics: str = Query(..., description="Liste metrics Graph API (comma-separated)"),
+    resource_id: str = Query(..., description="IG Business Account ID (ex: '15087023444'), Facebook Page ID, ou 'me' pour utiliser le compte connecté. Pour trouver votre IG Business ID: utiliser 'me' si connecté, ou via Graph API: GET /me/accounts → GET /{page_id}?fields=instagram_business_account{id}"),
+    metrics: str = Query(..., description="Métriques d'insights séparées par des VIRGULES (ex: 'impressions,reach,profile_views'). Exemples Instagram: 'impressions,reach,profile_views,website_clicks'. Exemples Facebook Pages: 'page_fans,page_impressions,page_engaged_users'. ⚠️ Ne pas utiliser les permissions OAuth (comme 'read_insights', 'instagram_manage_insights'), mais les noms de métriques réelles."),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
@@ -673,6 +678,19 @@ async def get_insights(
     Récupère les insights (métriques) pour un compte Instagram Business ou une page Facebook.
     
     Si resource_id='me', récupère automatiquement l'IG Business Account ID de l'utilisateur connecté.
+    
+    **Métriques valides pour Instagram Business :**
+    - Account metrics: impressions, reach, profile_views, website_clicks, follower_count, email_contacts
+    - Post metrics: impressions, reach, engagement, saved, video_views
+    
+    **Métriques valides pour Facebook Pages :**
+    - page_fans, page_impressions, page_engaged_users, page_fan_adds, page_views
+    
+    **Exemples :**
+    - Instagram: `impressions,reach,profile_views,website_clicks`
+    - Facebook Page: `page_fans,page_impressions,page_engaged_users`
+    
+    ⚠️ **IMPORTANT** : Utiliser les noms de métriques (ex: 'impressions'), PAS les permissions OAuth (ex: 'read_insights').
     
     APP REVIEW NOTES:
     1. App Feature: Analytics dashboard for Instagram creators to track performance metrics
@@ -785,12 +803,18 @@ async def get_insights(
 
 @router.get("/ig-business-profile")
 async def get_instagram_business_profile(
-    ig_business_account_id: str = Query(..., description="IG Business Account ID ou 'me' pour utiliser le compte connecté"),
+    ig_business_account_id: str = Query(..., description="IG Business Account ID (numeric ID, e.g. '15087023444') ou 'me' pour utiliser le compte connecté. Pour trouver votre ID: 1) Utiliser 'me' si connecté, 2) Via Graph API: GET /me/accounts → GET /{page_id}?fields=instagram_business_account{id}, 3) Via Meta Business Suite → Settings → Instagram Account"),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     """
     Récupère le profil d'un compte Instagram Business.
+    
+    **Comment trouver votre IG Business Account ID :**
+    - **Méthode 1 (Recommandée)** : Utiliser `'me'` si vous êtes connecté via OAuth → l'ID est récupéré automatiquement
+    - **Méthode 2** : Via Graph API Explorer : `GET /me/accounts` → `GET /{page_id}?fields=instagram_business_account{id}`
+    - **Méthode 3** : Via Meta Business Suite → Settings → Instagram Account → l'ID est affiché
+    - **Méthode 4** : Si vous avez une Page Facebook liée, l'ID est dans la réponse de l'endpoint `/page-public`
     
     Si ig_business_account_id='me', récupère automatiquement l'IG Business Account ID de l'utilisateur connecté.
     
@@ -883,13 +907,22 @@ async def get_instagram_business_profile(
 
 @router.get("/ig-profile")
 async def get_instagram_profile(
-    username: Optional[str] = Query(None, description="Instagram username (sans @)"),
-    user_id: Optional[str] = Query(None, description="Instagram user ID"),
+    username: Optional[str] = Query(None, description="Instagram username (sans @) ou URL Instagram (ex: 'https://www.instagram.com/username/'). Le username sera extrait automatiquement de l'URL si fourni."),
+    user_id: Optional[str] = Query(None, description="Instagram user ID (numeric ID). ⚠️ IMPORTANT: Meta Graph API nécessite un user_id, pas un username. Pour obtenir le user_id: utiliser l'endpoint /ig-business-profile avec 'me' si c'est un compte Business, ou via Graph API Explorer."),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     """
     Récupère le profil d'un compte Instagram (personnel ou Business).
+    
+    **⚠️ IMPORTANT :** Meta Graph API nécessite un `user_id` (ID numérique), pas un `username`.
+    
+    **Comment obtenir le user_id :**
+    - Si c'est un compte Business : utiliser `/ig-business-profile?ig_business_account_id=me` → l'ID est dans la réponse
+    - Via Graph API Explorer : `GET /me/accounts` → `GET /{page_id}?fields=instagram_business_account{id}`
+    - Le username seul ne fonctionne pas avec Meta Graph API
+    
+    **Si tu fournis une URL Instagram :** Le username sera extrait automatiquement, mais tu devras quand même fournir le `user_id` pour que l'endpoint fonctionne.
     
     Utilise instagram_basic pour les comptes personnels ou instagram_business_basic pour les comptes Business.
     
@@ -906,14 +939,23 @@ async def get_instagram_profile(
     """
     from services.meta_client import MetaAPIError
     
+    # Extraire le username depuis l'URL si fourni
+    if username and username.startswith('http'):
+        # Extraire le username depuis l'URL Instagram
+        match = re.search(r'instagram\.com/([^/?]+)', username)
+        if match:
+            username = match.group(1)
+            # Nettoyer le username (enlever @ si présent)
+            username = username.lstrip('@')
+    
     if not username and not user_id:
         raise HTTPException(
             status_code=400,
-            detail="Either username or user_id must be provided"
+            detail="Either username or user_id must be provided. Note: Meta Graph API requires user_id (numeric ID), not username. Use /ig-business-profile?ig_business_account_id=me to get your user_id if it's a Business account."
         )
     
     try:
-        # Si on a un username, essayer de récupérer le profil
+        # Si on a un username, essayer de trouver le user_id dans la DB
         # Note: Meta Graph API nécessite un user_id pour récupérer le profil
         # Pour instagram_basic, on peut utiliser l'endpoint /{user-id} avec les champs de base
         
@@ -927,13 +969,69 @@ async def get_instagram_profile(
                 },
                 access_token=_get_meta_token(db, current_user) if current_user else None,
             )
+        elif username:
+            # Si seulement username fourni, essayer de trouver le user_id dans la DB
+            # Chercher dans les posts Instagram pour ce créateur
+            instagram_platform = db.query(Platform).filter(Platform.name == "instagram").first()
+            found_user_id = None
+            
+            if instagram_platform:
+                # Chercher un post de ce créateur
+                post = (
+                    db.query(Post)
+                    .filter(
+                        Post.platform_id == instagram_platform.id,
+                        or_(
+                            Post.author == username,
+                            Post.author.ilike(f"%{username}%")
+                        )
+                    )
+                    .first()
+                )
+                
+                if post and post.api_payload:
+                    # Essayer d'extraire le user_id depuis api_payload
+                    try:
+                        api_payload = json.loads(post.api_payload) if isinstance(post.api_payload, str) else post.api_payload
+                        # Chercher user_id dans différents champs possibles
+                        found_user_id = (
+                            api_payload.get("owner_id")
+                            or api_payload.get("user_id")
+                            or api_payload.get("from", {}).get("id")
+                            or api_payload.get("creator", {}).get("id")
+                        )
+                        if found_user_id:
+                            logger.info(f"Found user_id {found_user_id} for username {username} in database")
+                    except (json.JSONDecodeError, AttributeError) as e:
+                        logger.warning(f"Could not parse api_payload for post {post.id}: {e}")
+            
+            if found_user_id:
+                # Utiliser le user_id trouvé dans la DB
+                user_id = found_user_id
+                profile_data = await call_meta(
+                    method="GET",
+                    endpoint=f"v21.0/{user_id}",
+                    params={
+                        "fields": "username,profile_picture_url,biography"
+                    },
+                    access_token=_get_meta_token(db, current_user) if current_user else None,
+                )
+            else:
+                # Si user_id non trouvé dans la DB, retourner une erreur explicative
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "user_id_required",
+                        "message": "Instagram user_id is required. Username lookup is not directly supported by Meta Graph API.",
+                        "note": "To get the user_id: 1) If it's a Business account, use /ig-business-profile?ig_business_account_id=me, 2) Use Graph API Explorer: GET /me/accounts → GET /{page_id}?fields=instagram_business_account{id}, 3) The user_id was not found in our database for this username.",
+                        "username_provided": username,
+                        "suggestion": "Try searching for posts from this creator first using /ig-public endpoint, then the user_id might be available in the stored data."
+                    }
+                )
         else:
-            # Si seulement username fourni, on ne peut pas récupérer directement via Graph API
-            # Il faudrait d'abord chercher le user_id via hashtag search ou autre méthode
-            # Pour l'instant, on retourne une erreur explicative
             raise HTTPException(
                 status_code=400,
-                detail="Instagram user_id is required. Username lookup is not directly supported by Meta Graph API. Please provide the Instagram user ID."
+                detail="Either username or user_id must be provided"
             )
         
         return {
