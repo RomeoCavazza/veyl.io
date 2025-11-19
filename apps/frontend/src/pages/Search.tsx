@@ -563,8 +563,9 @@ export default function Search() {
                   }
                 }
                 
-                // Déterminer si c'est une image
-                const isImage = post.media_url ? /\.(jpg|jpeg|png|gif|webp)$/i.test(post.media_url.split('?')[0]) : false;
+                // Déterminer si c'est une image (pas une vidéo/reel)
+                const isVideo = post.media_type === 'VIDEO' || post.media_type === 'REELS' || post.media_type === 'CAROUSEL_ALBUM';
+                const isImage = !isVideo && post.media_url ? /\.(jpg|jpeg|png|gif|webp)$/i.test(post.media_url.split('?')[0]) : false;
                 const embedUrl = post.permalink ? `${post.permalink.replace(/\/$/, '')}/embed` : undefined;
                 
                 return (
@@ -586,6 +587,13 @@ export default function Search() {
                             }}
                           />
                         ) : null
+                      ) : isVideo && embedUrl ? (
+                        <iframe
+                          src={embedUrl}
+                          title={post.id}
+                          className="w-full h-full"
+                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+                        />
                       ) : post.media_url && isImage ? (
                         <img
                           src={post.media_url}
