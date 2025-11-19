@@ -565,7 +565,13 @@ export default function Search() {
                 
                 // Déterminer si c'est une image (pas une vidéo/reel)
                 const isVideo = post.media_type === 'VIDEO' || post.media_type === 'REELS' || post.media_type === 'CAROUSEL_ALBUM';
-                const isImage = !isVideo && post.media_url ? /\.(jpg|jpeg|png|gif|webp)$/i.test(post.media_url.split('?')[0]) : false;
+                // Si media_type est IMAGE ou non défini mais media_url existe, considérer comme image
+                const isImage = !isVideo && post.media_url && (
+                  post.media_type === 'IMAGE' || 
+                  /\.(jpg|jpeg|png|gif|webp)$/i.test(post.media_url.split('?')[0]) ||
+                  post.media_url.includes('scontent') || // URLs Instagram CDN
+                  post.media_url.includes('fbcdn') // URLs Facebook CDN
+                );
                 const embedUrl = post.permalink ? `${post.permalink.replace(/\/$/, '')}/embed` : undefined;
                 
                 return (
@@ -599,6 +605,19 @@ export default function Search() {
                           src={post.media_url}
                           alt={post.caption || username || 'Instagram post'}
                           className="object-cover w-full h-full"
+                          onError={(e) => {
+                            const img = e.target as HTMLImageElement;
+                            img.style.display = 'none';
+                            // Si l'image échoue, essayer l'iframe embed comme fallback
+                            if (embedUrl) {
+                              const iframe = document.createElement('iframe');
+                              iframe.src = embedUrl;
+                              iframe.className = 'w-full h-full';
+                              iframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; picture-in-picture');
+                              iframe.title = post.id;
+                              img.parentElement?.appendChild(iframe);
+                            }
+                          }}
                         />
                       ) : embedUrl ? (
                         <iframe
