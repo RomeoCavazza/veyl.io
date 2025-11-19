@@ -31,7 +31,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { fetchMetaInsights, fetchPagePublicPosts } from '@/lib/api';
+import { fetchMetaInsights, fetchPagePublicPosts, fetchInstagramBusinessProfile, fetchInstagramProfile } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Analytics() {
@@ -46,6 +46,13 @@ export default function Analytics() {
   const [pageId, setPageId] = useState('');
   const [pagePostsResponse, setPagePostsResponse] = useState<any>(null);
   const [isFetchingPagePosts, setIsFetchingPagePosts] = useState(false);
+  // Pour IG Business Profile
+  const [igBusinessProfileResponse, setIgBusinessProfileResponse] = useState<any>(null);
+  const [isFetchingIgBusinessProfile, setIsFetchingIgBusinessProfile] = useState(false);
+  // Pour IG Profile
+  const [igProfileUserId, setIgProfileUserId] = useState('');
+  const [igProfileResponse, setIgProfileResponse] = useState<any>(null);
+  const [isFetchingIgProfile, setIsFetchingIgProfile] = useState(false);
 
   // Note: Ces données sont vides car elles doivent être calculées depuis les vraies données Meta API
   // Pour Meta App Review, on affiche uniquement les données réelles récupérées via les endpoints
@@ -109,6 +116,61 @@ export default function Analytics() {
       setPagePostsResponse(null);
     } finally {
       setIsFetchingPagePosts(false);
+    }
+  };
+
+  const handleFetchIgBusinessProfile = async () => {
+    setIsFetchingIgBusinessProfile(true);
+    try {
+      const data = await fetchInstagramBusinessProfile('me');
+      setIgBusinessProfileResponse(data);
+      toast({
+        title: 'IG Business Profile fetched',
+        description: 'Profile retrieved from Meta Graph API.',
+      });
+    } catch (error: any) {
+      console.error('Fetch IG Business Profile error:', error);
+      const errorMessage = error?.detail?.message || error?.message || 'Unable to fetch IG Business Profile from Meta.';
+      toast({
+        title: 'Fetch failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      setIgBusinessProfileResponse(null);
+    } finally {
+      setIsFetchingIgBusinessProfile(false);
+    }
+  };
+
+  const handleFetchIgProfile = async () => {
+    if (!igProfileUserId.trim()) {
+      toast({
+        title: 'User ID required',
+        description: 'Provide an Instagram user ID before fetching profile.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setIsFetchingIgProfile(true);
+    try {
+      const data = await fetchInstagramProfile(igProfileUserId.trim());
+      setIgProfileResponse(data);
+      toast({
+        title: 'IG Profile fetched',
+        description: 'Profile retrieved from Meta Graph API.',
+      });
+    } catch (error: any) {
+      console.error('Fetch IG Profile error:', error);
+      const errorMessage = error?.detail?.message || error?.message || 'Unable to fetch IG Profile from Meta.';
+      toast({
+        title: 'Fetch failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      setIgProfileResponse(null);
+    } finally {
+      setIsFetchingIgProfile(false);
     }
   };
 
@@ -297,6 +359,136 @@ export default function Analytics() {
               ) : (
                 <p className="text-muted-foreground">
                   No page posts fetched yet. Enter a Facebook Page ID and click "Fetch Page Posts" to retrieve posts.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Instagram Business Profile Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Instagram Business Profile (instagram_business_basic)</CardTitle>
+            <CardDescription>
+              Fetch Instagram Business profile using instagram_business_basic permission.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={handleFetchIgBusinessProfile} disabled={isFetchingIgBusinessProfile}>
+                {isFetchingIgBusinessProfile ? 'Fetching…' : 'Fetch IG Business Profile'}
+              </Button>
+            </div>
+            <div className="rounded-lg border bg-muted/40 p-4 text-sm">
+              <p className="font-medium mb-2">IG Business Profile Response</p>
+              {igBusinessProfileResponse ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {igBusinessProfileResponse.username && (
+                      <div className="p-3 rounded-md bg-background border">
+                        <p className="text-xs text-muted-foreground mb-1">Username</p>
+                        <p className="text-lg font-bold">@{igBusinessProfileResponse.username}</p>
+                      </div>
+                    )}
+                    {igBusinessProfileResponse.followers_count !== undefined && (
+                      <div className="p-3 rounded-md bg-background border">
+                        <p className="text-xs text-muted-foreground mb-1">Followers</p>
+                        <p className="text-lg font-bold">{igBusinessProfileResponse.followers_count.toLocaleString()}</p>
+                      </div>
+                    )}
+                    {igBusinessProfileResponse.media_count !== undefined && (
+                      <div className="p-3 rounded-md bg-background border">
+                        <p className="text-xs text-muted-foreground mb-1">Media Count</p>
+                        <p className="text-lg font-bold">{igBusinessProfileResponse.media_count.toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+                  {igBusinessProfileResponse.biography && (
+                    <div className="p-3 rounded-md bg-background border">
+                      <p className="text-xs text-muted-foreground mb-1">Bio</p>
+                      <p className="text-sm">{igBusinessProfileResponse.biography}</p>
+                    </div>
+                  )}
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                      View raw JSON response
+                    </summary>
+                    <pre className="max-h-64 overflow-auto text-xs bg-background p-3 rounded-md border mt-2">
+                      {JSON.stringify(igBusinessProfileResponse, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">
+                  No profile fetched yet. Click "Fetch IG Business Profile" to retrieve your Instagram Business profile.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Instagram Profile Card (instagram_basic) */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Instagram Profile (instagram_basic)</CardTitle>
+            <CardDescription>
+              Fetch Instagram profile using instagram_basic permission.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="igProfileUserId">Instagram User ID</Label>
+              <Input
+                id="igProfileUserId"
+                placeholder="e.g. 17841411416084584 (Instagram user ID)"
+                value={igProfileUserId}
+                onChange={(event) => setIgProfileUserId(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter an Instagram user ID to fetch profile information
+              </p>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleFetchIgProfile} disabled={isFetchingIgProfile}>
+                {isFetchingIgProfile ? 'Fetching…' : 'Fetch IG Profile'}
+              </Button>
+            </div>
+            <div className="rounded-lg border bg-muted/40 p-4 text-sm">
+              <p className="font-medium mb-2">IG Profile Response</p>
+              {igProfileResponse ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {igProfileResponse.username && (
+                      <div className="p-3 rounded-md bg-background border">
+                        <p className="text-xs text-muted-foreground mb-1">Username</p>
+                        <p className="text-lg font-bold">@{igProfileResponse.username}</p>
+                      </div>
+                    )}
+                    {igProfileResponse.profile_picture_url && (
+                      <div className="p-3 rounded-md bg-background border">
+                        <p className="text-xs text-muted-foreground mb-1">Profile Picture</p>
+                        <img src={igProfileResponse.profile_picture_url} alt="Profile" className="w-16 h-16 rounded-full" />
+                      </div>
+                    )}
+                  </div>
+                  {igProfileResponse.biography && (
+                    <div className="p-3 rounded-md bg-background border">
+                      <p className="text-xs text-muted-foreground mb-1">Bio</p>
+                      <p className="text-sm">{igProfileResponse.biography}</p>
+                    </div>
+                  )}
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                      View raw JSON response
+                    </summary>
+                    <pre className="max-h-64 overflow-auto text-xs bg-background p-3 rounded-md border mt-2">
+                      {JSON.stringify(igProfileResponse, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">
+                  No profile fetched yet. Enter a user ID and click "Fetch IG Profile" to retrieve profile information.
                 </p>
               )}
             </div>
