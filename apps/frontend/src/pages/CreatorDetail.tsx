@@ -27,7 +27,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import { getProjectPosts, fetchInstagramBusinessProfile } from '@/lib/api';
+import { getProjectPosts, fetchInstagramBusinessProfile, fetchInstagramProfile } from '@/lib/api';
 
 export default function CreatorDetail() {
   const engagementTrendData: Array<{ date: string; engagement: number }> = [];
@@ -202,8 +202,24 @@ export default function CreatorDetail() {
                 setCreator(baseCreator);
               }
             } catch (error) {
+              // Si Business profile échoue, essayer instagram_basic si on a un user_id
+              if (matchedCreator.instagram_user_id) {
+                try {
+                  const basicProfile = await fetchInstagramProfile(matchedCreator.instagram_user_id);
+                  if (basicProfile) {
+                    setCreator({
+                      ...baseCreator,
+                      profile_picture: basicProfile.profile_picture_url || baseCreator.profile_picture,
+                      bio: basicProfile.biography || baseCreator.bio,
+                    });
+                    return;
+                  }
+                } catch (basicError) {
+                  // Ignorer, utiliser les données du projet
+                }
+              }
               // Si l'API échoue, utiliser les données du projet
-              console.warn('Failed to fetch Instagram Business profile, using project data:', error);
+              console.warn('Failed to fetch Instagram profile, using project data:', error);
               setCreator(baseCreator);
             }
           } else {

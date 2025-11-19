@@ -299,6 +299,34 @@ export async function fetchInstagramBusinessProfile(igBusinessAccountId: string 
   return response.json();
 }
 
+// Instagram Profile API function (instagram_basic permission)
+export async function fetchInstagramProfile(userId: string): Promise<any> {
+  const apiBase = getApiBase();
+  const url = apiBase 
+    ? `${apiBase}/api/v1/meta/ig-profile?user_id=${encodeURIComponent(userId)}`
+    : `/api/v1/meta/ig-profile?user_id=${encodeURIComponent(userId)}`;
+
+  const response = await fetch(url, {
+    headers: withAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    let errorData: any = null;
+    try {
+      errorData = await response.json();
+    } catch {
+      errorData = { detail: `HTTP ${response.status}` };
+    }
+    
+    const error = new Error(errorData?.detail?.message || errorData?.detail || `HTTP ${response.status}`);
+    (error as any).status = response.status;
+    (error as any).detail = errorData?.detail;
+    throw error;
+  }
+  
+  return response.json();
+}
+
 // TikTok API functions
 export async function fetchTikTokProfile(userId?: string): Promise<any> {
   const apiBase = getApiBase();
