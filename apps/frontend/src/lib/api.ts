@@ -150,10 +150,9 @@ export async function fetchMetaIGPublic(tag: string, limit: number = 12): Promis
   }
 }
 
-export async function fetchMetaOEmbed(permalink: string): Promise<any> {
+export async function fetchMetaOEmbed(permalink: string, useAuth: boolean = false): Promise<any> {
   // En production, utiliser directement l'URL Railway pour éviter les problèmes de proxy Vercel
   // En dev, utiliser le proxy Vite
-  // Utiliser /oembed/public pour être cohérent avec la page démo (sans authentification)
   let apiBase: string;
   if (import.meta.env.DEV) {
     apiBase = ''; // Proxy Vite
@@ -165,16 +164,25 @@ export async function fetchMetaOEmbed(permalink: string): Promise<any> {
     }
   }
   
-  const url = `${apiBase}/api/v1/meta/oembed/public?url=${encodeURIComponent(permalink)}`;
+  // Utiliser /oembed (avec auth) ou /oembed/public (sans auth)
+  const endpoint = useAuth ? '/api/v1/meta/oembed' : '/api/v1/meta/oembed/public';
+  const url = `${apiBase}${endpoint}?url=${encodeURIComponent(permalink)}`;
 
   if (import.meta.env.DEV) {
-    console.log('Fetching oEmbed from:', url);
+    console.log('Fetching oEmbed from:', url, useAuth ? '(with auth)' : '(public)');
   }
 
   try {
+    const headers: HeadersInit = {};
+    if (useAuth) {
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+
     const response = await fetch(url, {
-      // Pas besoin d'auth pour /oembed/public
-      // Ajouter un timeout explicite
+      headers,
       signal: AbortSignal.timeout(30000), // 30 secondes
     });
 

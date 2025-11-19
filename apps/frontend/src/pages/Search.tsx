@@ -19,6 +19,7 @@ export default function Search() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
   const [selectedPostForEmbed, setSelectedPostForEmbed] = useState<PostHit | null>(null);
+  const [embedUseAuth, setEmbedUseAuth] = useState(false);
   const { toast } = useToast();
 
   // Charger posts depuis PostgreSQL - cherche dans tous les projets qui matchent la query
@@ -677,18 +678,36 @@ export default function Search() {
 
                         <div className="flex items-center gap-2">
                           {post.platform === 'instagram' && post.permalink && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedPostForEmbed(post);
-                                setEmbedDialogOpen(true);
-                              }}
-                              className="h-8 px-2"
-                            >
-                              <Code2 className="h-4 w-4" />
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPostForEmbed(post);
+                                  setEmbedUseAuth(false);
+                                  setEmbedDialogOpen(true);
+                                }}
+                                className="h-8 px-2"
+                                title="Embed (public)"
+                              >
+                                <Code2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPostForEmbed(post);
+                                  setEmbedUseAuth(true);
+                                  setEmbedDialogOpen(true);
+                                }}
+                                className="h-8 px-2"
+                                title="oEmbed (with auth)"
+                              >
+                                <Sparkles className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                           {post.permalink && (
                             <a
@@ -724,6 +743,7 @@ export default function Search() {
         post={selectedPostForEmbed}
         open={embedDialogOpen}
         onOpenChange={setEmbedDialogOpen}
+        useAuth={embedUseAuth}
       />
 
       <Footer />

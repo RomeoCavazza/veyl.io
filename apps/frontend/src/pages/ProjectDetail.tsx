@@ -61,6 +61,7 @@ export default function ProjectDetail() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [refreshTrigger, setRefreshTrigger] = useState(Date.now());
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
+  const [embedUseAuth, setEmbedUseAuth] = useState(false);
   const [selectedPlatformFilter, setSelectedPlatformFilter] = useState<string | 'all'>('all');
   const [isFetchingMeta, setIsFetchingMeta] = useState(false);
   const [isFetchingTikTok, setIsFetchingTikTok] = useState(false);

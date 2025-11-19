@@ -741,6 +741,22 @@ async def get_insights(
     # Parser les metrics (peut être comma-separated ou déjà un array)
     metrics_list = [m.strip() for m in metrics.split(",")] if isinstance(metrics, str) else metrics
     
+    # Valider que les métriques ne sont pas mélangées entre Facebook Pages et Instagram
+    facebook_metrics = {'page_fans', 'page_impressions', 'page_engaged_users', 'page_fan_adds', 'page_views'}
+    instagram_metrics = {'impressions', 'reach', 'profile_views', 'website_clicks', 'follower_count', 'email_contacts', 'engagement', 'saved', 'video_views'}
+    
+    has_facebook_metrics = any(m in facebook_metrics for m in metrics_list)
+    has_instagram_metrics = any(m in instagram_metrics for m in metrics_list)
+    
+    if has_facebook_metrics and has_instagram_metrics:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_metrics_mix",
+                "message": "Cannot mix Facebook Page metrics with Instagram metrics. Use only Facebook metrics (page_fans, page_impressions, etc.) for Facebook Pages, or only Instagram metrics (impressions, reach, etc.) for Instagram Business accounts.",
+            }
+        )
+    
     try:
         # Appeler Meta API pour récupérer les insights
         # Note: Meta API retourne un objet avec 'data' array contenant les métriques
@@ -795,7 +811,7 @@ async def get_insights(
         
         # Messages d'erreur simplifiés
         if "valid insights metric" in error_str or "invalid metric" in error_str:
-            error_message = "Invalid metrics. Use metric names (e.g. 'page_fans,page_impressions' for Facebook Pages, 'impressions,reach' for Instagram), not OAuth permissions."
+            error_message = "Invalid metrics. Use only Facebook metrics (page_fans, page_impressions) for Facebook Pages, or only Instagram metrics (impressions, reach) for Instagram Business. Do not mix them."
         elif "permission" in error_str or "access" in error_str:
             error_message = "Missing permissions. Ensure your OAuth token has 'read_insights' (Facebook Pages) or 'instagram_manage_insights' (Instagram Business)."
         else:

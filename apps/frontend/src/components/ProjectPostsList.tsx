@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, TrendingUp, ExternalLink, Code2 } from 'lucide-react';
+import { Heart, MessageCircle, TrendingUp, ExternalLink, Code2, Sparkles } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 import type { ProjectPost } from '@/types/project';
 
@@ -10,7 +10,7 @@ interface ProjectPostsListProps {
   creators: Array<{ handle: string }>;
   selectedPlatformFilter: string | 'all';
   onPostClick: (post: ProjectPost) => void;
-  onEmbedClick: (post: ProjectPost) => void;
+  onEmbedClick: (post: ProjectPost, useAuth?: boolean) => void;
 }
 
 export function ProjectPostsList({
@@ -161,17 +161,32 @@ export function ProjectPostsList({
 
                   <div className="flex items-center gap-2 pt-2">
                     {post.platform === 'instagram' && post.permalink && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 px-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEmbedClick(post);
-                        }}
-                      >
-                        <Code2 className="h-4 w-4" />
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEmbedClick(post, false);
+                          }}
+                          title="Embed (public)"
+                        >
+                          <Code2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEmbedClick(post, true);
+                          }}
+                          title="oEmbed (with auth)"
+                        >
+                          <Sparkles className="h-4 w-4" />
+                        </Button>
+                      </>
                     )}
                     {post.permalink && (
                       <a

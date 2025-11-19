@@ -21,9 +21,10 @@ interface EmbedDialogProps {
   post: PostForEmbed | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  useAuth?: boolean; // Si true, utilise /oembed (avec auth), sinon /oembed/public
 }
 
-export function EmbedDialog({ post, open, onOpenChange }: EmbedDialogProps) {
+export function EmbedDialog({ post, open, onOpenChange, useAuth = false }: EmbedDialogProps) {
   const [oembedData, setOembedData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +36,7 @@ export function EmbedDialog({ post, open, onOpenChange }: EmbedDialogProps) {
     } else if (open && (!post || !post.permalink || post.platform !== 'instagram')) {
       setError('Embed is only available for Instagram posts with a permalink.');
     }
-  }, [open, post]);
+  }, [open, post, useAuth]);
 
   const fetchOEmbed = async () => {
     if (!post?.permalink) return;
@@ -45,7 +46,7 @@ export function EmbedDialog({ post, open, onOpenChange }: EmbedDialogProps) {
     setOembedData(null);
 
     try {
-      const data = await fetchMetaOEmbed(post.permalink);
+      const data = await fetchMetaOEmbed(post.permalink, useAuth);
       setOembedData(data);
     } catch (err: unknown) {
       let errorMessage = 'Failed to fetch embed data';
