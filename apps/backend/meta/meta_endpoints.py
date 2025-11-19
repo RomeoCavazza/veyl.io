@@ -517,7 +517,7 @@ async def get_instagram_hashtag_media(
 
 @router.get("/page-public")
 async def get_page_public_posts(
-    page_id: str = Query(..., min_length=1, description="Facebook Page ID (numeric ID, e.g. '123456789012345'). To find a Page ID: visit the Facebook Page → About → Page ID, or use Graph API: https://graph.facebook.com/v21.0/{page-username}"),
+    page_id: str = Query(..., min_length=1, description="Facebook Page ID (numeric)"),
     limit: int = Query(10, ge=1, le=50, description="Nombre de posts à récupérer"),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
@@ -669,9 +669,9 @@ async def _get_ig_business_account_id(db: Session, current_user: Optional[User],
 
 @router.get("/insights")
 async def get_insights(
-    resource_id: str = Query(..., description="IG Business Account ID (ex: '15087023444'), Facebook Page ID, ou 'me' pour utiliser le compte connecté. Pour trouver votre IG Business ID: utiliser 'me' si connecté, ou via Graph API: GET /me/accounts → GET /{page_id}?fields=instagram_business_account{id}"),
-    metrics: str = Query(..., description="Métriques d'insights séparées par des VIRGULES (ex: 'impressions,reach,profile_views'). Exemples Instagram: 'impressions,reach,profile_views,website_clicks'. Exemples Facebook Pages: 'page_fans,page_impressions,page_engaged_users'. ⚠️ Ne pas utiliser les permissions OAuth (comme 'read_insights', 'instagram_manage_insights'), mais les noms de métriques réelles."),
-    period: Optional[str] = Query("day", description="Période pour les insights (requis pour certaines métriques Facebook Pages). Valeurs: 'day', 'week', 'days_28', 'lifetime'. Par défaut: 'day'. Pour Instagram Business, ce paramètre est ignoré."),
+    resource_id: str = Query(..., description="IG Business Account ID, Facebook Page ID, ou 'me'"),
+    metrics: str = Query(..., description="Métriques séparées par virgules (ex: 'page_fans,page_impressions' pour Facebook, 'impressions,reach' pour Instagram)"),
+    period: Optional[str] = Query("day", description="Période: 'day', 'week', 'days_28', 'lifetime' (défaut: 'day')"),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
@@ -715,7 +715,7 @@ async def get_insights(
         if not current_user:
             raise HTTPException(
                 status_code=401,
-                detail="Authentication required when using resource_id='me'. Please log in or provide a specific resource_id."
+                detail="Authentication required when using resource_id='me'"
             )
         
         # Récupérer le token de l'utilisateur
@@ -724,7 +724,7 @@ async def get_insights(
         except HTTPException:
             raise HTTPException(
                 status_code=400,
-                detail="No Meta/Instagram account connected. Please connect your Instagram or Facebook account in Profile settings."
+                detail="No Meta/Instagram account connected"
             )
         
         # Récupérer l'IG Business Account ID
@@ -732,7 +732,7 @@ async def get_insights(
         if not ig_business_id:
             raise HTTPException(
                 status_code=404,
-                detail="Instagram Business Account not found. Please ensure your Facebook Page is connected to an Instagram Business account."
+                detail="Instagram Business Account not found"
             )
         
         actual_resource_id = ig_business_id
@@ -791,30 +791,23 @@ async def get_insights(
         
     except MetaAPIError as e:
         logger.error(f"Meta API error fetching insights for {actual_resource_id}: {e}")
-        error_detail = {
-            "error": "Meta API error",
-            "message": str(e),
-            "resource_id": actual_resource_id,
-            "metrics_requested": metrics_list,
-            "period": period if period else None,
-        }
-        
-        # Ajouter des suggestions selon le type d'erreur
         error_str = str(e).lower()
+        
+        # Messages d'erreur simplifiés
         if "valid insights metric" in error_str or "invalid metric" in error_str:
-            error_detail["suggestion"] = {
-                "for_facebook_pages": "Try metrics like: page_fans, page_impressions, page_engaged_users, page_fan_adds, page_views",
-                "for_instagram_business": "Try metrics like: impressions, reach, profile_views, website_clicks, follower_count",
-                "note": "Make sure you're using metric names (not OAuth permissions) and that the period parameter is set correctly for Facebook Pages."
-            }
+            error_message = "Invalid metrics. Use metric names (e.g. 'page_fans,page_impressions' for Facebook Pages, 'impressions,reach' for Instagram), not OAuth permissions."
         elif "permission" in error_str or "access" in error_str:
-            error_detail["suggestion"] = {
-                "note": "Make sure your OAuth token has the required permissions: read_insights for Facebook Pages, or instagram_manage_insights for Instagram Business."
-            }
+            error_message = "Missing permissions. Ensure your OAuth token has 'read_insights' (Facebook Pages) or 'instagram_manage_insights' (Instagram Business)."
+        else:
+            error_message = f"Meta API error: {str(e)}"
         
         raise HTTPException(
             status_code=e.status_code if hasattr(e, 'status_code') else 500,
-            detail=error_detail
+            detail={
+                "error": "Meta API error",
+                "message": error_message,
+                "resource_id": actual_resource_id,
+            }
         )
     except Exception as e:
         logger.error(f"Error fetching insights for {actual_resource_id}: {e}")
@@ -830,7 +823,7 @@ async def get_insights(
 
 @router.get("/ig-business-profile")
 async def get_instagram_business_profile(
-    ig_business_account_id: str = Query(..., description="IG Business Account ID (numeric ID, e.g. '15087023444') ou 'me' pour utiliser le compte connecté. Pour trouver votre ID: 1) Utiliser 'me' si connecté, 2) Via Graph API: GET /me/accounts → GET /{page_id}?fields=instagram_business_account{id}, 3) Via Meta Business Suite → Settings → Instagram Account"),
+    ig_business_account_id: str = Query(..., description="IG Business Account ID ou 'me'"),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
@@ -864,7 +857,7 @@ async def get_instagram_business_profile(
         if not current_user:
             raise HTTPException(
                 status_code=401,
-                detail="Authentication required when using ig_business_account_id='me'. Please log in or provide a specific IG Business Account ID."
+                detail="Authentication required when using ig_business_account_id='me'"
             )
         
         # Récupérer le token de l'utilisateur
@@ -873,7 +866,7 @@ async def get_instagram_business_profile(
         except HTTPException:
             raise HTTPException(
                 status_code=400,
-                detail="No Meta/Instagram account connected. Please connect your Instagram or Facebook account in Profile settings."
+                detail="No Meta/Instagram account connected"
             )
         
         # Récupérer l'IG Business Account ID
@@ -881,7 +874,7 @@ async def get_instagram_business_profile(
         if not ig_business_id:
             raise HTTPException(
                 status_code=404,
-                detail="Instagram Business Account not found. Please ensure your Facebook Page is connected to an Instagram Business account."
+                detail="Instagram Business Account not found"
             )
         
         actual_ig_business_id = ig_business_id
@@ -934,8 +927,8 @@ async def get_instagram_business_profile(
 
 @router.get("/ig-profile")
 async def get_instagram_profile(
-    username: Optional[str] = Query(None, description="⚠️ OPTIONNEL - Instagram username (sans @) ou URL Instagram. Utilisé uniquement pour chercher le user_id dans notre base de données. Si le user_id n'est pas trouvé, il sera requis. Pour extraire le username depuis une URL: 'https://www.instagram.com/username/' → 'username' sera extrait automatiquement."),
-    user_id: Optional[str] = Query(None, description="⚠️ REQUIS - Instagram user ID (numeric ID, ex: '15087023444'). Meta Graph API nécessite un user_id, pas un username. Pour obtenir le user_id: 1) Si c'est un compte Business connecté: utiliser /ig-business-profile?ig_business_account_id=me, 2) Via Graph API Explorer: GET /me/accounts → GET /{page_id}?fields=instagram_business_account{id}, 3) Si vous avez des posts de ce créateur dans notre DB, le user_id sera cherché automatiquement depuis le username."),
+    username: Optional[str] = Query(None, description="Instagram username (optionnel, cherche user_id dans DB)"),
+    user_id: Optional[str] = Query(None, description="Instagram user ID (requis si username non trouvé)"),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
@@ -978,7 +971,7 @@ async def get_instagram_profile(
     if not username and not user_id:
         raise HTTPException(
             status_code=400,
-            detail="Either username or user_id must be provided. Note: Meta Graph API requires user_id (numeric ID), not username. Use /ig-business-profile?ig_business_account_id=me to get your user_id if it's a Business account."
+            detail="Either username or user_id must be provided"
         )
     
     try:
@@ -1049,15 +1042,7 @@ async def get_instagram_profile(
                     status_code=400,
                     detail={
                         "error": "user_id_required",
-                        "message": "Instagram user_id is required. The user_id was not found in our database for this username, and Meta Graph API does not support username lookup directly.",
-                        "username_provided": username,
-                        "how_to_get_user_id": {
-                            "method_1": "If it's a Business account connected to your Meta account: Use /ig-business-profile?ig_business_account_id=me",
-                            "method_2": "Via Graph API Explorer: GET /me/accounts → GET /{page_id}?fields=instagram_business_account{id}",
-                            "method_3": "Search for posts from this creator first using /ig-public endpoint with a hashtag they use, then check if the user_id is available in the stored data",
-                            "method_4": "Use external tools like findmyfbid.com to find the Instagram user ID from the username"
-                        },
-                        "note": "Meta Graph API requires a numeric user_id to fetch profile information. Username alone is not sufficient."
+                        "message": "Instagram user_id is required. Use /ig-business-profile?ig_business_account_id=me or provide user_id directly.",
                     }
                 )
         else:
