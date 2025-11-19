@@ -31,7 +31,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { fetchMetaInsights, fetchPagePublicPosts, fetchInstagramBusinessProfile, fetchInstagramProfile } from '@/lib/api';
+import { fetchMetaInsights, fetchPagePublicPosts, fetchInstagramBusinessProfile, fetchInstagramProfile, fetchTikTokProfile, fetchTikTokStats } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Analytics() {
@@ -171,6 +171,54 @@ export default function Analytics() {
       setIgProfileResponse(null);
     } finally {
       setIsFetchingIgProfile(false);
+    }
+  };
+
+  const handleFetchTikTokProfile = async () => {
+    setIsFetchingTikTokProfile(true);
+    try {
+      const userId = tiktokProfileUserId.trim() || undefined;
+      const data = await fetchTikTokProfile(userId);
+      setTiktokProfileResponse(data);
+      toast({
+        title: 'TikTok Profile fetched',
+        description: 'Profile retrieved from TikTok API.',
+      });
+    } catch (error: any) {
+      console.error('Fetch TikTok Profile error:', error);
+      const errorMessage = error?.detail?.message || error?.message || 'Unable to fetch TikTok Profile.';
+      toast({
+        title: 'Fetch failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      setTiktokProfileResponse(null);
+    } finally {
+      setIsFetchingTikTokProfile(false);
+    }
+  };
+
+  const handleFetchTikTokStats = async () => {
+    setIsFetchingTikTokStats(true);
+    try {
+      const userId = tiktokStatsUserId.trim() || undefined;
+      const data = await fetchTikTokStats(userId);
+      setTiktokStatsResponse(data);
+      toast({
+        title: 'TikTok Stats fetched',
+        description: 'Stats retrieved from TikTok API.',
+      });
+    } catch (error: any) {
+      console.error('Fetch TikTok Stats error:', error);
+      const errorMessage = error?.detail?.message || error?.message || 'Unable to fetch TikTok Stats.';
+      toast({
+        title: 'Fetch failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      setTiktokStatsResponse(null);
+    } finally {
+      setIsFetchingTikTokStats(false);
     }
   };
 
@@ -489,6 +537,154 @@ export default function Analytics() {
               ) : (
                 <p className="text-muted-foreground">
                   No profile fetched yet. Enter a user ID and click "Fetch IG Profile" to retrieve profile information.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* TikTok Profile Card (user.info.basic, user.info.profile) */}
+        <Card>
+          <CardHeader>
+            <CardTitle>TikTok Profile (user.info.basic, user.info.profile)</CardTitle>
+            <CardDescription>
+              Fetch TikTok profile using user.info.basic and user.info.profile permissions.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tiktokProfileUserId">TikTok User ID (optional)</Label>
+              <Input
+                id="tiktokProfileUserId"
+                placeholder="Leave empty for 'me' (your connected account)"
+                value={tiktokProfileUserId}
+                onChange={(event) => setTiktokProfileUserId(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty to use your connected TikTok account, or enter a specific user ID
+              </p>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleFetchTikTokProfile} disabled={isFetchingTikTokProfile}>
+                {isFetchingTikTokProfile ? 'Fetching…' : 'Fetch TikTok Profile'}
+              </Button>
+            </div>
+            <div className="rounded-lg border bg-muted/40 p-4 text-sm">
+              <p className="font-medium mb-2">TikTok Profile Response</p>
+              {tiktokProfileResponse?.data ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {tiktokProfileResponse.data.display_name && (
+                      <div className="p-3 rounded-md bg-background border">
+                        <p className="text-xs text-muted-foreground mb-1">Display Name</p>
+                        <p className="text-lg font-bold">{tiktokProfileResponse.data.display_name}</p>
+                      </div>
+                    )}
+                    {tiktokProfileResponse.data.avatar_url && (
+                      <div className="p-3 rounded-md bg-background border">
+                        <p className="text-xs text-muted-foreground mb-1">Avatar</p>
+                        <img src={tiktokProfileResponse.data.avatar_url} alt="Avatar" className="w-16 h-16 rounded-full" />
+                      </div>
+                    )}
+                    {tiktokProfileResponse.data.is_verified !== undefined && (
+                      <div className="p-3 rounded-md bg-background border">
+                        <p className="text-xs text-muted-foreground mb-1">Verified</p>
+                        <p className="text-lg font-bold">{tiktokProfileResponse.data.is_verified ? 'Yes' : 'No'}</p>
+                      </div>
+                    )}
+                  </div>
+                  {tiktokProfileResponse.data.bio_description && (
+                    <div className="p-3 rounded-md bg-background border">
+                      <p className="text-xs text-muted-foreground mb-1">Bio</p>
+                      <p className="text-sm">{tiktokProfileResponse.data.bio_description}</p>
+                    </div>
+                  )}
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                      View raw JSON response
+                    </summary>
+                    <pre className="max-h-64 overflow-auto text-xs bg-background p-3 rounded-md border mt-2">
+                      {JSON.stringify(tiktokProfileResponse, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">
+                  No profile fetched yet. Click "Fetch TikTok Profile" to retrieve your TikTok profile.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* TikTok Stats Card (user.info.stats) */}
+        <Card>
+          <CardHeader>
+            <CardTitle>TikTok Stats (user.info.stats)</CardTitle>
+            <CardDescription>
+              Fetch TikTok user statistics using user.info.stats permission.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tiktokStatsUserId">TikTok User ID (optional)</Label>
+              <Input
+                id="tiktokStatsUserId"
+                placeholder="Leave empty for 'me' (your connected account)"
+                value={tiktokStatsUserId}
+                onChange={(event) => setTiktokStatsUserId(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty to use your connected TikTok account, or enter a specific user ID
+              </p>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleFetchTikTokStats} disabled={isFetchingTikTokStats}>
+                {isFetchingTikTokStats ? 'Fetching…' : 'Fetch TikTok Stats'}
+              </Button>
+            </div>
+            <div className="rounded-lg border bg-muted/40 p-4 text-sm">
+              <p className="font-medium mb-2">TikTok Stats Response</p>
+              {tiktokStatsResponse?.data ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {tiktokStatsResponse.data.follower_count !== undefined && (
+                      <div className="p-3 rounded-md bg-background border">
+                        <p className="text-xs text-muted-foreground mb-1">Followers</p>
+                        <p className="text-lg font-bold">{tiktokStatsResponse.data.follower_count.toLocaleString()}</p>
+                      </div>
+                    )}
+                    {tiktokStatsResponse.data.following_count !== undefined && (
+                      <div className="p-3 rounded-md bg-background border">
+                        <p className="text-xs text-muted-foreground mb-1">Following</p>
+                        <p className="text-lg font-bold">{tiktokStatsResponse.data.following_count.toLocaleString()}</p>
+                      </div>
+                    )}
+                    {tiktokStatsResponse.data.likes_count !== undefined && (
+                      <div className="p-3 rounded-md bg-background border">
+                        <p className="text-xs text-muted-foreground mb-1">Total Likes</p>
+                        <p className="text-lg font-bold">{tiktokStatsResponse.data.likes_count.toLocaleString()}</p>
+                      </div>
+                    )}
+                    {tiktokStatsResponse.data.video_count !== undefined && (
+                      <div className="p-3 rounded-md bg-background border">
+                        <p className="text-xs text-muted-foreground mb-1">Videos</p>
+                        <p className="text-lg font-bold">{tiktokStatsResponse.data.video_count.toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                      View raw JSON response
+                    </summary>
+                    <pre className="max-h-64 overflow-auto text-xs bg-background p-3 rounded-md border mt-2">
+                      {JSON.stringify(tiktokStatsResponse, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">
+                  No stats fetched yet. Click "Fetch TikTok Stats" to retrieve your TikTok statistics.
                 </p>
               )}
             </div>
