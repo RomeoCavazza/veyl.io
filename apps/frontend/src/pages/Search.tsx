@@ -593,12 +593,25 @@ export default function Search() {
                             }}
                           />
                         ) : null
-                      ) : isVideo && embedUrl ? (
+                      ) : embedUrl ? (
+                        // PRIORITÉ: Toujours utiliser iframe embed si permalink disponible (plus fiable)
                         <iframe
                           src={embedUrl}
                           title={post.id}
                           className="w-full h-full"
                           allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+                          onError={(e) => {
+                            // Si iframe échoue, essayer l'image comme fallback
+                            const iframe = e.target as HTMLIFrameElement;
+                            if (post.media_url && isImage) {
+                              iframe.style.display = 'none';
+                              const img = document.createElement('img');
+                              img.src = post.media_url;
+                              img.alt = post.caption || username || 'Instagram post';
+                              img.className = 'object-cover w-full h-full';
+                              iframe.parentElement?.appendChild(img);
+                            }
+                          }}
                         />
                       ) : post.media_url && isImage ? (
                         <img
@@ -608,23 +621,7 @@ export default function Search() {
                           onError={(e) => {
                             const img = e.target as HTMLImageElement;
                             img.style.display = 'none';
-                            // Si l'image échoue, essayer l'iframe embed comme fallback
-                            if (embedUrl) {
-                              const iframe = document.createElement('iframe');
-                              iframe.src = embedUrl;
-                              iframe.className = 'w-full h-full';
-                              iframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; picture-in-picture');
-                              iframe.title = post.id;
-                              img.parentElement?.appendChild(iframe);
-                            }
                           }}
-                        />
-                      ) : embedUrl ? (
-                        <iframe
-                          src={embedUrl}
-                          title={post.id}
-                          className="w-full h-full"
-                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
                         />
                       ) : null}
                       {post.platform === 'tiktok' && (

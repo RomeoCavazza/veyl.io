@@ -405,14 +405,26 @@ async def get_instagram_public_content(
             post = upsert_post(
                 db, "instagram", item["id"], item, "meta_ig_public_api", defaults
             )
+            permalink = item.get("permalink")
+            # Si pas de permalink mais qu'on a un ID, construire le permalink
+            if not permalink and item.get("id"):
+                # Format: https://www.instagram.com/p/{shortcode}/
+                # L'ID Instagram peut être utilisé directement si c'est un shortcode
+                instagram_id = item.get("id")
+                if instagram_id and not instagram_id.isdigit():
+                    permalink = f"https://www.instagram.com/p/{instagram_id}/"
+            
             results.append({
                 "id": post.id,
                 "caption": post.caption,
                 "media_url": post.media_url,
-                "permalink": item.get("permalink"),
+                "permalink": permalink,
+                "username": author,
+                "author": author,
                 "like_count": item.get("like_count", 0),
                 "comments_count": item.get("comments_count", 0),
                 "timestamp": item.get("timestamp"),
+                "media_type": item.get("media_type"),
             })
         
         db.commit()
