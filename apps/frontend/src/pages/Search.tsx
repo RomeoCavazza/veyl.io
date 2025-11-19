@@ -572,7 +572,9 @@ export default function Search() {
                   post.media_url.includes('scontent') || // URLs Instagram CDN
                   post.media_url.includes('fbcdn') // URLs Facebook CDN
                 );
-                const embedUrl = post.permalink ? `${post.permalink.replace(/\/$/, '')}/embed` : undefined;
+                // Instagram ne supporte pas /embed directement, il faut utiliser oEmbed API
+                // Pour l'affichage dans la liste, on utilise l'image, pas l'iframe
+                // L'iframe oEmbed est utilisé uniquement dans EmbedDialog
                 
                 return (
                 <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -593,26 +595,6 @@ export default function Search() {
                             }}
                           />
                         ) : null
-                      ) : embedUrl ? (
-                        // PRIORITÉ: Toujours utiliser iframe embed si permalink disponible (plus fiable)
-                        <iframe
-                          src={embedUrl}
-                          title={post.id}
-                          className="w-full h-full"
-                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
-                          onError={(e) => {
-                            // Si iframe échoue, essayer l'image comme fallback
-                            const iframe = e.target as HTMLIFrameElement;
-                            if (post.media_url && isImage) {
-                              iframe.style.display = 'none';
-                              const img = document.createElement('img');
-                              img.src = post.media_url;
-                              img.alt = post.caption || username || 'Instagram post';
-                              img.className = 'object-cover w-full h-full';
-                              iframe.parentElement?.appendChild(img);
-                            }
-                          }}
-                        />
                       ) : post.media_url && isImage ? (
                         <img
                           src={post.media_url}
@@ -632,9 +614,20 @@ export default function Search() {
                           <span className="text-sm font-medium">TikTok Video</span>
                         </div>
                       )}
-                      {!post.media_url && !embedUrl && post.platform !== 'tiktok' && (
+                      {!post.media_url && post.platform !== 'tiktok' && (
                         <div className="w-full h-full flex items-center justify-center bg-muted/50">
-                          <span className="text-muted-foreground text-sm">No media</span>
+                          {post.permalink ? (
+                            <a
+                              href={post.permalink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted-foreground text-sm hover:text-primary hover:underline"
+                            >
+                              View on Instagram
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">No media</span>
+                          )}
                         </div>
                       )}
                     </div>
