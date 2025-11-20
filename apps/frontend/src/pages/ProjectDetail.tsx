@@ -39,6 +39,7 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
+  const [posts, setPosts] = useState<ProjectPost[]>([]);
   const [creators, setCreators] = useState<CreatorCard[]>([]);
   const [creatorLinks, setCreatorLinks] = useState<CreatorLink[]>([]);
   const [hashtagLinks, setHashtagLinks] = useState<HashtagLink[]>([]);
