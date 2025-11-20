@@ -26,6 +26,7 @@ import { Plus, X, Heart, MessageCircle, Eye, ArrowLeft, Bell, AtSign, Trash2, Ex
 import { useToast } from '@/hooks/use-toast';
 
 import { getProject, updateProject, deleteProject, addProjectCreator, removeProjectCreator, addProjectHashtag, removeProjectHashtag, getProjectPosts, fetchMetaIGPublic, fetchTikTokVideos, linkProjectHashtagPosts, searchCreators, type Project } from '@/lib/api';
+import { useListProjectPostsApiV1ProjectsProjectIdPostsGet } from '@/api/generated/projects';
 import type { ProjectPost } from '@/types/project';
 import type { CreatorLink, HashtagLink, CreatorCard, HashtagEntry, ProjectData } from '@/types/project';
 import { getErrorMessage } from '@/lib/utils';
@@ -38,10 +39,11 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
-  const [posts, setPosts] = useState<ProjectPost[]>([]);
   const [creators, setCreators] = useState<CreatorCard[]>([]);
   const [creatorLinks, setCreatorLinks] = useState<CreatorLink[]>([]);
   const [hashtagLinks, setHashtagLinks] = useState<HashtagLink[]>([]);
+  const [postsParams, setPostsParams] = useState<{ platform?: string } | undefined>(undefined);
+  const { data: postsData, isLoading: postsLoading, refetch: refetchPosts } = useListProjectPostsApiV1ProjectsProjectIdPostsGet(id ?? '', postsParams, { query: { enabled: !!id } });
   const [addCreatorOpen, setAddCreatorOpen] = useState(false);
   const [newCreatorUsername, setNewCreatorUsername] = useState('');
   const [newCreatorPlatform, setNewCreatorPlatform] = useState('instagram');
@@ -124,8 +126,8 @@ export default function ProjectDetail() {
           engagement: 0,
           platform: projectData.platforms?.[0] || 'instagram',
         }));
-        // Niches are now handled via hashtagLinks
-      }
+      // Niches are now handled via hashtagLinks
+    }
 
     setEditName(projectData.name || 'Untitled project');
     setEditDescription(projectData.description || '');
@@ -133,51 +135,39 @@ export default function ProjectDetail() {
 
   const fetchProjectPosts = useCallback(async (platformFilter?: string) => {
     if (!id) return;
+    // Update query params for the Orval hook
+    setPostsParams(platformFilter ? { platform: platformFilter } : undefined);
     try {
-      // Convertir le filtre frontend en filtre backend
-      let backendPlatform: string | undefined = undefined;
-      if (platformFilter === 'meta') {
-        backendPlatform = 'meta'; // Backend gère 'meta' = instagram + facebook
-      } else if (platformFilter === 'tiktok') {
-        backendPlatform = 'tiktok';
-      } else if (platformFilter === 'instagram') {
-        backendPlatform = 'instagram';
-      } else if (platformFilter === 'facebook') {
-        backendPlatform = 'facebook';
-      }
-      // Si 'all', backendPlatform reste undefined (pas de filtre)
-      
-      const postsData = await getProjectPosts(id, backendPlatform);
-      setPosts(postsData);
+      await refetchPosts();
     } catch (error) {
       console.error('Error loading project posts:', error);
     }
-  }, [id]);
+  }, [id, refetchPosts]);
 
   // Fetch posts from API - adaptatif selon la vue
   const handleFetch = async () => {
     if (!project || !id) return;
-    
+
     const isFetching = isFetchingMeta || isFetchingTikTok;
     if (isFetching) return; // Éviter les appels multiples
-    
+
     // Déterminer quelles plateformes fetcher selon la vue
     const shouldFetchMeta = selectedPlatformFilter === 'all' || selectedPlatformFilter === 'meta';
     const shouldFetchTikTok = selectedPlatformFilter === 'all' || selectedPlatformFilter === 'tiktok';
-    
+
     if (shouldFetchMeta) setIsFetchingMeta(true);
     if (shouldFetchTikTok) setIsFetchingTikTok(true);
-    
+
     try {
       const projectHashtags = project?.hashtags || hashtagLinks || [];
       let fetchedCount = 0;
-      
+
       // Fetch Meta si nécessaire - NE PAS FILTRER PAR PLATFORM (comme Search)
       // Le hashtag peut être créé avec n'importe quelle platform mais on veut fetcher Meta
       if (shouldFetchMeta) {
         // Prendre TOUS les hashtags (pas de filtre par platform), comme dans Search
         const allHashtags = projectHashtags.filter((h: HashtagLink) => h.name);
-        
+
         if (allHashtags.length > 0) {
           for (const hashtag of allHashtags.slice(0, 3)) {
             try {
@@ -201,13 +191,13 @@ export default function ProjectDetail() {
           }
         }
       }
-      
+
       // Fetch TikTok si nécessaire - NE PAS FILTRER PAR PLATFORM (comme Search)
-      // Le hashtag peut être créé avec platform='instagram' mais on veut quand même fetcher TikTok
+      // Le hashtag peut être créé avec platform='instagram' but we still want to fetch TikTok
       if (shouldFetchTikTok) {
         // Prendre TOUS les hashtags (pas de filtre par platform), comme dans Search
         const allHashtags = projectHashtags.filter((h: HashtagLink) => h.name);
-        
+
         if (allHashtags.length > 0) {
           for (const hashtag of allHashtags.slice(0, 3)) {
             try {
@@ -215,7 +205,7 @@ export default function ProjectDetail() {
               const response = await fetchTikTokVideos(hashtag.name, 10);
               const source = response.meta?.source || 'unknown';
               const videoCount = response.data?.length || 0;
-              
+
               if (source === 'tiktok_video_list_api') {
                 console.log(`✅ [FETCH] TikTok API SUCCESS for #${hashtag.name} (${videoCount} videos from API)`);
                 fetchedCount++;
@@ -235,16 +225,16 @@ export default function ProjectDetail() {
           console.log(`⚠️ [FETCH] No hashtags found in project`);
         }
       }
-      
+
       // 🔗 RE-LINK: Toujours re-linker les posts au hashtag après le fetch (même si API échoué)
       // Cela permet de charger les posts depuis la DB même si l'API a échoué
       const allHashtags = projectHashtags.filter((h: HashtagLink) => h.name);
       for (const hashtag of allHashtags.slice(0, 3)) {
-        const hashtagLink = projectHashtags.find((h: HashtagLink) => 
-          (h.name?.toLowerCase() === hashtag.name?.toLowerCase() || 
-           h.name?.toLowerCase() === `#${hashtag.name?.toLowerCase()}`)
+        const hashtagLink = projectHashtags.find((h: HashtagLink) =>
+        (h.name?.toLowerCase() === hashtag.name?.toLowerCase() ||
+          h.name?.toLowerCase() === `#${hashtag.name?.toLowerCase()}`)
         );
-        
+
         if (hashtagLink) {
           const linkId = hashtagLink.link_id || hashtagLink.id;
           if (linkId) {
@@ -267,7 +257,7 @@ export default function ProjectDetail() {
       const platformFilter = selectedPlatformFilter === 'all' ? undefined : selectedPlatformFilter;
       await fetchProjectPosts(platformFilter);
       setRefreshTrigger(Date.now());
-      
+
       if (fetchedCount === 0 && allHashtags.length === 0) {
         toast({
           title: 'No hashtags found',
@@ -276,7 +266,7 @@ export default function ProjectDetail() {
         });
         return;
       }
-      
+
       const platformText = shouldFetchMeta && shouldFetchTikTok ? 'Meta and TikTok' : shouldFetchMeta ? 'Meta' : 'TikTok';
       toast({
         title: 'Posts fetched',
@@ -296,11 +286,11 @@ export default function ProjectDetail() {
 
   const fetchProject = useCallback(async () => {
     if (!id) return;
-      setLoading(true);
-      try {
-        const projectData = await getProject(id);
-        console.log('Project loaded:', projectData);
-        applyProjectData(projectData);
+    setLoading(true);
+    try {
+      const projectData = await getProject(id);
+      console.log('Project loaded:', projectData);
+      applyProjectData(projectData);
     } catch (error: unknown) {
       console.error('Error loading project:', error);
       toast({
@@ -353,17 +343,17 @@ export default function ProjectDetail() {
       setAddCreatorOpen(false);
       setNewCreatorUsername('');
       toast({ title: 'Creator added', description: `@${username} linked to the project.` });
-      } catch (error: unknown) {
+    } catch (error: unknown) {
       console.error('Error adding creator:', error);
-        toast({
-          title: 'Error',
+      toast({
+        title: 'Error',
         description: getErrorMessage(error),
-          variant: 'destructive',
-        });
-      } finally {
+        variant: 'destructive',
+      });
+    } finally {
       setIsSavingCreator(false);
-      }
-    };
+    }
+  };
 
   const handleRemoveCreatorLink = async (linkId: number) => {
     if (!id) return;
@@ -374,7 +364,7 @@ export default function ProjectDetail() {
       toast({ title: 'Creator removed' });
     } catch (error: unknown) {
       console.error('Error removing creator:', error);
-    toast({
+      toast({
         title: 'Error',
         description: getErrorMessage(error),
         variant: 'destructive',
@@ -394,7 +384,7 @@ export default function ProjectDetail() {
       // Utiliser 'instagram' par défaut - le backend cherche sur TOUTES les plateformes de toute façon
       let updatedProject;
       let hashtagAlreadyExists = false;
-      
+
       try {
         updatedProject = await addProjectHashtag(id, {
           hashtag,
@@ -414,11 +404,11 @@ export default function ProjectDetail() {
           throw error; // Re-lancer les autres erreurs
         }
       }
-      
+
       // 🔥 AUTO-FETCH: Appeler TOUTES les APIs (Meta + TikTok) après l'ajout du hashtag
       // Le backend cherche déjà sur toutes les plateformes, donc on fetch aussi toutes les APIs
       const fetchPromises = [];
-      
+
       // Fetch Meta API
       fetchPromises.push(
         fetchMetaIGPublic(hashtag, 10)
@@ -439,7 +429,7 @@ export default function ProjectDetail() {
             console.error(`❌ [AUTO-FETCH] Meta API FAILED for #${hashtag}:`, getErrorMessage(error));
           })
       );
-      
+
       // Fetch TikTok API
       fetchPromises.push(
         fetchTikTokVideos(hashtag, 10)
@@ -455,19 +445,19 @@ export default function ProjectDetail() {
             console.error(`❌ [AUTO-FETCH] TikTok API FAILED for #${hashtag}:`, getErrorMessage(error));
           })
       );
-      
+
       // Attendre que tous les fetches soient terminés (en parallèle)
       await Promise.allSettled(fetchPromises);
-      
+
       // 🔗 RE-LINK: Après le fetch, re-linker les posts au hashtag (car les nouveaux posts ne sont pas auto-linkés)
       // Trouver le hashtag (qu'on vient d'ajouter ou qui existait déjà) pour le re-linker
       await fetchProject(); // Recharger pour avoir les hashtags à jour
       const updatedHashtagLinks = project?.hashtags || hashtagLinks || [];
-      const addedHashtagLink = updatedHashtagLinks.find((h: HashtagLink) => 
-        h.name?.toLowerCase() === hashtag.toLowerCase() || 
+      const addedHashtagLink = updatedHashtagLinks.find((h: HashtagLink) =>
+        h.name?.toLowerCase() === hashtag.toLowerCase() ||
         h.name?.toLowerCase() === `#${hashtag.toLowerCase()}`
       );
-      
+
       // Utiliser link_id (ID du ProjectHashtag) et non id (ID du Hashtag)
       const linkId = addedHashtagLink?.link_id || addedHashtagLink?.id;
       if (linkId) {
@@ -482,20 +472,20 @@ export default function ProjectDetail() {
           // Continue même si le re-link échoue
         }
       }
-      
+
       // Recharger avec le filtre actuel
       const platformFilter = selectedPlatformFilter === 'all' ? undefined : selectedPlatformFilter;
       await fetchProjectPosts(platformFilter);
       await fetchProject();
       setAddHashtagOpen(false);
       setNewHashtagName('');
-      toast({ 
-        title: 'Hashtag added', 
-        description: `#${hashtag} linked to the project. Fetching posts from all platforms...` 
+      toast({
+        title: 'Hashtag added',
+        description: `#${hashtag} linked to the project. Fetching posts from all platforms...`
       });
     } catch (error: unknown) {
       console.error('Error adding hashtag:', error);
-    toast({
+      toast({
         title: 'Error',
         description: getErrorMessage(error),
         variant: 'destructive',
@@ -524,6 +514,7 @@ export default function ProjectDetail() {
 
   // Filter posts by platform
   const filteredPosts = useMemo(() => {
+    const posts = postsData ?? [];
     if (selectedPlatformFilter === 'all') {
       return posts;
     }
@@ -534,7 +525,7 @@ export default function ProjectDetail() {
       }
       return postPlatform === selectedPlatformFilter;
     });
-  }, [posts, selectedPlatformFilter]);
+  }, [postsData, selectedPlatformFilter]);
 
   // Function to sort posts
   const sortedPosts = useMemo(() => {
@@ -579,7 +570,7 @@ export default function ProjectDetail() {
         setCreatorSuggestions([]);
         return;
       }
-      
+
       try {
         const data = await searchCreators(newCreatorUsername, 10);
         // Filtrer ceux déjà liés au projet
@@ -592,7 +583,7 @@ export default function ProjectDetail() {
         console.error('Error fetching creator suggestions:', error);
       }
     };
-    
+
     const debounceTimer = setTimeout(fetchCreatorSuggestions, 300);
     return () => clearTimeout(debounceTimer);
   }, [newCreatorUsername, creatorLinks]);
@@ -627,7 +618,7 @@ export default function ProjectDetail() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <div className="container py-8">
         {/* Header */}
         <div className="mb-6">
@@ -643,20 +634,20 @@ export default function ProjectDetail() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 mb-6">
-              <ProjectPanel
-                project={project}
-                onEdit={() => {
-                  setEditName(project.name || '');
-                  setEditDescription(project.description || '');
-                  setEditDialogOpen(true);
-                }}
-                onDelete={() => setDeleteDialogOpen(true)}
-              />
+          <ProjectPanel
+            project={project}
+            onEdit={() => {
+              setEditName(project.name || '');
+              setEditDescription(project.description || '');
+              setEditDialogOpen(true);
+            }}
+            onDelete={() => setDeleteDialogOpen(true)}
+          />
           <div className="space-y-4">
             <Card>
               <CardHeader className="py-3">
                 <CardTitle className="text-base">Tracking</CardTitle>
-                  </CardHeader>
+              </CardHeader>
               <CardContent className="space-y-5">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Hashtags</p>
@@ -734,9 +725,9 @@ export default function ProjectDetail() {
                           >
                             <X className="h-3 w-3" />
                           </Button>
-                              </div>
+                        </div>
                       ))}
-                            </div>
+                    </div>
                   )}
                   <Button
                     variant="ghost"
@@ -747,12 +738,12 @@ export default function ProjectDetail() {
                     <Plus className="h-3 w-3 mr-1" />
                     Add creator
                   </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                </div>
+              </CardContent>
+            </Card>
 
           </div>
-            </div>
+        </div>
 
         {/* Tabs */}
         <Tabs defaultValue="watchlist" className="space-y-4">
@@ -768,7 +759,7 @@ export default function ProjectDetail() {
                 Analytics
               </TabsTrigger>
             </TabsList>
-            
+
             <div className="flex gap-2 items-center">
               {/* Platform Filter */}
               <div className="flex gap-1 border rounded-md p-0.5">
@@ -818,7 +809,7 @@ export default function ProjectDetail() {
                   </>
                 )}
               </Button>
-              
+
               {/* Fetch Meta Embedding Button - pour les posts Instagram */}
               {sortedPosts.some(p => p.platform === 'instagram' && p.permalink) && (
                 <Button
@@ -832,7 +823,7 @@ export default function ProjectDetail() {
                       });
                       return;
                     }
-                    
+
                     // Ouvrir le dialog pour le premier post Instagram
                     const firstPost = instagramPosts[0];
                     setSelectedPost(firstPost);
@@ -897,20 +888,20 @@ export default function ProjectDetail() {
                     value={newCreatorUsername}
                     onChange={(e) => setNewCreatorUsername(e.target.value)}
                   />
-                {creatorSuggestions.length > 0 && (
-                  <div className="space-y-1 pt-1 max-h-40 overflow-y-auto border border-border rounded-md p-2">
-                    {creatorSuggestions.map((handle) => (
-                      <button
-                        key={handle}
-                        type="button"
-                        className="w-full text-left text-xs py-1 px-2 rounded-md hover:bg-muted transition-colors"
-                        onClick={() => setNewCreatorUsername(handle)}
-                      >
-                        @{handle}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  {creatorSuggestions.length > 0 && (
+                    <div className="space-y-1 pt-1 max-h-40 overflow-y-auto border border-border rounded-md p-2">
+                      {creatorSuggestions.map((handle) => (
+                        <button
+                          key={handle}
+                          type="button"
+                          className="w-full text-left text-xs py-1 px-2 rounded-md hover:bg-muted transition-colors"
+                          onClick={() => setNewCreatorUsername(handle)}
+                        >
+                          @{handle}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <span className="text-xs font-medium text-muted-foreground">Platform</span>
@@ -1050,7 +1041,7 @@ export default function ProjectDetail() {
                 <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   variant="destructive"
                   onClick={async () => {
                     try {

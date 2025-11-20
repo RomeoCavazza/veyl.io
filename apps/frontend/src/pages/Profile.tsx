@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Globe, Instagram, Facebook, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { TikTokIcon } from '@/components/icons/TikTokIcon';
-import { getApiBase, type ConnectedAccount, fetchInstagramBusinessProfile } from '@/lib/api';
+import { getApiBase, type ConnectedAccount, fetchInstagramBusinessProfile, fetchTikTokProfile } from '@/lib/api';
 
 export default function Profile() {
   const { user } = useAuth();
@@ -17,6 +17,7 @@ export default function Profile() {
   const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [instagramProfiles, setInstagramProfiles] = useState<Record<string, any>>({});
+  const [tiktokProfile, setTiktokProfile] = useState<any | null>(null);
 
   useEffect(() => {
     fetchConnectedAccounts();
@@ -48,6 +49,24 @@ export default function Profile() {
           // Silently fail - pas de compte Instagram Business ou pas de permission
           console.warn('Could not fetch Instagram Business profile:', error);
         }
+      }
+
+      // Si un compte TikTok est connecté, récupérer le profil TikTok live
+      const tiktokAccount = data.accounts?.find(acc => acc.provider === 'tiktok');
+      if (tiktokAccount) {
+        try {
+          const profileData = await fetchTikTokProfile(); // user_id par défaut: "me"
+          // Le backend renvoie { status, http_status, data, meta }
+          const userData = profileData?.data || profileData;
+          if (userData) {
+            setTiktokProfile(userData);
+          }
+        } catch (error) {
+          console.warn('Could not fetch TikTok profile:', error);
+          setTiktokProfile(null);
+        }
+      } else {
+        setTiktokProfile(null);
       }
     } catch (error) {
       console.error('Error fetching connected accounts:', error);
@@ -142,7 +161,7 @@ export default function Profile() {
                 {['instagram', 'facebook', 'tiktok'].map((provider) => {
                   const account = connectedAccounts.find(acc => acc.provider === provider);
                   const isConnected = !!account;
-                  const profile = instagramProfiles[provider];
+                  const profile = provider === 'tiktok' ? tiktokProfile : instagramProfiles[provider];
                   
                   return (
                     <div
@@ -151,10 +170,22 @@ export default function Profile() {
                     >
                       <div className="flex items-center gap-4 flex-1">
                         <div className="flex-shrink-0">
-                          {getProviderIcon(provider)}
+                          {provider === 'tiktok' && profile?.avatar_url ? (
+                            <img
+                              src={profile.avatar_url}
+                              alt={profile.display_name || 'TikTok avatar'}
+                              className="h-8 w-8 rounded-full object-cover"
+                            />
+                          ) : (
+                            getProviderIcon(provider)
+                          )}
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-medium">{getProviderName(provider)}</p>
+                          <p className="text-sm font-medium">
+                            {provider === 'tiktok' && profile?.display_name
+                              ? profile.display_name
+                              : getProviderName(provider)}
+                          </p>
                           <p className={`text-xs mt-0.5 ${isConnected ? 'text-green-500' : 'text-muted-foreground'}`}>
                             {isConnected ? 'Connected' : 'Not connected'}
                           </p>
@@ -173,6 +204,26 @@ export default function Profile() {
                                   )}
                                   {profile.media_count !== undefined && (
                                     <span>{profile.media_count} posts</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {/* Infos TikTok live si disponibles */}
+                          {isConnected && provider === 'tiktok' && profile && (
+                            <div className="mt-2 space-y-1">
+                              {profile.username && (
+                                <p className="text-xs text-muted-foreground">
+                                  @{profile.username}
+                                </p>
+                              )}
+                              {(profile.follower_count !== undefined || profile.likes_count !== undefined) && (
+                                <div className="flex gap-3 text-xs text-muted-foreground">
+                                  {profile.follower_count !== undefined && (
+                                    <span>{profile.follower_count.toLocaleString()} followers</span>
+                                  )}
+                                  {profile.likes_count !== undefined && (
+                                    <span>{profile.likes_count.toLocaleString()} likes</span>
                                   )}
                                 </div>
                               )}

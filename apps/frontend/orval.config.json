@@ -1,0 +1,20 @@
+{
+    "veyl": {
+        "output": {
+            "mode": "tags-split",
+            "target": "src/api/generated",
+            "schemas": "src/api/generated/model",
+            "client": "react-query",
+            "mock": false,
+            "override": {
+                "mutator": {
+                    "path": "./src/lib/axios.ts",
+                    "name": "api"
+                }
+            }
+        },
+        "input": {
+            "target": "c:/Users/romeo/OneDrive/Desktop/veyl.io/apps/backend/openapi.json"
+        }
+    }
+}
