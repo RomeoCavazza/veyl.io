@@ -8,7 +8,7 @@ export const getApiBase = (): string => {
   if (import.meta.env.DEV) {
     return ''; // Proxy Vite redirige vers Railway
   }
-  
+
   // En production, utiliser VITE_API_URL si défini (pour tests directs Railway)
   // Sinon, utiliser le proxy Vercel
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -16,7 +16,7 @@ export const getApiBase = (): string => {
     // URL absolue fournie (Railway direct) - utiliser telle quelle
     return apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
   }
-  
+
   // Sinon, utiliser le proxy Vercel (chemin relatif)
   return ''; // Proxy Vercel gère la redirection vers Railway
 };
@@ -114,7 +114,7 @@ export async function fetchMetaIGPublic(tag: string, limit: number = 12): Promis
   const searchParams = new URLSearchParams();
   searchParams.set('tag', tag.replace('#', ''));
   searchParams.set('limit', String(limit));
-  
+
   const url = apiBase ? `${apiBase}/api/v1/meta/ig-public?${searchParams.toString()}` : `/api/v1/meta/ig-public?${searchParams.toString()}`;
 
   const response = await fetch(url, {
@@ -163,7 +163,7 @@ export async function fetchMetaOEmbed(permalink: string, useAuth: boolean = fals
       apiBase = apiBase.slice(0, -1);
     }
   }
-  
+
   // Utiliser /oembed (avec auth) ou /oembed/public (sans auth)
   const endpoint = useAuth ? '/api/v1/meta/oembed' : '/api/v1/meta/oembed/public';
   const url = `${apiBase}${endpoint}?url=${encodeURIComponent(permalink)}`;
@@ -194,7 +194,7 @@ export async function fetchMetaOEmbed(permalink: string, useAuth: boolean = fals
         const errorText = await response.text().catch(() => '');
         errorData = { detail: errorText };
       }
-      
+
       if (import.meta.env.DEV) {
         console.error('oEmbed error response:', {
           status: response.status,
@@ -202,7 +202,7 @@ export async function fetchMetaOEmbed(permalink: string, useAuth: boolean = fals
           detail: errorData,
         });
       }
-      
+
       // Créer une erreur avec les détails pour pouvoir les récupérer
       const error = new Error(`HTTP_${response.status}`) as any;
       error.status = response.status;
@@ -227,11 +227,11 @@ export async function fetchPagePublicPosts(pageId: string, limit = 10): Promise<
   });
 
   const url = apiBase ? `${apiBase}/api/v1/meta/page-public?${params.toString()}` : `/api/v1/meta/page-public?${params.toString()}`;
-  
+
   const response = await fetch(url, {
     headers: withAuthHeaders(),
   });
-  
+
   if (!response.ok) {
     let errorData: any = null;
     try {
@@ -239,7 +239,7 @@ export async function fetchPagePublicPosts(pageId: string, limit = 10): Promise<
     } catch {
       errorData = { detail: `HTTP ${response.status}` };
     }
-    
+
     const error = new Error(errorData?.detail?.message || errorData?.detail || `HTTP ${response.status}`);
     (error as any).status = response.status;
     (error as any).detail = errorData?.detail;
@@ -269,21 +269,21 @@ export async function fetchMetaInsights(resourceId: string, metrics: string): Pr
     } catch {
       errorData = { detail: `HTTP ${response.status}` };
     }
-    
+
     const error = new Error(errorData?.detail?.message || errorData?.detail || `HTTP ${response.status}`);
     (error as any).status = response.status;
     (error as any).detail = errorData?.detail;
     throw error;
   }
-  
+
   return response.json();
 }
 
 // Instagram Business Profile API function
 export async function fetchInstagramBusinessProfile(igBusinessAccountId: string = 'me'): Promise<any> {
   const apiBase = getApiBase();
-  const url = apiBase 
-    ? `${apiBase}/api/v1/meta/ig-business-profile?ig_business_account_id=${encodeURIComponent(igBusinessAccountId)}` 
+  const url = apiBase
+    ? `${apiBase}/api/v1/meta/ig-business-profile?ig_business_account_id=${encodeURIComponent(igBusinessAccountId)}`
     : `/api/v1/meta/ig-business-profile?ig_business_account_id=${encodeURIComponent(igBusinessAccountId)}`;
 
   const response = await fetch(url, {
@@ -297,20 +297,20 @@ export async function fetchInstagramBusinessProfile(igBusinessAccountId: string 
     } catch {
       errorData = { detail: `HTTP ${response.status}` };
     }
-    
+
     const error = new Error(errorData?.detail?.message || errorData?.detail || `HTTP ${response.status}`);
     (error as any).status = response.status;
     (error as any).detail = errorData?.detail;
     throw error;
   }
-  
+
   return response.json();
 }
 
 // Instagram Profile API function (instagram_basic permission)
 export async function fetchInstagramProfile(userId: string): Promise<any> {
   const apiBase = getApiBase();
-  const url = apiBase 
+  const url = apiBase
     ? `${apiBase}/api/v1/meta/ig-profile?user_id=${encodeURIComponent(userId)}`
     : `/api/v1/meta/ig-profile?user_id=${encodeURIComponent(userId)}`;
 
@@ -325,13 +325,13 @@ export async function fetchInstagramProfile(userId: string): Promise<any> {
     } catch {
       errorData = { detail: `HTTP ${response.status}` };
     }
-    
+
     const error = new Error(errorData?.detail?.message || errorData?.detail || `HTTP ${response.status}`);
     (error as any).status = response.status;
     (error as any).detail = errorData?.detail;
     throw error;
   }
-  
+
   return response.json();
 }
 
@@ -343,19 +343,36 @@ export async function fetchTikTokProfile(userId?: string): Promise<any> {
     params.set('user_id', userId);
   }
 
-  const url = apiBase 
-    ? `${apiBase}/api/v1/tiktok/profile?${params.toString()}` 
+  const url = apiBase
+    ? `${apiBase}/api/v1/tiktok/profile?${params.toString()}`
     : `/api/v1/tiktok/profile?${params.toString()}`;
 
-  const response = await fetch(url, {
-    headers: withAuthHeaders(),
-  });
+  // 🎬 VISIBLE LOGS FOR TIKTOK REVIEWERS
+  console.log('🎬 [TIKTOK API] Calling TikTok Profile API');
+  console.log('🎬 [TIKTOK API] Endpoint: /api/v1/tiktok/profile');
+  console.log('🎬 [TIKTOK API] User ID:', userId || 'me');
 
-  if (!response.ok) {
-    throw new Error(`HTTP_${response.status}`);
+  try {
+    const response = await fetch(url, {
+      headers: withAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      console.error('❌ [TIKTOK API] HTTP Error:', response.status);
+      throw new Error(`HTTP_${response.status}`);
+    }
+
+    const data = await response.json();
+    const source = data?.meta?.source || 'unknown';
+    console.log('✅ [TIKTOK API] Profile received');
+    console.log('✅ [TIKTOK API] Source:', source);
+
+    return data;
+  } catch (error) {
+    console.error('❌ [TIKTOK API] Request failed:', error);
+    console.error('❌ [TIKTOK API] Falling back to database');
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function fetchTikTokStats(userId?: string): Promise<any> {
@@ -365,19 +382,36 @@ export async function fetchTikTokStats(userId?: string): Promise<any> {
     params.set('user_id', userId);
   }
 
-  const url = apiBase 
-    ? `${apiBase}/api/v1/tiktok/stats?${params.toString()}` 
+  const url = apiBase
+    ? `${apiBase}/api/v1/tiktok/stats?${params.toString()}`
     : `/api/v1/tiktok/stats?${params.toString()}`;
 
-  const response = await fetch(url, {
-    headers: withAuthHeaders(),
-  });
+  // 🎬 VISIBLE LOGS FOR TIKTOK REVIEWERS
+  console.log('🎬 [TIKTOK API] Calling TikTok Stats API');
+  console.log('🎬 [TIKTOK API] Endpoint: /api/v1/tiktok/stats');
+  console.log('🎬 [TIKTOK API] User ID:', userId || 'me');
 
-  if (!response.ok) {
-    throw new Error(`HTTP_${response.status}`);
+  try {
+    const response = await fetch(url, {
+      headers: withAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      console.error('❌ [TIKTOK API] HTTP Error:', response.status);
+      throw new Error(`HTTP_${response.status}`);
+    }
+
+    const data = await response.json();
+    const source = data?.meta?.source || 'unknown';
+    console.log('✅ [TIKTOK API] Stats received');
+    console.log('✅ [TIKTOK API] Source:', source);
+
+    return data;
+  } catch (error) {
+    console.error('❌ [TIKTOK API] Request failed:', error);
+    console.error('❌ [TIKTOK API] Falling back to database');
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function fetchTikTokVideos(query?: string, limit: number = 10, cursor?: string): Promise<any> {
@@ -392,19 +426,37 @@ export async function fetchTikTokVideos(query?: string, limit: number = 10, curs
     params.set('cursor', cursor);
   }
 
-  const url = apiBase 
-    ? `${apiBase}/api/v1/tiktok/videos?${params.toString()}` 
+  const url = apiBase
+    ? `${apiBase}/api/v1/tiktok/videos?${params.toString()}`
     : `/api/v1/tiktok/videos?${params.toString()}`;
 
-  const response = await fetch(url, {
-    headers: withAuthHeaders(),
-  });
+  // 🎬 VISIBLE LOGS FOR TIKTOK REVIEWERS
+  console.log('🎬 [TIKTOK API] Calling TikTok Videos API');
+  console.log('🎬 [TIKTOK API] Endpoint: /api/v1/tiktok/videos');
+  console.log('🎬 [TIKTOK API] Params:', { query, limit, cursor });
 
-  if (!response.ok) {
-    throw new Error(`HTTP_${response.status}`);
+  try {
+    const response = await fetch(url, {
+      headers: withAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      console.error('❌ [TIKTOK API] HTTP Error:', response.status);
+      throw new Error(`HTTP_${response.status}`);
+    }
+
+    const data = await response.json();
+    const source = data?.meta?.source || 'unknown';
+    console.log('✅ [TIKTOK API] Response received');
+    console.log('✅ [TIKTOK API] Source:', source);
+    console.log('✅ [TIKTOK API] Videos count:', data?.data?.length || 0);
+
+    return data;
+  } catch (error) {
+    console.error('❌ [TIKTOK API] Request failed:', error);
+    console.error('❌ [TIKTOK API] Falling back to database');
+    throw error;
   }
-
-  return response.json();
 }
 
 export interface HashtagSearchResult {
@@ -420,11 +472,11 @@ export async function searchHashtags(q: string, platform: string = 'instagram'):
   const response = await fetch(url, {
     headers: withAuthHeaders(),
   });
-  
+
   if (!response.ok) {
     throw new Error(`HTTP_${response.status}`);
   }
-  
+
   return response.json();
 }
 
@@ -444,11 +496,11 @@ export async function login(email: string, password: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
   });
-  
+
   if (!response.ok) {
     throw new Error('Login failed');
   }
-  
+
   return response.json();
 }
 
@@ -460,11 +512,11 @@ export async function register(email: string, password: string, name?: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, name })
   });
-  
+
   if (!response.ok) {
     throw new Error('Registration failed');
   }
-  
+
   return response.json();
 }
 
@@ -475,11 +527,11 @@ export async function getMe(token?: string): Promise<any> {
   const response = await fetch(url, {
     headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
   });
-  
+
   if (!response.ok) {
     throw new Error('Failed to get user info');
   }
-  
+
   return response.json();
 }
 
@@ -499,11 +551,11 @@ export async function getConnectedAccounts(): Promise<{ accounts: ConnectedAccou
     credentials: 'same-origin',
     headers: withAuthHeaders(),
   });
-  
+
   if (!response.ok) {
     throw new Error('Failed to get connected accounts');
   }
-  
+
   return response.json();
 }
 
@@ -514,7 +566,7 @@ export async function disconnectAccount(accountId: number): Promise<void> {
     method: 'DELETE',
     headers: withAuthHeaders(),
   });
-  
+
   if (!response.ok) {
     const errorText = await response.text();
     let detail = errorText;
@@ -543,7 +595,7 @@ export async function deleteUserAccount(email: string, userId?: string, reason?:
       reason: reason || undefined,
     }),
   });
-  
+
   if (!response.ok) {
     const errorText = await response.text();
     let detail = errorText;
@@ -559,14 +611,14 @@ export async function deleteUserAccount(email: string, userId?: string, reason?:
 
 export async function searchCreators(query: string, limit: number = 10): Promise<{ creators: Array<{ username: string }> }> {
   const apiBase = getApiBase();
-  const url = apiBase 
+  const url = apiBase
     ? `${apiBase}/api/v1/projects/creators/search?q=${encodeURIComponent(query)}&limit=${limit}`
     : `/api/v1/projects/creators/search?q=${encodeURIComponent(query)}&limit=${limit}`;
-  
+
   const response = await fetch(url, {
     headers: withAuthHeaders(),
   });
-  
+
   if (!response.ok) {
     const errorText = await response.text();
     let detail = errorText;
@@ -578,7 +630,7 @@ export async function searchCreators(query: string, limit: number = 10): Promise
     }
     throw new Error(detail || `HTTP ${response.status}: Failed to search creators`);
   }
-  
+
   return response.json();
 }
 
@@ -632,13 +684,13 @@ export async function createProject(project: ProjectCreate): Promise<Project> {
   const apiBase = getApiBase();
   // IMPORTANT: Utiliser '/' (slash) pour la route, FastAPI gère les deux versions
   const url = apiBase ? `${apiBase}/api/v1/projects` : '/api/v1/projects';
-  
+
   if (import.meta.env.DEV) {
     console.log('API: Creating project at:', url);
     console.log('API: Using proxy:', import.meta.env.DEV ? 'Vite' : 'Vercel');
     console.log('API: Request body:', JSON.stringify(project, null, 2));
   }
-  
+
   const response = await fetch(url, {
     mode: 'cors',
     credentials: 'same-origin', // Utiliser same-origin pour le proxy Vercel
@@ -650,13 +702,13 @@ export async function createProject(project: ProjectCreate): Promise<Project> {
     },
     body: JSON.stringify(project),
   });
-  
+
   if (import.meta.env.DEV) {
     console.log('API: Response status:', response.status);
     console.log('API: Response type:', response.type);
     console.log('API: Response redirected:', response.redirected);
   }
-  
+
   if (!response.ok) {
     const errorText = await response.text();
     if (import.meta.env.DEV) {
@@ -670,7 +722,7 @@ export async function createProject(project: ProjectCreate): Promise<Project> {
     }
     throw new Error(error.detail || `HTTP ${response.status}: Failed to create project`);
   }
-  
+
   const data = await response.json();
   if (import.meta.env.DEV) {
     console.log('API: Project created successfully:', data);
@@ -682,17 +734,17 @@ export async function getProjects(): Promise<Project[]> {
   // Utiliser getApiBase() pour déterminer l'URL de base
   const apiBase = getApiBase();
   const url = apiBase ? `${apiBase}/api/v1/projects` : '/api/v1/projects';
-  
+
   const response = await fetch(url, {
     mode: 'cors',
     credentials: apiBase ? 'include' : 'same-origin', // include pour Railway direct, same-origin pour proxy
     headers: withAuthHeaders(),
   });
-  
+
   if (!response.ok) {
     throw new Error('Failed to get projects');
   }
-  
+
   return response.json();
 }
 
@@ -830,7 +882,7 @@ export async function getProject(projectId: string): Promise<Project> {
     }
     throw new Error(detail || `HTTP ${response.status}: Failed to load project`);
   }
-  
+
   return response.json();
 }
 
@@ -861,7 +913,7 @@ export async function updateProject(projectId: string, updates: Partial<ProjectC
     }
     throw new Error(detail || `HTTP ${response.status}: Failed to update project`);
   }
-  
+
   return response.json();
 }
 
@@ -891,7 +943,7 @@ export async function deleteProject(projectId: string): Promise<void> {
 
 export async function linkProjectHashtagPosts(projectId: string, linkId: number, limit: number = 100): Promise<{ newly_linked?: number }> {
   const apiBase = getApiBase();
-  const url = apiBase 
+  const url = apiBase
     ? `${apiBase}/api/v1/projects/${projectId}/hashtags/${linkId}/link-posts?limit=${limit}`
     : `/api/v1/projects/${projectId}/hashtags/${linkId}/link-posts?limit=${limit}`;
 
@@ -911,7 +963,7 @@ export async function linkProjectHashtagPosts(projectId: string, linkId: number,
     }
     throw new Error(detail || `HTTP ${response.status}: Failed to link posts`);
   }
-  
+
   return response.json();
 }
 
@@ -921,8 +973,8 @@ export async function getProjectPosts(projectId: string, platform?: string): Pro
   if (platform) {
     params.set('platform', platform);
   }
-  const url = apiBase 
-    ? `${apiBase}/api/v1/projects/${projectId}/posts${params.toString() ? '?' + params.toString() : ''}` 
+  const url = apiBase
+    ? `${apiBase}/api/v1/projects/${projectId}/posts${params.toString() ? '?' + params.toString() : ''}`
     : `/api/v1/projects/${projectId}/posts${params.toString() ? '?' + params.toString() : ''}`;
 
   const response = await fetch(url, {
@@ -942,6 +994,6 @@ export async function getProjectPosts(projectId: string, platform?: string): Pro
     }
     throw new Error(detail || `HTTP ${response.status}: Failed to load project posts`);
   }
-  
+
   return response.json();
 }
