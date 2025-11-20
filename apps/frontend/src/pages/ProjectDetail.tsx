@@ -859,8 +859,9 @@ export default function ProjectDetail() {
                 setSelectedPost(post);
                 setPostDialogOpen(true);
               }}
-              onEmbedClick={(post) => {
+              onEmbedClick={(post, useAuth = false) => {
                 setSelectedPost(post);
+                setEmbedUseAuth(useAuth);
                 setEmbedDialogOpen(true);
               }}
             />
