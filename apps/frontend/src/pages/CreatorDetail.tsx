@@ -27,7 +27,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import { getProjectPosts, fetchInstagramBusinessProfile, fetchInstagramProfile } from '@/lib/api';
+import { getProjectPosts, fetchInstagramBusinessProfile, fetchInstagramProfile, fetchTikTokProfile, fetchTikTokStats } from '@/lib/api';
 
 export default function CreatorDetail() {
   const engagementTrendData: Array<{ date: string; engagement: number }> = [];
@@ -46,7 +46,7 @@ export default function CreatorDetail() {
   // Filter posts by platform
   const filteredPosts = useMemo(() => {
     let filtered = creatorPosts;
-    
+
     if (selectedPlatformFilter !== 'all') {
       filtered = creatorPosts.filter((post: any) => {
         const postPlatform = post.platform || creator?.platform || 'instagram';
@@ -56,7 +56,7 @@ export default function CreatorDetail() {
         return postPlatform === selectedPlatformFilter;
       });
     }
-    
+
     return filtered;
   }, [creatorPosts, selectedPlatformFilter, creator]);
 
@@ -145,7 +145,7 @@ export default function CreatorDetail() {
         let matchedCreator = projectCreators.find(
           (c: any) => (c.creator_username || '').toLowerCase() === normalizedUsername
         );
-        
+
         // Si pas trouvé, chercher dans les posts pour trouver le username réel
         if (!matchedCreator) {
           try {
@@ -155,7 +155,7 @@ export default function CreatorDetail() {
               const postAuthor = (p.username || p.author || '').toLowerCase();
               return postAuthor === normalizedUsername;
             });
-            
+
             if (postWithUsername) {
               // Créer un créateur fictif depuis le post
               matchedCreator = {
@@ -170,7 +170,7 @@ export default function CreatorDetail() {
 
         if (matchedCreator) {
           const creatorPlatform = projectData.platforms?.[0] || 'instagram';
-          
+
           // Base creator data from project
           const baseCreator = {
             handle: matchedCreator.creator_username,
@@ -184,7 +184,7 @@ export default function CreatorDetail() {
             verified: matchedCreator.verified || false,
             full_name: matchedCreator.full_name,
           };
-          
+
           // Si c'est Instagram, essayer d'enrichir avec Meta API
           if (creatorPlatform === 'instagram' && matchedCreator.creator_username) {
             try {
@@ -222,6 +222,32 @@ export default function CreatorDetail() {
               console.warn('Failed to fetch Instagram profile, using project data:', error);
               setCreator(baseCreator);
             }
+          } else if (creatorPlatform === 'tiktok' && matchedCreator.creator_username) {
+            // 🎬 TIKTOK: Essayer d'enrichir avec TikTok API
+            try {
+              console.log('🎬 [CREATOR] Attempting to fetch TikTok profile for:', matchedCreator.creator_username);
+              const profile = await fetchTikTokProfile();
+              const stats = await fetchTikTokStats();
+
+              if (profile && stats) {
+                // Enrichir avec les données TikTok API
+                setCreator({
+                  ...baseCreator,
+                  profile_picture: profile.data?.avatar_url || baseCreator.profile_picture,
+                  followers: stats.data?.follower_count || baseCreator.followers,
+                  following: stats.data?.following_count || baseCreator.following,
+                  bio: profile.data?.bio_description || baseCreator.bio,
+                  verified: profile.data?.is_verified || baseCreator.verified,
+                  full_name: profile.data?.display_name || baseCreator.full_name,
+                });
+              } else {
+                setCreator(baseCreator);
+              }
+            } catch (error) {
+              // Si l'API TikTok échoue, utiliser les données du projet
+              console.warn('Failed to fetch TikTok profile, using project data:', error);
+              setCreator(baseCreator);
+            }
           } else {
             setCreator(baseCreator);
           }
@@ -236,20 +262,20 @@ export default function CreatorDetail() {
         if (fallbackHandle) {
           const cleanHandle = fallbackHandle.replace('@', '');
           const creatorPlatform = projectData.platforms?.[0] || 'instagram';
-          
+
           // Calculer les stats depuis les posts du créateur
           const creatorPosts = await getProjectPosts(id);
           const filteredCreatorPosts = creatorPosts.filter((post: any) => {
             const postAuthor = (post.author || post.username || '').toLowerCase();
             return postAuthor === cleanHandle.toLowerCase();
           });
-          
+
           const totalLikes = filteredCreatorPosts.reduce((sum: number, p: any) => sum + (p.like_count || 0), 0);
           const totalComments = filteredCreatorPosts.reduce((sum: number, p: any) => sum + (p.comment_count || 0), 0);
-          const avgEngagement = filteredCreatorPosts.length > 0 
+          const avgEngagement = filteredCreatorPosts.length > 0
             ? ((totalLikes + totalComments) / filteredCreatorPosts.length).toFixed(1)
             : 0;
-          
+
           setCreator({
             handle: cleanHandle,
             platform: creatorPlatform,
@@ -289,22 +315,22 @@ export default function CreatorDetail() {
         if (!token) return;
 
         const allPosts = await getProjectPosts(id);
-        
+
         // Filter posts by creator username
         const creatorPostsFiltered = allPosts.filter((post: any) => {
           const postAuthor = (post.username || post.author || '').toLowerCase();
           const creatorHandle = creator.handle.toLowerCase();
           return postAuthor === creatorHandle;
         });
-        
+
         // Calculer les stats depuis les posts et les fusionner dans le créateur
         if (creatorPostsFiltered.length > 0) {
           const totalLikes = creatorPostsFiltered.reduce((sum: number, p: any) => sum + (p.like_count || 0), 0);
           const totalComments = creatorPostsFiltered.reduce((sum: number, p: any) => sum + (p.comment_count || 0), 0);
-          const avgEngagement = creatorPostsFiltered.length > 0 
+          const avgEngagement = creatorPostsFiltered.length > 0
             ? ((totalLikes + totalComments) / creatorPostsFiltered.length).toFixed(1)
             : 0;
-          
+
           setCreator((prev: any) => {
             if (!prev) return prev;
             return {
@@ -342,7 +368,7 @@ export default function CreatorDetail() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <div className="container py-8">
         {/* Header */}
         <div className="mb-6">
@@ -442,7 +468,7 @@ export default function CreatorDetail() {
               <TabsTrigger value="grid">Grid</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
-            
+
             {/* Platform Filter */}
             <div className="flex gap-1 border rounded-md p-0.5">
               <Button
@@ -477,8 +503,8 @@ export default function CreatorDetail() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {sortedPosts.length > 0 ? (
                 sortedPosts.map((post) => (
-                  <Card 
-                    key={post.id} 
+                  <Card
+                    key={post.id}
                     className="overflow-hidden cursor-pointer hover:border-primary transition-colors"
                     onClick={() => {
                       setSelectedPost(post);
@@ -524,7 +550,7 @@ export default function CreatorDetail() {
                 ))
               ) : (
                 <div className="col-span-full text-center py-12 text-muted-foreground">
-                  {selectedPlatformFilter !== 'all' 
+                  {selectedPlatformFilter !== 'all'
                     ? `No ${selectedPlatformFilter === 'meta' ? 'Meta' : 'TikTok'} posts found for this creator.`
                     : 'No posts found for this creator.'}
                 </div>
@@ -547,7 +573,7 @@ export default function CreatorDetail() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[60px]">Image</TableHead>
-                        <TableHead 
+                        <TableHead
                           className="cursor-pointer hover:bg-muted/50"
                           onClick={() => handleSort('caption')}
                         >
@@ -556,7 +582,7 @@ export default function CreatorDetail() {
                             {getSortIcon('caption')}
                           </div>
                         </TableHead>
-                        <TableHead 
+                        <TableHead
                           className="cursor-pointer hover:bg-muted/50"
                           onClick={() => handleSort('posted_at')}
                         >
@@ -565,7 +591,7 @@ export default function CreatorDetail() {
                             {getSortIcon('posted_at')}
                           </div>
                         </TableHead>
-                        <TableHead 
+                        <TableHead
                           className="text-right cursor-pointer hover:bg-muted/50"
                           onClick={() => handleSort('like_count')}
                         >
@@ -574,7 +600,7 @@ export default function CreatorDetail() {
                             {getSortIcon('like_count')}
                           </div>
                         </TableHead>
-                        <TableHead 
+                        <TableHead
                           className="text-right cursor-pointer hover:bg-muted/50"
                           onClick={() => handleSort('comment_count')}
                         >
@@ -583,7 +609,7 @@ export default function CreatorDetail() {
                             {getSortIcon('comment_count')}
                           </div>
                         </TableHead>
-                        <TableHead 
+                        <TableHead
                           className="text-right cursor-pointer hover:bg-muted/50"
                           onClick={() => handleSort('score')}
                         >
@@ -655,7 +681,7 @@ export default function CreatorDetail() {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                            {selectedPlatformFilter !== 'all' 
+                            {selectedPlatformFilter !== 'all'
                               ? `No ${selectedPlatformFilter === 'meta' ? 'Meta' : 'TikTok'} posts found for this creator.`
                               : 'No posts found for this creator.'}
                           </TableCell>
@@ -856,17 +882,17 @@ export default function CreatorDetail() {
                           // Format caption with hashtags and mentions as normal but styled text
                           const parts: (string | JSX.Element)[] = [];
                           let lastIndex = 0;
-                          
+
                           // Regex to find hashtags and mentions
                           const regex = /(#\w+|@\w+)/g;
                           let match;
-                          
+
                           while ((match = regex.exec(caption)) !== null) {
                             // Add text before the match
                             if (match.index > lastIndex) {
                               parts.push(caption.substring(lastIndex, match.index));
                             }
-                            
+
                             // Add styled hashtag or mention
                             parts.push(
                               <span
@@ -876,15 +902,15 @@ export default function CreatorDetail() {
                                 {match[0]}
                               </span>
                             );
-                            
+
                             lastIndex = regex.lastIndex;
                           }
-                          
+
                           // Add remaining text
                           if (lastIndex < caption.length) {
                             parts.push(caption.substring(lastIndex));
                           }
-                          
+
                           return parts.length > 0 ? parts : <span>{caption}</span>;
                         })()}
                       </div>
