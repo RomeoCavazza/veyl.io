@@ -279,7 +279,7 @@ export default function CreatorDetail() {
     fetchCreator();
   }, [id, username, navigate, toast]);
 
-  // Load creator posts
+  // Load creator posts (une seule fois par créateur, éviter les boucles infinies)
   useEffect(() => {
     const fetchCreatorPosts = async () => {
       if (!id || !creator?.handle) return;
@@ -297,20 +297,23 @@ export default function CreatorDetail() {
           return postAuthor === creatorHandle;
         });
         
-        // Calculer les stats depuis les posts
-        if (creatorPostsFiltered.length > 0 && creator) {
+        // Calculer les stats depuis les posts et les fusionner dans le créateur
+        if (creatorPostsFiltered.length > 0) {
           const totalLikes = creatorPostsFiltered.reduce((sum: number, p: any) => sum + (p.like_count || 0), 0);
           const totalComments = creatorPostsFiltered.reduce((sum: number, p: any) => sum + (p.comment_count || 0), 0);
           const avgEngagement = creatorPostsFiltered.length > 0 
             ? ((totalLikes + totalComments) / creatorPostsFiltered.length).toFixed(1)
             : 0;
           
-          setCreator({
-            ...creator,
-            posts_count: creatorPostsFiltered.length,
-            total_likes: totalLikes,
-            total_comments: totalComments,
-            avg_engagement: creator.avg_engagement || parseFloat(avgEngagement as string),
+          setCreator((prev: any) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              posts_count: creatorPostsFiltered.length,
+              total_likes: totalLikes,
+              total_comments: totalComments,
+              avg_engagement: prev.avg_engagement || parseFloat(avgEngagement as string),
+            };
           });
         }
 
@@ -320,10 +323,10 @@ export default function CreatorDetail() {
       }
     };
 
-    if (creator) {
+    if (creator?.handle) {
       fetchCreatorPosts();
     }
-  }, [id, creator]);
+  }, [id, creator?.handle]);
 
   if (!creator) {
     return (
