@@ -19,11 +19,8 @@ class InstagramOAuthProvider(BaseOAuthProvider):
         return "instagram"
     
     def get_scopes(self) -> str:
-        # Scopes de base (toujours demandés)
-        base_scopes = "pages_show_list,pages_read_engagement,instagram_basic"
-        # Scopes avancés (nécessitent App Review, mais doivent être demandés pour que Meta détecte leur utilisation)
-        advanced_scopes = "instagram_business_basic,instagram_business_manage_insights,instagram_manage_insights,read_insights,pages_read_user_content"
-        return f"{base_scopes},{advanced_scopes}"
+        # Scopes de base uniquement (les scopes avancés nécessitent App Review et seront automatiquement disponibles une fois approuvés)
+        return "pages_show_list,pages_read_engagement,instagram_basic"
     
     def get_redirect_uri(self) -> str:
         return settings.IG_REDIRECT_URI.strip() if settings.IG_REDIRECT_URI else ""
