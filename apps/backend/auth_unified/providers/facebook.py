@@ -19,6 +19,7 @@ class FacebookOAuthProvider(BaseOAuthProvider):
         return "facebook"
     
     def get_scopes(self) -> str:
+        # Scopes de base uniquement (les scopes avancés nécessitent App Review et seront automatiquement disponibles une fois approuvés)
         return "public_profile,email,pages_show_list"
     
     def get_redirect_uri(self) -> str:
@@ -95,4 +96,5 @@ class FacebookOAuthProvider(BaseOAuthProvider):
                 "email": email_to_pass,  # None si email généré
                 "access_token": access_token
             }
+
 
