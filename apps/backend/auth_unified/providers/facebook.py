@@ -19,7 +19,11 @@ class FacebookOAuthProvider(BaseOAuthProvider):
         return "facebook"
     
     def get_scopes(self) -> str:
-        return "public_profile,email,pages_show_list"
+        # Scopes de base (toujours demandés)
+        base_scopes = "public_profile,email,pages_show_list"
+        # Scopes avancés (nécessitent App Review, mais doivent être demandés pour que Meta détecte leur utilisation)
+        advanced_scopes = "pages_read_engagement,read_insights,pages_read_user_content,instagram_basic,instagram_business_basic,instagram_business_manage_insights,instagram_manage_insights"
+        return f"{base_scopes},{advanced_scopes}"
     
     def get_redirect_uri(self) -> str:
         return settings.FB_REDIRECT_URI
