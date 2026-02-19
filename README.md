@@ -16,11 +16,11 @@
   <a href="https://developers.tiktok.com/"><img src="https://img.shields.io/badge/partner-TikTok_for_Developers-black" alt="TikTok Partner"></a>
 </p>
 
-<p align="center">⚡ A social media intelligence platform that helps you monitor, analyze, and anticipate trends on Instagram and TikTok 🔍</p>
+<p align="center">A social media intelligence platform that helps you monitor, analyze, and anticipate trends on Instagram and TikTok 🔍</p>
 
 [veyl.io](https://www.veyl.io) helps you shape a comprehensive social media monitoring experience, offering powerful analytics and trend detection features powered by official Meta/TikTok APIs.
 
-## 🖥 Platform Features
+## Platform Features
 
 - **Trend Monitoring** — Create custom projects to track hashtags, creators, and emerging trends across Instagram and TikTok
 - **Advanced Analytics** — Real-time engagement metrics, growth tracking, and performance insights
@@ -30,7 +30,7 @@
 
 See the [online documentation](https://www.veyl.io/docs) for more details.
 
-## ✨ Features
+## Features
 
 - **Search-as-you-type:** Find posts and creators with real-time API integration and database fallback
 - **Multi-platform monitoring:** Track trends simultaneously on Instagram and TikTok
@@ -43,11 +43,11 @@ See the [online documentation](https://www.veyl.io/docs) for more details.
 - **Conformité RGPD:** Compliant with GDPR and CCPA data protection regulations
 - **Meta & TikTok partnerships:** Official partner with Meta for Developers and TikTok for Developers
 
-## 📖 Documentation
+## Documentation
 
 You can consult veyl.io's documentation at [veyl.io/docs](https://www.veyl.io/docs).
 
-## 🚀 Getting Started
+## Getting Started
 
 For basic instructions on how to set up veyl.io, configure OAuth, and create your first monitoring project, take a look at our [documentation](https://www.veyl.io/docs) guide.
 
@@ -74,7 +74,7 @@ npm run dev
 - Backend API: `http://localhost:8000`
 - API Docs: `http://localhost:8000/docs`
 
-## 🌍 Tech Stack
+## Tech Stack
 
 **Backend:**
 - **FastAPI** — Python async API framework
@@ -92,7 +92,7 @@ npm run dev
 - **Railway** — Backend hosting (auto-deploy)
 - **Vercel** — Frontend hosting with proxy to Railway
 
-## 🧰 Official Integrations
+## Official Integrations
 
 veyl.io integrates with official developer platforms:
 
@@ -107,26 +107,11 @@ veyl.io integrates with official developer platforms:
 - [Documentation](https://developers.tiktok.com/)
 
 
-## ⚙️ Advanced Usage
+## Advanced Usage
 
 For technical details, see the [online documentation](https://www.veyl.io/docs).
 
-## 🧾 Roadmap
-
-### ✅ Phase 1: Foundations (Completed)
-- Projects CRUD with database models
-- OAuth integration (Meta, TikTok, Google)
-- Search interface with API-first strategy and database fallback
-- Analytics dashboards and insights
-- Project management UI
-
-### 🔄 Phase 2: Post-App Review (In Progress)
-- **Advanced Search** — Enhanced search UX, filters, and ranking
-- **Supabase + pgvector** — Semantic storage, RAG, similarity search
-- **Make / n8n** — Automated data ingestion
-- **Dust** — Agent internal reasoning (if needed)
-
-## 📊 Privacy & Data Protection
+## Privacy & Data Protection
 
 veyl.io collects **anonymized** usage data to help us improve our product. We are fully compliant with GDPR and CCPA regulations.
 
@@ -162,14 +147,8 @@ Contributions are welcome! Check out the [GitHub issues](https://github.com/Rome
 - **ISCOM Paris** — Strategic planning, marketing insights, and trend analysis
 - **EPITECH Paris** — Technical development and backend architecture
 
-## 📦 Versioning
+## Versioning
 
 veyl.io releases and their associated binaries are available on the project's [releases page](https://github.com/RomeoCavazza/veyl.io/releases).
 
 The project follows [SemVer conventions](https://semver.org/) for versioning.
-
----
-
-<p align="center">
-  Made with ❤️ by the veyl.io team
-</p>
