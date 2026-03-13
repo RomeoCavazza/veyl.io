@@ -1,0 +1,10 @@
+{
+    "name": "Default Template",
+    "description": "Template par défaut pour les présentations",
+    "author": "Revolver AI Bot",
+    "version": "1.0.0",
+    "fonts": {
+        "title": "Arial",
+        "body": "Calibri"
+    }
+} 

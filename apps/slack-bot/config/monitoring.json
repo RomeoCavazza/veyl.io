@@ -1,0 +1,18 @@
+{
+  "metrics": {
+    "enabled": true,
+    "prometheus_port": 9090,
+    "collect_interval": 60
+  },
+  "alerts": {
+    "enabled": true,
+    "email": "admin@example.com",
+    "slack_webhook": "https://hooks.slack.com/services/..."
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "logs/monitoring.log",
+    "max_size": "10MB",
+    "backup_count": 5
+  }
+}

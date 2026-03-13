@@ -1,0 +1,444 @@
+{
+  "templates": {
+    "cover": {
+      "type": "cover",
+      "layout": "centered_minimal",
+      "content": {
+        "main_title": "{{brand_name}}",
+        "subtitle": "{{project_type}} Campaign",
+        "agency": "REVOLVR",
+        "tagline": "KILLING IT SINCE 2010",
+        "logos": {
+          "brand_logo": "{BRAND_LOGO_URL}",
+          "agency_logo": "assets/revolvr_logo.png"
+        }
+      },
+      "style_variations": {
+        "structured": {
+          "font_main": "Montserrat Bold",
+          "font_sub": "Montserrat Regular",
+          "color_primary": "{{primary_color}}",
+          "color_secondary": "{{secondary_color}}",
+          "background": "{{background_color}}"
+        },
+        "creative": {
+          "font_main": "Playfair Display",
+          "font_sub": "Open Sans",
+          "color_primary": "{{primary_color}}",
+          "color_secondary": "{{secondary_color}}",
+          "background": "{{background_color}}"
+        },
+        "event": {
+          "font_main": "Roboto Condensed",
+          "font_sub": "Roboto",
+          "color_primary": "{{primary_color}}",
+          "color_secondary": "{{secondary_color}}",
+          "background": "{{background_color}}"
+        }
+      },
+      "dynamic_content": {
+        "project_type": {
+          "awareness": "AWARENESS ACTIVATION",
+          "recommendation": "RECOMMENDATION",
+          "strategy": "STRATEGY",
+          "campaign": "CAMPAIGN",
+          "event": "EVENT LAUNCH"
+        }
+      }
+    },
+    "strategic_priorities": {
+      "type": "strategic_priorities",
+      "layout": "grid_2x2",
+      "content": {
+        "title": "STRATEGIC PRIORITIES",
+        "priorities": [
+          {
+            "text": "{{priority_1}}",
+            "icon": "🎯",
+            "color": "{{primary_color}}"
+          },
+          {
+            "text": "{{priority_2}}",
+            "icon": "🚀",
+            "color": "{{secondary_color}}"
+          },
+          {
+            "text": "{{priority_3}}",
+            "icon": "💡",
+            "color": "{{accent_color}}"
+          },
+          {
+            "text": "{{priority_4}}",
+            "icon": "🏆",
+            "color": "{{primary_color}}"
+          }
+        ]
+      },
+      "dynamic_content": {
+        "priorities_by_sector": {
+          "luxury": ["Increase brand awareness", "Drive consideration", "Generate leads", "Build community"],
+          "tech": ["User acquisition", "Product adoption", "Retention", "Virality"],
+          "fashion": ["Brand awareness", "Desire", "Purchase intent", "Loyalty"],
+          "food": ["Trial", "Repeat purchase", "Recommendation", "Brand love"],
+          "automotive": ["Awareness", "Consideration", "Test drive", "Purchase"],
+          "default": ["Increase awareness", "Drive engagement", "Generate leads", "Build loyalty"]
+        }
+      }
+    },
+    "sommaire": {
+      "type": "sommaire",
+      "layout": "vertical_list",
+      "content": {
+        "title": "SOMMAIRE",
+        "sections": [
+          {
+            "number": "01",
+            "title": "BRAND OVERVIEW",
+            "subtitle": "Understanding the brand"
+          },
+          {
+            "number": "02",
+            "title": "STATE OF PLAY",
+            "subtitle": "Market analysis & insights"
+          },
+          {
+            "number": "03",
+            "title": "STRATEGIC IDEAS",
+            "subtitle": "Creative concepts & execution"
+          },
+          {
+            "number": "04",
+            "title": "PLANNING & BUDGET",
+            "subtitle": "Timeline & investment"
+          }
+        ]
+      },
+      "dynamic_content": {
+        "trend_types": {
+          "social": "SOCIAL TREND",
+          "tech": "TECH TREND",
+          "cultural": "CULTURAL TREND",
+          "behavioral": "BEHAVIORAL TREND",
+          "environmental": "ENVIRONMENTAL TREND"
+        }
+      }
+    },
+    "brand_overview": {
+      "type": "brand_overview",
+      "layout": "two_columns",
+      "content": {
+        "title": "BRAND OVERVIEW",
+        "left_column": {
+          "brand_story": {
+            "title": "BRAND STORY",
+            "content": "{{brand_story}}"
+          },
+          "values": {
+            "title": "CORE VALUES",
+            "values": ["{{core_values}}"]
+          },
+          "positioning": {
+            "title": "POSITIONING",
+            "content": "{{positioning}}"
+          }
+        },
+        "right_column": {
+          "target_audience": {
+            "title": "TARGET AUDIENCE",
+            "demographics": "{{demographics}}",
+            "psychographics": "{{psychographics}}"
+          },
+          "key_messages": {
+            "title": "KEY MESSAGES",
+            "messages": ["{{key_messages}}"]
+          }
+        }
+      },
+      "dynamic_content": {
+        "extract_from_brief": {
+          "brand_story": "Extract brand history, mission, vision",
+          "values": "Extract core values, principles",
+          "positioning": "Extract market position, differentiation",
+          "target": "Extract target audience details",
+          "messages": "Extract key communication messages"
+        }
+      }
+    },
+    "state_of_play": {
+      "type": "state_of_play",
+      "layout": "grid_2x2",
+      "content": {
+        "title": "STATE OF PLAY",
+        "sections": [
+          {
+            "title": "MARKET INSIGHTS",
+            "content": "{{market_insights}}",
+            "data_points": "{{market_data_points}}"
+          },
+          {
+            "title": "COMPETITIVE LANDSCAPE",
+            "content": "{{competitive_landscape}}",
+            "data_points": "{{competitor_data_points}}"
+          },
+          {
+            "title": "CONSUMER TRENDS",
+            "content": "{{consumer_trends}}",
+            "data_points": "{{trend_data_points}}"
+          },
+          {
+            "title": "OPPORTUNITIES",
+            "content": "{{opportunities}}",
+            "data_points": "{{opportunity_data_points}}"
+          }
+        ]
+      },
+      "dynamic_content": {
+        "veille_sources": {
+          "market_data": "Industry reports, market research",
+          "competitors": "Competitor websites, social media, campaigns",
+          "consumers": "Social listening, surveys, behavioral data",
+          "opportunities": "Gap analysis, trend identification"
+        }
+      }
+    },
+    "idea_series": {
+      "type": "idea_series",
+      "idea_count": "{{NUMBER_OF_IDEAS}}",
+      "slides_per_idea": 9,
+      "structure": [
+        {
+          "slide_type": "idea_header",
+          "content": {
+            "title": "IDEA #{IDEA_NUMBER} - {TREND_TYPE}",
+            "concept_name": "{{idea_1_name}}",
+            "trend_context": "{{idea_1_trend}}"
+          }
+        },
+        {
+          "slide_type": "idea_reason",
+          "content": {
+            "title": "THE REASON",
+            "opportunity": "{{idea_1_opportunity}}",
+            "market_gap": "{{idea_1_market_gap}}",
+            "consumer_need": "{{idea_1_need}}"
+          }
+        },
+        {
+          "slide_type": "idea_data",
+          "content": {
+            "title": "THE DATA",
+            "statistics": [
+              {
+                "metric": "{{idea_1_metric_1}}",
+                "value": "{{idea_1_value_1}}",
+                "source": "{{idea_1_source_1}}"
+              },
+              {
+                "metric": "{{idea_1_metric_2}}",
+                "value": "{{idea_1_value_2}}",
+                "source": "{{idea_1_source_2}}"
+              }
+            ],
+            "trends": "{{idea_1_trends}}"
+          }
+        },
+        {
+          "slide_type": "idea_explanation",
+          "content": {
+            "title": "THE EXPLANATION",
+            "how_it_works": "{{idea_1_mechanism}}",
+            "key_components": ["{{idea_1_components}}"],
+            "user_journey": "{{idea_1_user_journey}}"
+          }
+        },
+        {
+          "slide_type": "idea_sos",
+          "content": {
+            "title": "THE SOS IDEA",
+            "amplification": "{{idea_1_amplification}}",
+            "viral_elements": ["{{idea_1_viral}}"],
+            "partnerships": "{{idea_1_partnerships}}"
+          }
+        },
+        {
+          "slide_type": "idea_moodboard",
+          "content": {
+            "title": "THE MOODBOARD",
+            "visual_direction": "{{idea_1_visual}}",
+            "color_palette": ["{{idea_1_colors}}"],
+            "imagery_style": "{{idea_1_imagery}}",
+            "ai_generated_images": ["{{idea_1_images}}"]
+          }
+        },
+        {
+          "slide_type": "idea_execution",
+          "content": {
+            "title": "THE EXECUTION",
+            "implementation": "{{idea_1_implementation}}",
+            "channels": ["{{idea_1_channels}}"],
+            "timeline": "{{idea_1_timeline}}",
+            "resources": "{{idea_1_resources}}"
+          }
+        },
+        {
+          "slide_type": "idea_result",
+          "content": {
+            "title": "THE RESULT",
+            "expected_outcomes": ["{{idea_1_outcomes}}"],
+            "kpis": [
+              {
+                "metric": "{{idea_1_kpis_metric}}",
+                "target": "{{idea_1_kpis_target}}",
+                "measurement": "{{idea_1_kpis_measurement}}"
+              }
+            ],
+            "roi": "{{idea_1_roi}}"
+          }
+        }
+      ],
+      "dynamic_content": {
+        "trend_types": {
+          "social": "SOCIAL TREND",
+          "tech": "TECH TREND",
+          "cultural": "CULTURAL TREND",
+          "behavioral": "BEHAVIORAL TREND",
+          "environmental": "ENVIRONMENTAL TREND"
+        },
+        "idea_generation": {
+          "based_on_veille": "Generate ideas from veille insights",
+          "based_on_brief": "Align with brief objectives",
+          "based_on_trends": "Leverage current trends"
+        }
+      }
+    },
+    "timeline": {
+      "type": "timeline",
+      "layout": "horizontal_timeline",
+      "content": {
+        "title": "TIMELINE",
+        "phases": [
+          {
+            "phase": "PHASE 1",
+            "name": "PLANNING & PREPARATION",
+            "duration": "{{phase_1_duration}}",
+            "activities": ["{{phase_1_activities}}"],
+            "milestones": ["{{phase_1_milestones}}"]
+          },
+          {
+            "phase": "PHASE 2",
+            "name": "EXECUTION & LAUNCH",
+            "duration": "{{phase_2_duration}}",
+            "activities": ["{{phase_2_activities}}"],
+            "milestones": ["{{phase_2_milestones}}"]
+          },
+          {
+            "phase": "PHASE 3",
+            "name": "OPTIMIZATION & SCALE",
+            "duration": "{{phase_3_duration}}",
+            "activities": ["{{phase_3_activities}}"],
+            "milestones": ["{{phase_3_milestones}}"]
+          }
+        ]
+      },
+      "dynamic_content": {
+        "timeline_calculation": {
+          "based_on_brief": "Extract timeline requirements",
+          "based_on_complexity": "Adjust based on project complexity",
+          "based_on_budget": "Optimize timeline for budget constraints"
+        }
+      }
+    },
+    "budget": {
+      "type": "budget",
+      "layout": "table",
+      "content": {
+        "title": "BUDGET",
+        "total_budget": "{{total_budget}}",
+        "categories": [
+          {
+            "category": "CREATIVE & PRODUCTION",
+            "amount": "{{creative_amount}}",
+            "percentage": "{{creative_percentage}}",
+            "breakdown": "{{creative_breakdown}}"
+          },
+          {
+            "category": "MEDIA & DISTRIBUTION",
+            "amount": "{{media_amount}}",
+            "percentage": "{{media_percentage}}",
+            "breakdown": "{{media_breakdown}}"
+          },
+          {
+            "category": "TECHNOLOGY & PLATFORMS",
+            "amount": "{{tech_amount}}",
+            "percentage": "{{tech_percentage}}",
+            "breakdown": "{{tech_breakdown}}"
+          },
+          {
+            "category": "PARTNERSHIPS & ACTIVATIONS",
+            "amount": "{{partnerships_amount}}",
+            "percentage": "{{partnerships_percentage}}",
+            "breakdown": "{{partnerships_breakdown}}"
+          }
+        ]
+      },
+      "dynamic_content": {
+        "budget_allocation": {
+          "based_on_brief": "Extract budget requirements",
+          "based_on_ideas": "Allocate based on idea complexity",
+          "based_on_sector": "Adjust for sector standards"
+        }
+      }
+    }
+  },
+  "style_guides": {
+    "structured": {
+      "primary_color": "#2C3E50",
+      "secondary_color": "#34495E",
+      "accent_color": "#3498DB",
+      "background_color": "#ECF0F1",
+      "heading_font": "Montserrat Bold",
+      "subheading_font": "Montserrat SemiBold",
+      "body_font": "Open Sans Regular"
+    },
+    "creative": {
+      "primary_color": "#E74C3C",
+      "secondary_color": "#F39C12",
+      "accent_color": "#9B59B6",
+      "background_color": "#F8F9FA",
+      "heading_font": "Playfair Display Bold",
+      "subheading_font": "Playfair Display Regular",
+      "body_font": "Lato Regular"
+    },
+    "event": {
+      "primary_color": "#1ABC9C",
+      "secondary_color": "#16A085",
+      "accent_color": "#F1C40F",
+      "background_color": "#FFFFFF",
+      "heading_font": "Roboto Condensed Bold",
+      "subheading_font": "Roboto Medium",
+      "body_font": "Roboto Regular"
+    }
+  },
+  "detection_rules": {
+    "style_indicators": {
+      "structured": ["strategy", "planning", "business", "corporate", "analysis"],
+      "creative": ["creative", "artistic", "brand", "identity", "design"],
+      "event": ["event", "launch", "activation", "experience", "campaign"]
+    },
+    "sector_mapping": {
+      "luxury": "structured",
+      "tech": "structured",
+      "fashion": "creative",
+      "food": "creative",
+      "automotive": "structured",
+      "events": "event"
+    },
+    "project_type_mapping": {
+      "strategy": "structured",
+      "campaign": "creative",
+      "event": "event",
+      "branding": "creative",
+      "awareness": "structured"
+    }
+  }
+} 

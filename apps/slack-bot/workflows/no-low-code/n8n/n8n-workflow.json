@@ -1,0 +1,1085 @@
+{
+  "name": "Trendwatch AI - Veille Multi-Sources",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "[Init] Cron",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configuration pour les 4 sheets\nconst sheets = ['Agrégateur général', 'Benchmark', 'Spotted', 'Trend'];\nreturn sheets.map(sheet => ({\n  json: {\n    sheetName: sheet,\n    spreadsheetId: $env.SPREADSHEET_ID\n  }\n}));"
+      },
+      "id": "config-sheets",
+      "name": "[Init] Config Sheets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 280]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$json.spreadsheetId}}",
+          "mode": "id"
+        },
+        "sheetName": "={{$json.sheetName}}",
+        "range": "A2:F400"
+      },
+      "id": "clear-sheets",
+      "name": "[Init] Clear Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [620, 280]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$json.spreadsheetId}}",
+          "mode": "id"
+        },
+        "sheetName": "={{$json.sheetName}}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "DATE": "DATE",
+            "MARQUE": "MARQUE", 
+            "LIEN DE PUBLICATION": "LIEN DE PUBLICATION",
+            "CAPTION": "CAPTION",
+            "DESCRIPTION": "DESCRIPTION",
+            "NOTES": "NOTES"
+          }
+        },
+        "options": {
+          "range": "A1:F1"
+        }
+      },
+      "id": "set-headers",
+      "name": "[Init] Set Headers",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [820, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Démarrage des 3 branches en parallèle\nreturn [{ json: { trigger: 'start' } }];"
+      },
+      "id": "start-branches",
+      "name": "[Init] Start Branches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Liste des flux RSS (variables d'env)\nconst feeds = [\n  'https://rss.app/feeds/tech_feed_ai_deeptech.xml'\n];\nreturn feeds.map(url => ({ json: { feedUrl: url } }));"
+      },
+      "id": "rss-feed-list", 
+      "name": "[RSS] Feed List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.feedUrl}}"
+      },
+      "id": "rss-feed-read",
+      "name": "[RSS] Feed Read",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalisation RSS\nconst items = [];\nfor (const item of $input.all()) {\n  const j = item.json;\n  const date = j.isoDate || j.pubDate || new Date().toISOString();\n  const url = j.link || j.guid || '';\n  const title = j.title || '';\n  const description = j.contentSnippet || j.description || '';\n  const source = url ? new URL(url).hostname.replace(/^www\\./, '') : '';\n  const brand = source.split('.')[0];\n  \n  items.push({\n    json: {\n      platform: 'web',\n      date,\n      url,\n      title,\n      caption: title,\n      description,\n      brand,\n      source\n    }\n  });\n}\nreturn items;"
+      },
+      "id": "normalize-rss",
+      "name": "[RSS] Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtrage 7 jours + dédupe + tri\nconst sevenDaysAgo = new Date();\nsevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);\n\nlet filtered = $input.all().filter(item => {\n  const itemDate = new Date(item.json.date);\n  return itemDate >= sevenDaysAgo;\n});\n\nconst seen = new Set();\nfiltered = filtered.filter(item => {\n  const url = item.json.url;\n  if (seen.has(url)) return false;\n  seen.add(url);\n  return true;\n});\n\nfiltered.sort((a, b) => new Date(b.json.date) - new Date(a.json.date));\nreturn filtered.slice(0, 80);"
+      },
+      "id": "filter-dedup-rss",
+      "name": "[RSS] Filter+Dedup+Sort",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1850, 200]
+    },
+    {
+      "parameters": {
+        "batchSize": 8,
+        "options": {}
+      },
+      "id": "split-batches-web",
+      "name": "[RSS] Split Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [2050, 200]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "content": "Tu es analyste \"trendwatch\". Résume l'URL suivante en 3–6 puces concises :\n- marque / acteur\n- action / format / campagne\n- collaboration(s)\n- insight(s) / signaux faibles\n- pourquoi c'est pertinent (1 phrase)\n\nURL: {{$json.url}}\nContexte: titre=\"{{$json.title}}\", extrait=\"{{$json.description}}\"."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.6
+        }
+      },
+      "id": "openai-web",
+      "name": "[RSS] OpenAI",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.1,
+      "position": [2250, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "DATE",
+              "name": "DATE",
+              "value": "={{$json.date}}",
+              "type": "string"
+            },
+            {
+              "id": "MARQUE", 
+              "name": "MARQUE",
+              "value": "={{$json.brand}}",
+              "type": "string"
+            },
+            {
+              "id": "LIEN DE PUBLICATION",
+              "name": "LIEN DE PUBLICATION",
+              "value": "={{$json.url}}",
+              "type": "string"
+            },
+            {
+              "id": "CAPTION",
+              "name": "CAPTION", 
+              "value": "={{$json.caption}}",
+              "type": "string"
+            },
+            {
+              "id": "DESCRIPTION",
+              "name": "DESCRIPTION",
+              "value": "={{$json.description}}",
+              "type": "string"
+            },
+            {
+              "id": "NOTES",
+              "name": "NOTES",
+              "value": "={{$json.choices[0].message.content}}",
+              "type": "string"
+            },
+            {
+              "id": "platform",
+              "name": "platform",
+              "value": "web",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "set-map-web",
+      "name": "[RSS] Set Map",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [2450, 200]
+    },
+    {
+      "parameters": {},
+      "id": "aggregate-web",
+      "name": "[RSS] Aggregate",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [2650, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/acts/apify~instagram-post-scraper/run-sync-get-dataset?token={{$env.APIFY_TOKEN}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"directUrls\": [],\n  \"resultsType\": \"posts\",\n  \"resultsLimit\": 50,\n  \"searchType\": \"hashtag\",\n  \"hashtags\": [\"ai\", \"deeplearning\", \"machinelearning\", \"artificialintelligence\", \"genai\", \"llm\", \"openai\", \"techinnovation\", \"deeptech\"],\n  \"profileUrls\": [\n    \"https://www.instagram.com/nvidia/\",\n    \"https://www.instagram.com/openai/\",\n    \"https://www.instagram.com/google/\",\n    \"https://www.instagram.com/microsoft/\",\n    \"https://www.instagram.com/mit/\",\n    \"https://www.instagram.com/stanford/\",\n    \"https://www.instagram.com/deepmind/\",\n    \"https://www.instagram.com/anthropic/\",\n    \"https://www.instagram.com/huggingface/\",\n    \"https://www.instagram.com/tesla/\",\n    \"https://www.instagram.com/spacex/\",\n    \"https://www.instagram.com/apple/\",\n    \"https://www.instagram.com/meta/\",\n    \"https://www.instagram.com/intel/\",\n    \"https://www.instagram.com/amd/\",\n    \"https://www.instagram.com/github/\",\n    \"https://www.instagram.com/ibmresearch/\"\n  ]\n}"
+      },
+      "id": "apify-ig",
+      "name": "[IG] Apify Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalisation Instagram\nconst out = [];\nconst data = Array.isArray($json) ? $json : [$json];\n\nfor (const p of data) {\n  if (!p) continue;\n  out.push({\n    json: {\n      platform: 'instagram',\n      date: p.timestamp || new Date().toISOString(),\n      url: p.url || '',\n      brand: p.ownerUsername || '',\n      caption: p.caption || '',\n      mediaUrl: p.displayUrl || ''\n    }\n  });\n}\nreturn out;"
+      },
+      "id": "normalize-ig",
+      "name": "[IG] Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 400]
+    },
+    {
+      "parameters": {
+        "batchSize": 4,
+        "options": {}
+      },
+      "id": "split-batches-ig",
+      "name": "[IG] Split Batches", 
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1650, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$json.mediaUrl}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-media-ig",
+      "name": "[IG] Download Media",
+      "type": "n8n-nodes-base.httpRequest", 
+      "typeVersion": 4.1,
+      "position": [1850, 400]
+    },
+    {
+      "parameters": {
+        "mode": "binaryToJson",
+        "options": {}
+      },
+      "id": "base64-ig",
+      "name": "[IG] Base64",
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1,
+      "position": [2050, 400]
+    },
+    {
+      "parameters": {
+        "amount": 500,
+        "unit": "ms"
+      },
+      "id": "wait-gemini-ig",
+      "name": "[IG] Wait Gemini",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2250, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key={{$env.GOOGLE_AI_API_KEY}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"contents\": [{\n    \"parts\": [\n      {\"text\": \"Analyse ce post Instagram pour un tableau trendwatch (3–6 puces): marque, action, format, collab, insight(s), signaux faibles, why it matters.\\n\\nCaption: {{$json.caption}}\"},\n      {\"inlineData\": {\"mimeType\": \"image/jpeg\", \"data\": \"={{$json.data}}\"}}\n    ]\n  }],\n  \"generationConfig\": {\"temperature\": 0.7}\n}"
+      },
+      "id": "gemini-vision-ig",
+      "name": "[IG] Gemini Vision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2450, 400]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "DATE",
+              "name": "DATE",
+              "value": "={{$json.date}}",
+              "type": "string"
+            },
+            {
+              "id": "MARQUE",
+              "name": "MARQUE", 
+              "value": "={{$json.brand}}",
+              "type": "string"
+            },
+            {
+              "id": "LIEN DE PUBLICATION",
+              "name": "LIEN DE PUBLICATION",
+              "value": "={{$json.url}}",
+              "type": "string"
+            },
+            {
+              "id": "CAPTION",
+              "name": "CAPTION",
+              "value": "={{$json.caption}}",
+              "type": "string"
+            },
+            {
+              "id": "DESCRIPTION",
+              "name": "DESCRIPTION",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "NOTES",
+              "name": "NOTES",
+              "value": "={{$json.candidates[0].content.parts[0].text}}",
+              "type": "string"
+            },
+            {
+              "id": "platform",
+              "name": "platform",
+              "value": "instagram",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "set-map-ig",
+      "name": "[IG] Set Map",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [2650, 400]
+    },
+    {
+      "parameters": {},
+      "id": "aggregate-ig",
+      "name": "[IG] Aggregate",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [2850, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/acts/apify~tiktok-scraper/run-sync-get-dataset?token={{$env.APIFY_TOKEN}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"profiles\": [\"nvidia\", \"openai\", \"google\", \"microsoft\", \"mit\", \"stanford\", \"deepmind\", \"anthropic\", \"huggingface\", \"tesla\", \"spacex\", \"apple\", \"meta\", \"intel\", \"amd\"],\n  \"hashtags\": [\"ai\", \"artificialintelligence\", \"machinelearning\", \"deeplearning\", \"genai\", \"llm\", \"openai\", \"techinnovation\", \"deeptech\"],\n  \"resultsPerPage\": 50,\n  \"maxItems\": 50\n}"
+      },
+      "id": "apify-tt",
+      "name": "[TT] Apify Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalisation TikTok\nconst out = [];\nconst data = Array.isArray($json) ? $json : [$json];\n\nfor (const p of data) {\n  if (!p) continue;\n  out.push({\n    json: {\n      platform: 'tiktok',\n      date: p.createTime ? new Date(p.createTime * 1000).toISOString() : new Date().toISOString(),\n      url: p.webVideoUrl || '',\n      brand: p.authorMeta?.name || '',\n      caption: p.text || '',\n      mediaUrl: p.videoUrl || ''\n    }\n  });\n}\nreturn out;"
+      },
+      "id": "normalize-tt",
+      "name": "[TT] Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 600]
+    },
+    {
+      "parameters": {
+        "batchSize": 4,
+        "options": {}
+      },
+      "id": "split-batches-tt",
+      "name": "[TT] Split Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1650, 600]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$json.mediaUrl}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-media-tt",
+      "name": "[TT] Download Media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1850, 600]
+    },
+    {
+      "parameters": {
+        "mode": "binaryToJson",
+        "options": {}
+      },
+      "id": "base64-tt",
+      "name": "[TT] Base64",
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1,
+      "position": [2050, 600]
+    },
+    {
+      "parameters": {
+        "amount": 500,
+        "unit": "ms"
+      },
+      "id": "wait-gemini-tt",
+      "name": "[TT] Wait Gemini",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2250, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key={{$env.GOOGLE_AI_API_KEY}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"contents\": [{\n    \"parts\": [\n      {\"text\": \"Analyse ce post TikTok pour un tableau trendwatch (3–6 puces): marque, action, format, collab, insight(s), signaux faibles, why it matters.\\n\\nCaption: {{$json.caption}}\"},\n      {\"inlineData\": {\"mimeType\": \"video/mp4\", \"data\": \"={{$json.data}}\"}}\n    ]\n  }],\n  \"generationConfig\": {\"temperature\": 0.7}\n}"
+      },
+      "id": "gemini-vision-tt",
+      "name": "[TT] Gemini Vision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2450, 600]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "DATE",
+              "name": "DATE",
+              "value": "={{$json.date}}",
+              "type": "string"
+            },
+            {
+              "id": "MARQUE",
+              "name": "MARQUE",
+              "value": "={{$json.brand}}",
+              "type": "string"
+            },
+            {
+              "id": "LIEN DE PUBLICATION",
+              "name": "LIEN DE PUBLICATION", 
+              "value": "={{$json.url}}",
+              "type": "string"
+            },
+            {
+              "id": "CAPTION",
+              "name": "CAPTION",
+              "value": "={{$json.caption}}",
+              "type": "string"
+            },
+            {
+              "id": "DESCRIPTION",
+              "name": "DESCRIPTION",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "NOTES",
+              "name": "NOTES",
+              "value": "={{$json.candidates[0].content.parts[0].text}}",
+              "type": "string"
+            },
+            {
+              "id": "platform",
+              "name": "platform",
+              "value": "tiktok",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "set-map-tt",
+      "name": "[TT] Set Map",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [2650, 600]
+    },
+    {
+      "parameters": {},
+      "id": "aggregate-tt",
+      "name": "[TT] Aggregate",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [2850, 600]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "merge-all-sources",
+      "name": "[Merge] All Sources",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [3050, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Dédupe finale et tri\nconst seen = new Set();\nlet unique = $input.all().filter(item => {\n  const url = item.json['LIEN DE PUBLICATION'];\n  if (!url || seen.has(url)) return false;\n  seen.add(url);\n  return true;\n});\n\nunique.sort((a, b) => {\n  const dateA = new Date(a.json.DATE || 0);\n  const dateB = new Date(b.json.DATE || 0);\n  return dateB - dateA;\n});\n\nreturn unique.slice(0, 150);"
+      },
+      "id": "final-dedup-sort",
+      "name": "[Merge] Final Dedup+Sort",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3250, 400]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$env.SPREADSHEET_ID}}",
+          "mode": "id"
+        },
+        "sheetName": "Agrégateur général",
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        }
+      },
+      "id": "append-aggregator",
+      "name": "[Sheet] Append Agrégateur",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [3450, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Classification avec routage\nconst competitors = ['openai', 'anthropic', 'google', 'deepmind', 'meta', 'nvidia', 'microsoft'];\nconst influencers = ['andrejkarpathy', 'sama', 'ilyasut', 'lexfridman', 'yannlecun'];\nconst trendKeywords = ['trend', 'challenge', 'viral', 'sound', 'meme', 'agent', 'rag'];\n\nconst outputs = {\n  benchmark: [],\n  spotted: [],\n  trend: []\n};\n\n$input.all().forEach(item => {\n  const j = item.json;\n  const brandL = (j.MARQUE || '').toLowerCase();\n  const platform = (j.platform || '').toLowerCase();\n  const caption = (j.CAPTION || '').toLowerCase();\n  const notes = (j.NOTES || '').toLowerCase();\n  \n  if (competitors.some(c => brandL.includes(c))) {\n    outputs.benchmark.push(item);\n  } else if (influencers.some(i => brandL.includes(i))) {\n    outputs.spotted.push(item);\n  } else if (['instagram', 'tiktok'].includes(platform) || \n             trendKeywords.some(k => caption.includes(k) || notes.includes(k))) {\n    outputs.trend.push(item);\n  } else {\n    outputs.spotted.push(item);\n  }\n});\n\nreturn [\n  { json: { items: outputs.benchmark, bucket: 'Benchmark' } },\n  { json: { items: outputs.spotted, bucket: 'Spotted' } },\n  { json: { items: outputs.trend, bucket: 'Trend' } }\n];"
+      },
+      "id": "classifier",
+      "name": "[Route] Classifier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3650, 400]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$env.SPREADSHEET_ID}}",
+          "mode": "id"
+        },
+        "sheetName": "Benchmark",
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        }
+      },
+      "id": "append-benchmark",
+      "name": "[Sheet] Append Benchmark",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [3850, 320]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$env.SPREADSHEET_ID}}",
+          "mode": "id"
+        },
+        "sheetName": "Spotted",
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        }
+      },
+      "id": "append-spotted",
+      "name": "[Sheet] Append Spotted",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [3850, 420]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$env.SPREADSHEET_ID}}",
+          "mode": "id"
+        },
+        "sheetName": "Trend",
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        }
+      },
+      "id": "append-trend",
+      "name": "[Sheet] Append Trend",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [3850, 520]
+    }
+  ],
+  "connections": {
+    "[Init] Cron": {
+      "main": [
+        [
+          {
+            "node": "[Init] Config Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Init] Config Sheets": {
+      "main": [
+        [
+          {
+            "node": "[Init] Clear Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Init] Clear Sheets": {
+      "main": [
+        [
+          {
+            "node": "[Init] Set Headers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Init] Set Headers": {
+      "main": [
+        [
+          {
+            "node": "[Init] Start Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Init] Start Branches": {
+      "main": [
+        [
+          {
+            "node": "[RSS] Feed List",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "[IG] Apify Run",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "[TT] Apify Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[RSS] Feed List": {
+      "main": [
+        [
+          {
+            "node": "[RSS] Feed Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[RSS] Feed Read": {
+      "main": [
+        [
+          {
+            "node": "[RSS] Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[RSS] Normalize": {
+      "main": [
+        [
+          {
+            "node": "[RSS] Filter+Dedup+Sort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[RSS] Filter+Dedup+Sort": {
+      "main": [
+        [
+          {
+            "node": "[RSS] Split Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[RSS] Split Batches": {
+      "main": [
+        [
+          {
+            "node": "[RSS] OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "[RSS] Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[RSS] OpenAI": {
+      "main": [
+        [
+          {
+            "node": "[RSS] Set Map",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[RSS] Set Map": {
+      "main": [
+        [
+          {
+            "node": "[RSS] Split Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[RSS] Aggregate": {
+      "main": [
+        [
+          {
+            "node": "[Merge] All Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[IG] Apify Run": {
+      "main": [
+        [
+          {
+            "node": "[IG] Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[IG] Normalize": {
+      "main": [
+        [
+          {
+            "node": "[IG] Split Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[IG] Split Batches": {
+      "main": [
+        [
+          {
+            "node": "[IG] Download Media",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "[IG] Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[IG] Download Media": {
+      "main": [
+        [
+          {
+            "node": "[IG] Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[IG] Base64": {
+      "main": [
+        [
+          {
+            "node": "[IG] Wait Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[IG] Wait Gemini": {
+      "main": [
+        [
+          {
+            "node": "[IG] Gemini Vision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[IG] Gemini Vision": {
+      "main": [
+        [
+          {
+            "node": "[IG] Set Map",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[IG] Set Map": {
+      "main": [
+        [
+          {
+            "node": "[IG] Split Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[IG] Aggregate": {
+      "main": [
+        [
+          {
+            "node": "[Merge] All Sources",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "[TT] Apify Run": {
+      "main": [
+        [
+          {
+            "node": "[TT] Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[TT] Normalize": {
+      "main": [
+        [
+          {
+            "node": "[TT] Split Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[TT] Split Batches": {
+      "main": [
+        [
+          {
+            "node": "[TT] Download Media",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "[TT] Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[TT] Download Media": {
+      "main": [
+        [
+          {
+            "node": "[TT] Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[TT] Base64": {
+      "main": [
+        [
+          {
+            "node": "[TT] Wait Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[TT] Wait Gemini": {
+      "main": [
+        [
+          {
+            "node": "[TT] Gemini Vision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[TT] Gemini Vision": {
+      "main": [
+        [
+          {
+            "node": "[TT] Set Map",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[TT] Set Map": {
+      "main": [
+        [
+          {
+            "node": "[TT] Split Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[TT] Aggregate": {
+      "main": [
+        [
+          {
+            "node": "[Merge] All Sources",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "[Merge] All Sources": {
+      "main": [
+        [
+          {
+            "node": "[Merge] Final Dedup+Sort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Merge] Final Dedup+Sort": {
+      "main": [
+        [
+          {
+            "node": "[Sheet] Append Agrégateur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Sheet] Append Agrégateur": {
+      "main": [
+        [
+          {
+            "node": "[Route] Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Route] Classifier": {
+      "main": [
+        [
+          {
+            "node": "[Sheet] Append Benchmark",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "[Sheet] Append Spotted",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "[Sheet] Append Trend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": ["trendwatch", "ai", "scraping"],
+  "triggerCount": 1,
+  "updatedAt": "2024-12-15T00:00:00.000Z",
+  "versionId": "v1"
+}

@@ -1,0 +1,74 @@
+{
+    "theme": {
+        "background": "FFFFFF",
+        "text": "000000",
+        "accent": "4472C4"
+    },
+    "layouts": {
+        "title": {
+            "title": {
+                "x": 1,
+                "y": 1,
+                "width": 8,
+                "height": 1.5
+            },
+            "subtitle": {
+                "x": 1,
+                "y": 3,
+                "width": 8,
+                "height": 1
+            }
+        },
+        "content": {
+            "title": {
+                "x": 1,
+                "y": 0.5,
+                "width": 8,
+                "height": 1
+            },
+            "body": {
+                "x": 1,
+                "y": 2,
+                "width": 8,
+                "height": 5
+            }
+        },
+        "image": {
+            "title": {
+                "x": 1,
+                "y": 0.5,
+                "width": 8,
+                "height": 1
+            },
+            "image": {
+                "x": 1,
+                "y": 2,
+                "width": 6,
+                "height": 4
+            },
+            "caption": {
+                "x": 1,
+                "y": 6.5,
+                "width": 6,
+                "height": 0.5
+            }
+        }
+    },
+    "fonts": {
+        "title": {
+            "name": "Calibri",
+            "size": 44,
+            "bold": true
+        },
+        "subtitle": {
+            "name": "Calibri",
+            "size": 32,
+            "bold": false
+        },
+        "body": {
+            "name": "Calibri",
+            "size": 18,
+            "bold": false
+        }
+    }
+} 

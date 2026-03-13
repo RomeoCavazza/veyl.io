@@ -1,0 +1,30 @@
+services:
+  slack-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    ports:
+      - "8000:8000"       # Expose l'API FastAPI
+    volumes:
+      - ..:/app            # Monte tout le repo pour dev live
+    env_file:
+      - ../.env
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+
+  slack-bot: &slack-bot
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    depends_on:
+      - slack-server      # Démarre après slack-server
+    env_file:
+      - ../.env
+    volumes:
+      - ..:/app
+    command: python src/bot/slack_bot.py
+
+  slack-cli:
+    <<: *slack-bot       # Hérite de slack-bot
+    entrypoint: ["python", "src/bot/slack_bot.py"]
+    command: ["--simulate"]  # Simulation CLI
+    # Pour tests CLI: changer en `command: ["pytest", "-q"]`

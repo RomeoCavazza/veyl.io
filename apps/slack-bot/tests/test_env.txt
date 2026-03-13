@@ -1,0 +1,2 @@
+DATABASE_URL=sqlite:///./revolver.db
+OPENAI_API_KEY=sk-test-key

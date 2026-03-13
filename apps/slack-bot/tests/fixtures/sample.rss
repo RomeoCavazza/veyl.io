@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>Flux de test</title>
+    <link>https://example.com/</link>
+    <description>Flux RSS de test</description>
+    <item>
+      <title>Article Test</title>
+      <link>https://example.com/article-test</link>
+      <description>Ceci est un article de test.</description>
+      <pubDate>Tue, 20 May 2025 15:00:00 +0000</pubDate>
+      <guid>https://example.com/article-test</guid>
+    </item>
+  </channel>
+</rss>
+

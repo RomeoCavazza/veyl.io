@@ -1,0 +1,79 @@
+[run]
+# Sources à analyser
+source = 
+    cli
+    slides
+    monitoring
+
+# Fichiers à ignorer
+omit =
+    */tests/*
+    */__init__.py
+    */migrations/*
+    */settings/*
+    */wsgi.py
+    */asgi.py
+    */manage.py
+    */setup.py
+    */conftest.py
+
+# Activer l'analyse des branches
+branch = True
+
+# Plugins à utiliser
+plugins =
+    coverage_conditional_plugin
+
+[report]
+# Seuil minimal de couverture
+fail_under = 80
+
+# Format du rapport
+precision = 2
+show_missing = True
+skip_covered = False
+
+# Lignes à exclure
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    pass
+    raise ImportError
+    except ImportError:
+    if TYPE_CHECKING:
+    if typing.TYPE_CHECKING:
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+    if settings\.DEBUG:
+
+[html]
+# Configuration du rapport HTML
+directory = coverage_html
+title = Rapport de couverture Revolver AI Bot
+extra_css = 
+
+[xml]
+# Configuration du rapport XML
+output = coverage.xml
+
+[json]
+# Configuration du rapport JSON
+output = coverage.json
+pretty_print = True
+
+[paths]
+# Chemins à normaliser
+source =
+    .
+    /app
+    */site-packages/
+
+[coverage_conditional_plugin]
+# Configuration du plugin conditionnel
+rules =
+    "sys_version_info >= (3, 8)": py-gte-38
+    "sys_version_info >= (3, 9)": py-gte-39
+    "sys_version_info >= (3, 10)": py-gte-310
+    "sys_version_info >= (3, 11)": py-gte-311 

@@ -1,0 +1,14 @@
+# only include your package source & metadata
+recursive-include bot *.py
+recursive-include api *.py
+recursive-include parser *.py
+recursive-include pptx_generator *.py
+recursive-include reco *.py
+include pyproject.toml README.md LICENSE
+
+# exclude everything else
+prune tests
+prune docs
+prune scripts
+prune streamlit_app
+

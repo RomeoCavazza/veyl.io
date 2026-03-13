@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Deck Schema",
+  "description": "Schéma JSON pour la génération du deck PPTX",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Titre principal de la présentation"
+    },
+    "sections": {
+      "type": "array",
+      "description": "Liste des sections du deck",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Identifiant du type de section (e.g., state_of_play, kpis, timeline)"
+          },
+          "content": {
+            "type": "object",
+            "description": "Contenu propre à la section, structuré selon le type",
+            "additionalProperties": true
+          }
+        },
+        "required": ["type", "content"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["title", "sections"],
+  "additionalProperties": false
+}

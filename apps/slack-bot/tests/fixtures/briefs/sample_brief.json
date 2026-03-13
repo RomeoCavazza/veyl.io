@@ -1,0 +1,19 @@
+{
+    "titre": "Test Brief",
+    "problème": "Un problème de test pour les tests d'intégration",
+    "objectifs": [
+        "Objectif de test 1",
+        "Objectif de test 2"
+    ],
+    "kpis": [
+        "KPI 1: Taux de conversion",
+        "KPI 2: Engagement"
+    ],
+    "budget": "10000€",
+    "deadline": "2024-12-31",
+    "contexte": "Contexte de test pour l'intégration",
+    "contraintes": [
+        "Contrainte 1",
+        "Contrainte 2"
+    ]
+} 

@@ -1,0 +1,108 @@
+# =================================================================================
+# REVOLVR BOT - REQUIREMENTS CANONIQUES
+# Fichier unifié avec sections claires : PRODUCTION | DÉVELOPPEMENT | OPTIONNEL
+# =================================================================================
+
+# ============================= PRODUCTION (22 packages essentiels) ================
+# Core API/Web
+fastapi==0.115.12
+uvicorn[standard]==0.34.3
+python-multipart==0.0.20
+
+# Data validation
+pydantic>=2.0,<3.0
+pydantic-core==2.23.4
+
+# Database
+sqlalchemy>=2.0,<3.0
+alembic>=1.13.0
+
+# Scraping
+playwright>=1.40.0
+httpx[http2]>=0.28.0
+beautifulsoup4>=4.12.0
+
+# IA/LLM + NLP
+openai>=1.0,<2.0
+tiktoken>=0.9.0
+spacy>=3.7.0
+
+# Cache & Async
+redis>=4.5.0
+
+# Utils essentiels
+python-dotenv>=1.0.0
+requests>=2.32.0
+pandas>=2.2.0
+feedparser>=6.0.11
+psutil>=5.9.0
+
+# Tests MVP
+pytest>=8.0,<9.0
+pytest-asyncio>=0.24.0
+
+# Qualité MVP
+ruff>=0.6.0
+black>=24.0,<25.0
+
+# Slack integration
+slack-sdk>=3.20.0
+
+# ============================= DÉVELOPPEMENT =============================
+# Testing étendu
+pytest-cov
+pytest-mock
+pytest-trio
+pytest-html
+coverage
+
+# Dev tools: formatters, linters
+flake8
+isort
+pre-commit
+
+# Typing / Static analysis
+mypy
+types-requests
+types-PyYAML
+types-jsonschema
+
+# CLI & Scripting
+typer[all]
+click
+
+# ============================= OPTIONNEL =============================
+# PDF parsing & generation
+pdfminer.six>=20221105
+reportlab>=3.6
+pdf2image
+pytesseract
+
+# PowerPoint generation
+python-pptx
+
+# JSON Schema validation
+jsonschema>=4.0.0
+
+# Async: Trio & Async Tools
+trio==0.25.0
+anyio[trio]
+
+# Web Scraping étendu
+selenium>=4.15.0
+webdriver-manager>=4.0.0
+
+# Google APIs
+google-cloud-vision>=3.10.0
+google-api-python-client>=2.118.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0
+
+# Linting support for notebooks
+nbstripout
+
+# =================================================================================
+# TOTAL: ~55 packages (vs 318 dans requirements.max.txt)
+# Réduction: 83% de dépendances supprimées
+# Sections: 22 production + 11 dev + 22 optionnel = 55 total
+# =================================================================================

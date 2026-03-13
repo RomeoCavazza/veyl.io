@@ -1,0 +1,61 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "PDF Document Schema",
+    "description": "Schema for validating PDF document metadata",
+    "type": "object",
+    "required": ["path", "type"],
+    "properties": {
+        "path": {
+            "type": "string",
+            "description": "Path to the PDF file"
+        },
+        "type": {
+            "type": "string",
+            "enum": ["pdf"],
+            "description": "Document type, must be 'pdf'"
+        },
+        "metadata": {
+            "type": "object",
+            "description": "Optional PDF metadata",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "Document title"
+                },
+                "author": {
+                    "type": "string",
+                    "description": "Document author"
+                },
+                "subject": {
+                    "type": "string",
+                    "description": "Document subject"
+                },
+                "keywords": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Document keywords"
+                },
+                "creator": {
+                    "type": "string",
+                    "description": "Application used to create the document"
+                },
+                "producer": {
+                    "type": "string",
+                    "description": "Application used to produce the PDF"
+                },
+                "creationDate": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Document creation date"
+                },
+                "modDate": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Document modification date"
+                }
+            }
+        }
+    }
+} 

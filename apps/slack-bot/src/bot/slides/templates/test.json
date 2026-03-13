@@ -1,0 +1,18 @@
+{
+    "name": "test",
+    "description": "Template de test",
+    "author": "Test Author",
+    "version": "1.0.0",
+    "theme": {
+        "colors": {
+            "primary": "#2C3E50",
+            "secondary": "#E74C3C",
+            "text": "#2C3E50",
+            "background": "#FFFFFF"
+        },
+        "fonts": {
+            "title": "Arial",
+            "body": "Arial"
+        }
+    }
+} 

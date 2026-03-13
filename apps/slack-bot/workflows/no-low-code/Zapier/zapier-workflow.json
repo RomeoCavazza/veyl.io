@@ -1,0 +1,761 @@
+{
+  "name": "Trendwatch AI - Veille Tech/DeepTech (Zapier)",
+  "platform": "zapier",
+  "description": "Système de veille technologique AI/DeepTech via 6 Zaps Zapier spécialisés",
+  "version": "1.0",
+  "created": "2024-12-15",
+  "variables": {
+    "SPREADSHEET_ID": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+    "APIFY_TOKEN": "{{env.APIFY_TOKEN}}",
+    "GOOGLE_AI_API_KEY": "{{env.GOOGLE_AI_API_KEY}}",
+    "TIMEZONE": "Europe/Paris"
+  },
+  "sheets": {
+    "target_spreadsheet": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+    "worksheets": ["Agrégateur", "Benchmark", "Spotted", "Trend"],
+    "columns": ["DATE", "MARQUE", "LIEN DE PUBLICATION", "CAPTION", "DESCRIPTION", "NOTES"]
+  },
+  "sources": {
+    "rss_feeds": [
+      "https://rss.app/feeds/tech_feed_ai_deeptech.xml"
+    ],
+    "instagram_profiles": [
+      "https://www.instagram.com/nvidia/",
+      "https://www.instagram.com/openai/",
+      "https://www.instagram.com/google/",
+      "https://www.instagram.com/microsoft/",
+      "https://www.instagram.com/mit/",
+      "https://www.instagram.com/stanford/",
+      "https://www.instagram.com/deepmind/",
+      "https://www.instagram.com/anthropic/",
+      "https://www.instagram.com/huggingface/",
+      "https://www.instagram.com/tesla/",
+      "https://www.instagram.com/spacex/",
+      "https://www.instagram.com/apple/",
+      "https://www.instagram.com/meta/",
+      "https://www.instagram.com/intel/",
+      "https://www.instagram.com/amd/",
+      "https://www.instagram.com/github/",
+      "https://www.instagram.com/ibmresearch/"
+    ],
+    "instagram_hashtags": [
+      "#AI", "#DeepLearning", "#MachineLearning", "#ArtificialIntelligence", 
+      "#GenAI", "#LLM", "#OpenAI", "#TechInnovation", "#DeepTech"
+    ],
+    "tiktok_profiles": [
+      "https://www.tiktok.com/@nvidia?lang=en",
+      "https://www.tiktok.com/@openai?lang=en",
+      "https://www.tiktok.com/@google?lang=en",
+      "https://www.tiktok.com/@microsoft?lang=en",
+      "https://www.tiktok.com/@mit?lang=en",
+      "https://www.tiktok.com/@stanford?lang=en",
+      "https://www.tiktok.com/@deepmind?lang=en",
+      "https://www.tiktok.com/@anthropic?lang=en",
+      "https://www.tiktok.com/@huggingface?lang=en",
+      "https://www.tiktok.com/@tesla?lang=en",
+      "https://www.tiktok.com/@spacex?lang=en",
+      "https://www.tiktok.com/@apple?lang=en",
+      "https://www.tiktok.com/@meta?lang=en",
+      "https://www.tiktok.com/@intel?lang=en",
+      "https://www.tiktok.com/@amd?lang=en"
+    ],
+    "tiktok_hashtags": [
+      "#AI", "#ArtificialIntelligence", "#MachineLearning", "#DeepLearning", 
+      "#GenAI", "#LLM", "#OpenAI", "#TechInnovation", "#DeepTech"
+    ]
+  },
+  "classification_rules": {
+    "competitors": [
+      "openai", "anthropic", "google", "deepmind", "meta", "nvidia",
+      "microsoft", "databricks", "snowflake", "huggingface"
+    ],
+    "influencer_handles": [
+      "andrejkarpathy", "sama", "ilyasut", "lexfridman", "yannlecun",
+      "hardmaru", "svpolk", "jimfan", "elonmusk"
+    ],
+    "trend_keywords": [
+      "trend", "viral", "breakthrough", "innovation", "agent", "rag", 
+      "multimodal", "reasoning", "alignment", "safety"
+    ]
+  },
+  "zaps": [
+    {
+      "id": "zap-1-init",
+      "name": "[INIT] Préparation Sheets",
+      "description": "Initialisation hebdomadaire des Google Sheets",
+      "status": "active",
+      "trigger": {
+        "app": "Schedule by Zapier",
+        "type": "schedule",
+        "config": {
+          "frequency": "Weekly",
+          "day": "Monday",
+          "time": "08:00",
+          "timezone": "Europe/Paris"
+        }
+      },
+      "actions": [
+        {
+          "id": "action-1",
+          "app": "Google Sheets",
+          "action": "Clear Range",
+          "config": {
+            "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+            "worksheet": "Agrégateur",
+            "range": "A2:F1000"
+          }
+        },
+        {
+          "id": "action-2",
+          "app": "Google Sheets",
+          "action": "Clear Range",
+          "config": {
+            "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+            "worksheet": "Benchmark",
+            "range": "A2:F1000"
+          }
+        },
+        {
+          "id": "action-3", 
+          "app": "Google Sheets",
+          "action": "Clear Range",
+          "config": {
+            "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+            "worksheet": "Spotted",
+            "range": "A2:F1000"
+          }
+        },
+        {
+          "id": "action-4",
+          "app": "Google Sheets", 
+          "action": "Clear Range",
+          "config": {
+            "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+            "worksheet": "Trend",
+            "range": "A2:F1000"
+          }
+        },
+        {
+          "id": "action-5",
+          "app": "Google Sheets",
+          "action": "Update Spreadsheet Row",
+          "config": {
+            "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+            "worksheet": "Agrégateur",
+            "row": 1,
+            "values": ["DATE", "MARQUE", "LIEN DE PUBLICATION", "CAPTION", "DESCRIPTION", "NOTES"]
+          }
+        },
+        {
+          "id": "action-6",
+          "app": "Google Sheets",
+          "action": "Update Spreadsheet Row",
+          "config": {
+            "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+            "worksheet": "Benchmark",
+            "row": 1,
+            "values": ["DATE", "MARQUE", "LIEN DE PUBLICATION", "CAPTION", "DESCRIPTION", "NOTES"]
+          }
+        },
+        {
+          "id": "action-7",
+          "app": "Google Sheets",
+          "action": "Update Spreadsheet Row", 
+          "config": {
+            "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+            "worksheet": "Spotted",
+            "row": 1,
+            "values": ["DATE", "MARQUE", "LIEN DE PUBLICATION", "CAPTION", "DESCRIPTION", "NOTES"]
+          }
+        },
+        {
+          "id": "action-8",
+          "app": "Google Sheets",
+          "action": "Update Spreadsheet Row",
+          "config": {
+            "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+            "worksheet": "Trend", 
+            "row": 1,
+            "values": ["DATE", "MARQUE", "LIEN DE PUBLICATION", "CAPTION", "DESCRIPTION", "NOTES"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "zap-2-rss",
+      "name": "[RSS] Veille Web",
+      "description": "Collecte et analyse des flux RSS tech/AI",
+      "status": "active",
+      "trigger": {
+        "app": "RSS by Zapier",
+        "type": "new_item_in_feed",
+        "config": {
+          "feed_url": "https://rss.app/feeds/tech_feed_ai_deeptech.xml"
+        }
+      },
+      "actions": [
+        {
+          "id": "action-1",
+          "app": "Filter by Zapier",
+          "action": "Only continue if",
+          "config": {
+            "rules": [
+              {
+                "field": "{{trigger.date_published}}",
+                "operator": "is_greater_than",
+                "value": "{{today - 7 days}}"
+              }
+            ]
+          }
+        },
+        {
+          "id": "action-2",
+          "app": "Formatter by Zapier",
+          "action": "Text - Extract Domain",
+          "config": {
+            "input": "{{trigger.link}}",
+            "transform": "extract_domain"
+          }
+        },
+        {
+          "id": "action-3",
+          "app": "OpenAI",
+          "action": "Send Prompt",
+          "config": {
+            "model": "gpt-4o-mini",
+            "temperature": 0.6,
+            "prompt": "Tu es analyste \"trendwatch\" tech/AI. Résume l'article suivant en 3–6 puces concises :\n- acteur/entreprise principale\n- innovation/annonce/développement\n- impact/collaboration(s)\n- insight(s) / signaux faibles tech\n- pourquoi c'est pertinent pour la veille tech (1 phrase)\n\nTitre: {{trigger.title}}\nContenu: {{trigger.description}}\nURL: {{trigger.link}}"
+          }
+        },
+        {
+          "id": "action-4",
+          "app": "Google Sheets",
+          "action": "Create Spreadsheet Row",
+          "config": {
+            "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+            "worksheet": "Agrégateur",
+            "values": {
+              "DATE": "{{trigger.date_published}}",
+              "MARQUE": "{{step_2.output}}",
+              "LIEN DE PUBLICATION": "{{trigger.link}}",
+              "CAPTION": "{{trigger.title}}",
+              "DESCRIPTION": "{{trigger.description}}",
+              "NOTES": "{{step_3.output}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "zap-3-instagram",
+      "name": "[IG] Veille Instagram",
+      "description": "Scraping quotidien des profils Instagram tech/AI",
+      "status": "active",
+      "trigger": {
+        "app": "Schedule by Zapier",
+        "type": "schedule",
+        "config": {
+          "frequency": "Daily",
+          "time": "09:00",
+          "timezone": "Europe/Paris"
+        }
+      },
+      "actions": [
+        {
+          "id": "action-1",
+          "app": "Webhooks by Zapier",
+          "action": "POST",
+          "config": {
+            "url": "https://api.apify.com/v2/acts/apify~instagram-post-scraper/run-sync-get-dataset?token={{env.APIFY_TOKEN}}",
+            "method": "POST",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "data": {
+              "directUrls": [],
+              "resultsType": "posts",
+              "resultsLimit": 7,
+              "searchType": "hashtag",
+              "hashtags": ["#AI", "#DeepLearning", "#MachineLearning", "#ArtificialIntelligence", "#GenAI", "#LLM", "#OpenAI", "#TechInnovation", "#DeepTech"],
+              "profileUrls": [
+                "https://www.instagram.com/nvidia/",
+                "https://www.instagram.com/openai/",
+                "https://www.instagram.com/google/",
+                "https://www.instagram.com/microsoft/",
+                "https://www.instagram.com/mit/",
+                "https://www.instagram.com/stanford/",
+                "https://www.instagram.com/deepmind/",
+                "https://www.instagram.com/anthropic/",
+                "https://www.instagram.com/huggingface/",
+                "https://www.instagram.com/tesla/",
+                "https://www.instagram.com/spacex/",
+                "https://www.instagram.com/apple/",
+                "https://www.instagram.com/meta/",
+                "https://www.instagram.com/intel/",
+                "https://www.instagram.com/amd/",
+                "https://www.instagram.com/github/",
+                "https://www.instagram.com/ibmresearch/"
+              ]
+            }
+          }
+        },
+        {
+          "id": "action-2",
+          "app": "Formatter by Zapier",
+          "action": "Utilities - Line-item to Text",
+          "config": {
+            "input": "{{step_1.data}}",
+            "separator": "newline"
+          }
+        },
+        {
+          "id": "action-3",
+          "app": "Filter by Zapier",
+          "action": "Only continue if",
+          "config": {
+            "rules": [
+              {
+                "field": "{{step_2.output}}",
+                "operator": "is_not_empty"
+              }
+            ]
+          }
+        },
+        {
+          "id": "action-4",
+          "app": "Google Sheets",
+          "action": "Create Spreadsheet Row",
+          "config": {
+            "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+            "worksheet": "Agrégateur",
+            "values": {
+              "DATE": "{{step_1.timestamp}}",
+              "MARQUE": "{{step_1.ownerUsername}}",
+              "LIEN DE PUBLICATION": "{{step_1.url}}",
+              "CAPTION": "{{step_1.caption}}",
+              "DESCRIPTION": "",
+              "NOTES": "[Instagram] {{step_1.caption}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "zap-4-tiktok",
+      "name": "[TT] Veille TikTok",
+      "description": "Scraping quotidien TikTok profils + analytics hashtags",
+      "status": "active",
+      "trigger": {
+        "app": "Schedule by Zapier",
+        "type": "schedule",
+        "config": {
+          "frequency": "Daily",
+          "time": "10:00", 
+          "timezone": "Europe/Paris"
+        }
+      },
+      "actions": [
+        {
+          "id": "action-1",
+          "app": "Webhooks by Zapier",
+          "action": "POST",
+          "config": {
+            "url": "https://api.apify.com/v2/acts/apify~tiktok-scraper/run-sync-get-dataset?token={{env.APIFY_TOKEN}}",
+            "method": "POST",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "data": {
+              "excludePinnedPosts": false,
+              "profileSorting": "latest",
+              "profiles": [
+                "https://www.tiktok.com/@nvidia?lang=en",
+                "https://www.tiktok.com/@openai?lang=en",
+                "https://www.tiktok.com/@google?lang=en",
+                "https://www.tiktok.com/@microsoft?lang=en",
+                "https://www.tiktok.com/@mit?lang=en",
+                "https://www.tiktok.com/@stanford?lang=en",
+                "https://www.tiktok.com/@deepmind?lang=en",
+                "https://www.tiktok.com/@anthropic?lang=en",
+                "https://www.tiktok.com/@huggingface?lang=en",
+                "https://www.tiktok.com/@tesla?lang=en",
+                "https://www.tiktok.com/@spacex?lang=en",
+                "https://www.tiktok.com/@apple?lang=en",
+                "https://www.tiktok.com/@meta?lang=en",
+                "https://www.tiktok.com/@intel?lang=en",
+                "https://www.tiktok.com/@amd?lang=en"
+              ],
+              "resultsPerPage": 5,
+              "scrapeLastNDays": 7,
+              "shouldDownloadVideos": false
+            }
+          }
+        },
+        {
+          "id": "action-2",
+          "app": "Webhooks by Zapier",
+          "action": "POST",
+          "config": {
+            "url": "https://api.apify.com/v2/acts/apify~tiktok-scraper/run-sync-get-dataset?token={{env.APIFY_TOKEN}}",
+            "method": "POST",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "data": {
+              "analytics_period": "7",
+              "country": "FR",
+              "hashtag_list": ["#AI", "#ArtificialIntelligence", "#MachineLearning", "#DeepLearning", "#GenAI", "#LLM", "#OpenAI", "#TechInnovation", "#DeepTech"],
+              "result_type": "analytics"
+            }
+          }
+        },
+        {
+          "id": "action-3",
+          "app": "Formatter by Zapier",
+          "action": "Utilities - Combine",
+          "config": {
+            "input_1": "{{step_1.data}}",
+            "input_2": "{{step_2.data}}",
+            "separator": "|"
+          }
+        },
+        {
+          "id": "action-4",
+          "app": "Filter by Zapier",
+          "action": "Only continue if",
+          "config": {
+            "rules": [
+              {
+                "field": "{{step_3.output}}",
+                "operator": "is_not_empty"
+              }
+            ]
+          }
+        },
+        {
+          "id": "action-5",
+          "app": "Google Sheets",
+          "action": "Create Spreadsheet Row",
+          "config": {
+            "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+            "worksheet": "Agrégateur",
+            "values": {
+              "DATE": "{{step_1.createTime}}",
+              "MARQUE": "{{step_1.authorMeta.name}}",
+              "LIEN DE PUBLICATION": "{{step_1.webVideoUrl}}",
+              "CAPTION": "{{step_1.text}}",
+              "DESCRIPTION": "",
+              "NOTES": "[TikTok] {{step_1.text}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "zap-5-classification",
+      "name": "[ROUTE] Classification",
+      "description": "Routage automatique vers feuilles thématiques",
+      "status": "active",
+      "trigger": {
+        "app": "Google Sheets",
+        "type": "new_spreadsheet_row",
+        "config": {
+          "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+          "worksheet": "Agrégateur",
+          "trigger_column": "A"
+        }
+      },
+      "paths": [
+        {
+          "id": "path-benchmark",
+          "name": "Route to Benchmark",
+          "filter": {
+            "app": "Filter by Zapier",
+            "action": "Only continue if",
+            "config": {
+              "rules": [
+                {
+                  "field": "{{trigger.MARQUE}}",
+                  "operator": "text_contains_any",
+                  "value": "openai,anthropic,google,deepmind,meta,nvidia,microsoft,databricks,snowflake,huggingface"
+                }
+              ]
+            }
+          },
+          "actions": [
+            {
+              "id": "action-1",
+              "app": "Google Sheets",
+              "action": "Create Spreadsheet Row",
+              "config": {
+                "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+                "worksheet": "Benchmark",
+                "values": {
+                  "DATE": "{{trigger.DATE}}",
+                  "MARQUE": "{{trigger.MARQUE}}",
+                  "LIEN DE PUBLICATION": "{{trigger.LIEN DE PUBLICATION}}",
+                  "CAPTION": "{{trigger.CAPTION}}",
+                  "DESCRIPTION": "{{trigger.DESCRIPTION}}",
+                  "NOTES": "{{trigger.NOTES}}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "path-spotted-influencers",
+          "name": "Route to Spotted (Influencers)",
+          "filter": {
+            "app": "Filter by Zapier",
+            "action": "Only continue if",
+            "config": {
+              "rules": [
+                {
+                  "field": "{{trigger.MARQUE}}",
+                  "operator": "text_contains_any",
+                  "value": "andrejkarpathy,sama,ilyasut,lexfridman,yannlecun,hardmaru,svpolk,jimfan,elonmusk"
+                }
+              ]
+            }
+          },
+          "actions": [
+            {
+              "id": "action-1", 
+              "app": "Google Sheets",
+              "action": "Create Spreadsheet Row",
+              "config": {
+                "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+                "worksheet": "Spotted",
+                "values": {
+                  "DATE": "{{trigger.DATE}}",
+                  "MARQUE": "{{trigger.MARQUE}}",
+                  "LIEN DE PUBLICATION": "{{trigger.LIEN DE PUBLICATION}}",
+                  "CAPTION": "{{trigger.CAPTION}}",
+                  "DESCRIPTION": "{{trigger.DESCRIPTION}}",
+                  "NOTES": "{{trigger.NOTES}}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "path-trend",
+          "name": "Route to Trend",
+          "filter": {
+            "app": "Filter by Zapier",
+            "action": "Only continue if",
+            "config": {
+              "rules": [
+                {
+                  "field": "{{trigger.CAPTION}}",
+                  "operator": "text_contains_any",
+                  "value": "trend,viral,breakthrough,innovation,agent,rag,multimodal,reasoning,alignment,safety"
+                },
+                {
+                  "field": "{{trigger.NOTES}}",
+                  "operator": "text_contains_any", 
+                  "value": "trend,viral,breakthrough,innovation,agent,rag,multimodal,reasoning,alignment,safety"
+                }
+              ],
+              "logic": "OR"
+            }
+          },
+          "actions": [
+            {
+              "id": "action-1",
+              "app": "Google Sheets",
+              "action": "Create Spreadsheet Row",
+              "config": {
+                "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+                "worksheet": "Trend",
+                "values": {
+                  "DATE": "{{trigger.DATE}}",
+                  "MARQUE": "{{trigger.MARQUE}}",
+                  "LIEN DE PUBLICATION": "{{trigger.LIEN DE PUBLICATION}}",
+                  "CAPTION": "{{trigger.CAPTION}}",
+                  "DESCRIPTION": "{{trigger.DESCRIPTION}}",
+                  "NOTES": "{{trigger.NOTES}}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "path-spotted-default",
+          "name": "Route to Spotted (Default)",
+          "filter": {
+            "app": "Filter by Zapier",
+            "action": "Only continue if",
+            "config": {
+              "rules": [
+                {
+                  "field": "{{trigger.MARQUE}}",
+                  "operator": "text_does_not_contain_any",
+                  "value": "openai,anthropic,google,deepmind,meta,nvidia,microsoft,databricks,snowflake,huggingface,andrejkarpathy,sama,ilyasut,lexfridman,yannlecun,hardmaru,svpolk,jimfan,elonmusk"
+                },
+                {
+                  "field": "{{trigger.CAPTION}}",
+                  "operator": "text_does_not_contain_any",
+                  "value": "trend,viral,breakthrough,innovation,agent,rag,multimodal,reasoning,alignment,safety"
+                },
+                {
+                  "field": "{{trigger.NOTES}}",
+                  "operator": "text_does_not_contain_any",
+                  "value": "trend,viral,breakthrough,innovation,agent,rag,multimodal,reasoning,alignment,safety"
+                }
+              ],
+              "logic": "AND"
+            }
+          },
+          "actions": [
+            {
+              "id": "action-1",
+              "app": "Google Sheets",
+              "action": "Create Spreadsheet Row",
+              "config": {
+                "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+                "worksheet": "Spotted",
+                "values": {
+                  "DATE": "{{trigger.DATE}}",
+                  "MARQUE": "{{trigger.MARQUE}}",
+                  "LIEN DE PUBLICATION": "{{trigger.LIEN DE PUBLICATION}}",
+                  "CAPTION": "{{trigger.CAPTION}}",
+                  "DESCRIPTION": "{{trigger.DESCRIPTION}}",
+                  "NOTES": "{{trigger.NOTES}}"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "zap-6-analytics",
+      "name": "[ANALYTICS] Analyse finale",
+      "description": "Rapport hebdomadaire d'analyse Gemini",
+      "status": "active",
+      "trigger": {
+        "app": "Schedule by Zapier",
+        "type": "schedule",
+        "config": {
+          "frequency": "Weekly",
+          "day": "Sunday",
+          "time": "18:00",
+          "timezone": "Europe/Paris"
+        }
+      },
+      "actions": [
+        {
+          "id": "action-1",
+          "app": "Google Sheets",
+          "action": "Lookup Spreadsheet Rows",
+          "config": {
+            "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+            "worksheet": "Agrégateur",
+            "lookup_column": "A",
+            "lookup_value": ">= {{today - 7 days}}",
+            "return_all_matches": true
+          }
+        },
+        {
+          "id": "action-2",
+          "app": "Formatter by Zapier",
+          "action": "Text - Join",
+          "config": {
+            "input": "{{step_1.output}}",
+            "separator": "\\n"
+          }
+        },
+        {
+          "id": "action-3",
+          "app": "Filter by Zapier",
+          "action": "Only continue if",
+          "config": {
+            "rules": [
+              {
+                "field": "{{step_2.output}}",
+                "operator": "is_not_empty"
+              }
+            ]
+          }
+        },
+        {
+          "id": "action-4",
+          "app": "Webhooks by Zapier",
+          "action": "POST",
+          "config": {
+            "url": "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key={{env.GOOGLE_AI_API_KEY}}",
+            "method": "POST",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "data": {
+              "contents": [
+                {
+                  "parts": [
+                    {
+                      "text": "You are a tech market analyst specializing in AI/DeepTech intelligence. You're in charge of a weekly technology market analysis. Here's a table aggregating all the publications issued this week and to date (7 days). Your objective is to write a benchmark of the 4 most relevant actions taken by AI/tech competitors in the table. You'll also have to write a sector watch called \"Spotted\", where you list 4 AI/tech/open-science news items that you find relevant for innovation tracking. Finally, you'll need to identify 4 technology trends relevant to the AI ecosystem, which have created buzz on social networks and in the tech community. You'll need to describe the actions with information such as the description of the news (or release, or research breakthrough), the concept, the date and location if necessary, naming the participants and any collaborators. Be as explicit and precise as possible, answering in a brief but highly informative paragraph for each competitor/trend (300 words).\\n\\nHere's how your answer should be structured: {Date in month/day number format)\\n\\nBenchmark :\\n1. {Action 1} : x\\n2. {Action 2} : x\\n3. {Action 3} : x\\n4. {Action 4} : x\\n\\nSpotted :\\n1. {News 1} : x\\n2. {News 2} : x\\n3. {News 3} : x\\n4. {News 4} : x\\n\\nTrends :\\n1. {Trend 1} : x\\n2. {Trend 2} : x\\n3. {Trend 3} : x\\n4. {Trend 4} : x\\n\\nData:\\n{{step_2.output}}"
+                    }
+                  ]
+                }
+              ],
+              "generationConfig": {
+                "temperature": 0.7
+              }
+            }
+          }
+        },
+        {
+          "id": "action-5",
+          "app": "Google Sheets",
+          "action": "Create Spreadsheet Row",
+          "config": {
+            "spreadsheet_id": "17JXOTxNk7-EDYpSQIKgBH-hyClpwn7jkmSknl3Azs1A",
+            "worksheet": "Agrégateur",
+            "values": {
+              "DATE": "{{today}}",
+              "MARQUE": "SYSTEM",
+              "LIEN DE PUBLICATION": "weekly-report",
+              "CAPTION": "Weekly AI/DeepTech Analysis Report",
+              "DESCRIPTION": "Automated Gemini analysis of the week's tech trends",
+              "NOTES": "{{step_4.candidates[0].content.parts[0].text}}"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "task_estimation": {
+      "init_weekly": 8,
+      "rss_daily": 1,
+      "instagram_daily": 4,
+      "tiktok_daily": 6,
+      "classification_per_item": 1,
+      "analytics_weekly": 5,
+      "monthly_total_estimated": 200
+    },
+    "plan_recommendations": {
+      "starter": "Basic functionality with daily limits",
+      "professional": "Full feature set with higher quotas",
+      "team": "Advanced features + collaboration"
+    },
+    "monitoring": {
+      "success_rate_target": "95%",
+      "error_notification": "email",
+      "performance_tracking": "zapier_dashboard"
+    }
+  },
+  "setup_instructions": {
+    "step_1": "Create 6 new Zaps in Zapier dashboard",
+    "step_2": "Configure each trigger according to zap specifications",
+    "step_3": "Add sequential actions as defined in actions array",
+    "step_4": "Set up app connections (Google Sheets, OpenAI, Webhooks)",
+    "step_5": "Configure environment variables for API keys",
+    "step_6": "Test each Zap individually before activation",
+    "step_7": "Monitor task usage and adjust frequencies as needed"
+  },
+  "tags": ["trendwatch", "ai", "deeptech", "scraping", "automation", "zapier"],
+  "author": "AI Assistant",
+  "last_updated": "2024-12-15"
+}

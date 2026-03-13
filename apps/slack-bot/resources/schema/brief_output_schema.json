@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Schéma de Sortie de Brief (Français)",
+  "type": "object",
+  "properties": {
+    "titre": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Le titre du brief."
+    },
+    "problème": {
+      "type": "string",
+      "description": "Description du problème identifié dans le brief."
+    },
+    "objectifs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "description": "Liste des objectifs à atteindre."
+    },
+    "kpis": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "description": "Liste des indicateurs clés de performance (KPIs)."
+    },
+    "reformulation_interne": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Reformulation interne du problème et des enjeux."
+    },
+    "résumé": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Résumé concis du brief à utiliser, par exemple, pour les prompts LLM."
+    }
+  },
+  "required": [
+    "titre",
+    "objectifs",
+    "reformulation_interne",
+    "résumé"
+  ],
+  "additionalProperties": false
+}

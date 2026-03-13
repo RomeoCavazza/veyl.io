@@ -26,6 +26,7 @@
 - **Advanced Analytics** — Real-time engagement metrics, growth tracking, and performance insights
 - **Fast Search** — Search across millions of posts with database-backed fallback
 - **Creator Intelligence** — Analyze influencer performance, partnerships, and content strategies
+- **AI Strategy Bot** — Revolver AI bot for strategic parsing, monitoring, and automated deliverables (Slack integrated)
 - **Project Workspaces** — Organize your monitoring with dedicated project dashboards (Watchlist, Grid, Analytics)
 
 See the [online documentation](https://www.veyl.io/docs) for more details.
@@ -46,6 +47,18 @@ See the [online documentation](https://www.veyl.io/docs) for more details.
 ## Documentation
 
 You can consult veyl.io's documentation at [veyl.io/docs](https://www.veyl.io/docs).
+
+### Structure
+
+```text
+veyl.io/
+├── apps/
+│   ├── backend/        # FastAPI Python API
+│   ├── frontend/       # React Vite UI
+│   └── slack-bot/      # AI Strategy Bot (Revolver)
+├── docs/               # Technical portal
+└── ...
+```
 
 ## Getting Started
 

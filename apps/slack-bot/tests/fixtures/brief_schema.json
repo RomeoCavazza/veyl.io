@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Brief Schema",
+  "description": "Schéma de validation pour les briefs",
+  "type": "object",
+  "required": ["titre", "problème", "objectifs", "kpis"],
+  "properties": {
+    "titre": {
+      "type": "string",
+      "minLength": 1
+    },
+    "problème": {
+      "type": "string",
+      "minLength": 1
+    },
+    "objectifs": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        }
+      ]
+    },
+    "kpis": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "budget": {
+      "type": "string"
+    },
+    "deadline": {
+      "type": "string"
+    },
+    "contexte": {
+      "type": "string"
+    },
+    "contraintes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+} 

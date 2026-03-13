@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies (prod + dev)
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+          .venv/bin/pip install -r requirements-dev.txt
+      - name: Run tests with coverage
+        run: .venv/bin/python -m pytest --cov=bot --cov-report=xml --maxfail=1 -v
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: true
+
+  infra-smoke:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Docker Compose plugin
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose-plugin
+      - name: Start Docker services
+        run: docker compose -f docker-compose.dev.yml up -d
+      - name: Wait for services to be ready
+        run: sleep 10
+      - name: Healthcheck API
+        run: curl --fail http://localhost:8000/
+      - name: Test CLI simulation
+        run: docker compose run --rm slack-cli --simulate
+      - name: Test brief upload API
+        run: |
+          curl --fail http://localhost:8000/extract-brief -F "file=@tests/samples/brief_sample.pdf"
+      - name: Tear down Docker services
+        run: docker compose -f docker-compose.dev.yml down

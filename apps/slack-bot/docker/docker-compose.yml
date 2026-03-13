@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  revolver-bot:
+    build: .
+    container_name: revolver-ai-bot
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.staging
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./output:/app/output
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Service Redis pour le cache et les sessions
+  redis:
+    image: redis:7-alpine
+    container_name: revolver-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Service PostgreSQL pour les données persistantes
+  postgres:
+    image: postgres:15-alpine
+    container_name: revolver-postgres
+    environment:
+      POSTGRES_DB: revolver
+      POSTGRES_USER: revolver
+      POSTGRES_PASSWORD: revolver_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U revolver"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  redis_data:
+  postgres_data: 

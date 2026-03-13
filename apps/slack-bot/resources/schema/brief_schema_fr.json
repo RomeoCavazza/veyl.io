@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Schéma de Brief (Français Interne après extraction/process)",
+  "type": "object",
+  "properties": {
+    "titre": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Le titre du brief (valeur par défaut si non extrait : 'Brief extrait automatiquement')."
+    },
+    "problème": {
+      "type": "string",
+      "description": "La problématique soulevée dans le brief (valeur par défaut si non extrait : 'Problème non précisé')."
+    },
+    "objectifs": {
+      "type": "string",
+      "description": "Les objectifs du brief, sous forme de chaîne (items séparés par ';', valeur par défaut si non extrait : 'Objectifs non précisés')."
+    },
+    "kpis": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "description": "Liste des indicateurs clés de performance (valeur par défaut si non extrait : ['KPI non identifié'])."
+    },
+    "reformulation_interne": {
+      "type": "string",
+      "description": "Reformulation interne optionnelle du problème (potentiellement ajoutée par l'orchestrateur)."
+    },
+    "résumé": {
+      "type": "string",
+      "description": "Résumé concis optionnel (potentiellement ajoutée par l'orchestrateur)."
+    }
+  },
+  "required": [
+    "titre",
+    "problème",
+    "objectifs",
+    "kpis"
+  ],
+  "additionalProperties": true
+}

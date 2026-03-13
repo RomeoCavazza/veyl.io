@@ -1,0 +1,6 @@
+SLACK_TOKEN = "xoxb-your-slack-token"
+GMAIL_API_CREDENTIALS = "credentials.json"
+GSPREADSHEET_ID = "your-google-sheet-id"
+SERPAPI_KEY = "your-serpapi-key"
+OPENAI_API_KEY = "your-openai-api-key"
+PHANTOMBUSTER_API_KEY = "your-phantombuster-key"

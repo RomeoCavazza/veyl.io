@@ -1,0 +1,48 @@
+{
+    "name": "default",
+    "description": "Template par défaut",
+    "author": "Revolver AI",
+    "version": "1.0.0",
+    "layouts": {
+        "title": {
+            "name": "Title Slide",
+            "placeholders": {
+                "title": {"type": "title", "font_size": 44},
+                "subtitle": {"type": "subtitle", "font_size": 32}
+            }
+        },
+        "content": {
+            "name": "Content",
+            "placeholders": {
+                "title": {"type": "title", "font_size": 36},
+                "content": {"type": "body", "font_size": 24}
+            }
+        },
+        "chart": {
+            "name": "Chart",
+            "placeholders": {
+                "title": {"type": "title", "font_size": 36},
+                "chart": {"type": "content", "font_size": 24}
+            }
+        },
+        "image": {
+            "name": "Picture",
+            "placeholders": {
+                "title": {"type": "title", "font_size": 36},
+                "image": {"type": "content"}
+            }
+        }
+    },
+    "theme": {
+        "colors": {
+            "primary": "#2C3E50",
+            "secondary": "#E74C3C",
+            "text": "#2C3E50",
+            "background": "#FFFFFF"
+        },
+        "fonts": {
+            "title": "Arial",
+            "body": "Arial"
+        }
+    }
+} 

@@ -1,0 +1,92 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "revolver-ai-bot"
+version = "0.2.8"
+description = "Revolver AI Bot – Un agent IA stratégique pour parsing, veille et livrables"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+
+authors = [
+  { name = "Romeo Cavazza", email = "romeo@example.com" }
+]
+
+dependencies = [
+  "openai>=0.27.0",
+  "python-dotenv>=1.0.0",
+  "python-pptx>=0.6.21",
+  "pdfplumber>=0.11.6",
+  "pydantic>=2.11.4",
+  "jsonschema>=4.23.0",
+  "requests>=2.32.3"
+]
+
+[project.optional-dependencies]
+dev = [
+  # Formatage et lint
+  "black>=24.3.0",
+  "flake8>=6.1.0",
+  "isort>=5.13.2",
+  "autopep8",
+
+  # Tests
+  "pytest>=8.3.0",
+  "pytest-cov>=4.1.0",
+  "pytest-mock>=3.12.0",
+
+  # Typage & outils
+  "mypy>=1.9.0",
+  "ipython>=8.20.0",
+  "coverage-badge",
+  "python-dotenv>=1.0.1",
+  "fpdf>=1.7.2",
+  "trio>=0.22"
+]
+
+[tool.setuptools.packages.find]
+include = ["bot*", "api*", "parser*", "pptx_generator*", "reco*", "utils*"]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+  "ignore:'count' is passed as positional argument"
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+exclude = '''
+/(
+    \.venv
+  | build
+  | dist
+  | \.git
+  | __pycache__
+  | \.approval_tests_temp
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+skip = [".venv", "__pycache__", ".approval_tests_temp"]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [".venv", "build", "dist", ".git", "__pycache__", ".approval_tests_temp"]
+
+[tool.coverage.run]
+branch = true
+source = ["bot", "api", "parser", "reco"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+  "if __name__ == .__main__.:",
+  "pragma: no cover",
+  "raise NotImplementedError",
+]

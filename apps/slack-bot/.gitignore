@@ -1,0 +1,176 @@
+# ========================
+# 🐍 Python & Environnement
+# ========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# ========================
+# 🛠️ IDE & Éditeurs
+# ========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ========================
+# 📓 Jupyter
+# ========================
+.ipynb_checkpoints/
+
+# ========================
+# 📄 LaTeX (Si applicable)
+# ========================
+# *.aux
+# *.log
+# *.out
+# *.toc
+# *.fls
+# *.fdb_latexmk
+# *.synctex.gz
+
+# ========================
+# ✅ Tests & Coverage
+# ========================
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# ========================
+# 📚 Documentation (MkDocs)
+# ========================
+site/
+docs/_build/
+
+# ========================
+# 🐳 Docker & Configs Divers
+# ========================
+# Dockerfile* # Si tu veux ignorer tous les Dockerfiles, sinon précise (ex: Dockerfile.local)
+# docker-compose*.yml # Idem, si tu veux ignorer toutes les variations
+.ngrok.yml
+# Procfile # Généralement commité, mais si c'est un Procfile local spécifique...
+
+# Fichiers de sortie ou temporaires
+output/
+!tests/samples/*.pptx
+
+# ========================
+# 🗃️ Fichiers de données générés ou sensibles
+# ========================
+# briefs/ # Si ce dossier contient des données sensibles ou générées non versionnables
+# tests/samples/*.pdf # Si les PDF de samples ne doivent pas être tous versionnés
+# data/veille.csv # Si ce fichier est généré et grand, ou contient des données non versionnables
+
+# ========================
+# 🔒 Secrets
+# ========================
+# Ignorer tous les fichiers dans le dossier /secrets/
+/secrets/*
+
+# MAIS ne PAS ignorer le fichier d'exemple ou les fichiers de configuration non sensibles
+# Si credential.json NE contient PAS de secrets, alors c'est OK de le dé-ignorer.
+# Sinon, il devrait aussi être ignoré (en enlevant la ligne !/secrets/credential.json).
+!/secrets/credential.json 
+
+# IMPORTANT : Le fichier .env dans secrets/ ne doit PAS être dé-ignoré s'il contient des secrets.
+# La ligne "!/secrets/.env" précédente a été supprimée.
+# Si tu as un fichier .env.example dans secrets/, tu peux le dé-ignorer :
+# !/secrets/.env.example
+
+# ========================
+# 🌍 Autres
+# ========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+test_output/
+temp/
+tmp/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Docker
+.dockerignore
+
+# API keys and secrets
+secrets/
+*.key
+*.pem
+ngrok.yml
+
+# Large files
+*.pdf
+*.zip
+*.tar.gz
+*.rar
+*.pptx
+examples/*.pptx
+
+# AI/ML models
+models/
+*.pkl
+*.h5
+*.onnx
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+
+# ========================
+# Fichier d'environnement racine
+# ========================
+# Ignorer le fichier .env à la racine du projet s'il contient des secrets
+.env
+.python-version
